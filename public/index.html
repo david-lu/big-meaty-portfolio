@@ -1,0 +1,98 @@
+<!doctype html>
+<html>
+
+<head>
+  <title>David Lu</title>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollToPlugin.min.js"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.167.1/build/three.module.js"
+      }
+    }
+  </script>
+  <script defer type='module' src="scripts.js"></script>
+  <meta property='og:title' content='David Lu' />
+  <meta property='og:image' content='https://davidlu.tech/banner.png' />
+  <meta property='og:description' content='Use this app to make your face less ugly!' />
+  <meta property='og:url' content='https://davidlu.tech/' />
+  <meta property='og:image:width' content='1024' />
+  <meta property='og:image:height' content='500' />
+  <meta property='og:type' content='website' />
+</head>
+
+<body>
+  <div id="nav-menu" style="z-index: 100">
+    <button id='nav-art' class="nav-button hidden">
+      <div>
+        <img src='assets/icon-art.svg'></img>
+        <span>Portfolio</span>
+      </div>
+    </button>
+    <button id='nav-contact' class="nav-button hidden">
+      <div>
+        <img src='assets/icon-contact.svg'></img>
+        <span>Contact</span>
+      </div>
+    </button>
+    <button id='nav-hamburger' class="nav-button">
+      <img src='assets/icon-hamburger.svg'></img>
+    </button>
+  </div>
+  <div id="main">
+    <div id="intro" class="parallax-section">
+      <div id="david"></div>
+      <div id="title"></div>
+      <div id="subtitle"></div>
+    </div>
+    <div id="school" class="parallax-section">
+      <div class="parallax-container">
+        <div id="school-animation">
+          <div id="school-circle"></div>
+          <div id="school-logo"></div>
+        </div>
+        <div id="">
+
+        </div>
+      </div>
+    </div>
+    <div id="software" class="parallax-section">
+      
+    </div>
+    <div id="google" class="parallax-section">
+      <div class="parallax-container">
+        <div id="google-page">
+          <div class="google-doodle"></div>
+          <div class="google-search-bar"></div>
+          <div id="google-buttons">
+            <div class="google-button">Search Google</div>
+            <div class="google-button">I'm Feeling Lucky</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="animation" class="parallax-section">
+      ANIMATION
+    </div>
+    <div id="skills" class="parallax-section">
+      <div class="skill-header">BACKEND</div>
+      <div class="skill-section">Node.js FastAPI Docker Express.js</div>
+      <div class="skill-header">FRONTEND</div>
+      <div class="skill-section">React.js Flutter React.js Flutter React.js Flutter React.js Flutter </div>
+      <div class="skill-header">LANGUAGES</div>
+      <div class="skill-section">Python Java C++ JavaScript TypeScript Dart Kotlin</div>
+      <div class="skill-header">TOOLS</div>
+      <div class="skill-section">Eclipse Git IntelliJ CreateJs</div>
+    </div>
+    <div id="now" class="parallax-section">
+      NOW
+    </div>
+  </div>
+</body>
+
+</html>
