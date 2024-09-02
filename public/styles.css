@@ -17,6 +17,11 @@ div {
     background-size: contain;
 }
 
+hr {
+    margin: 1rem 2rem;
+    color: black;
+}
+
 body > div {
     position: absolute;
     left: 0;
@@ -24,25 +29,28 @@ body > div {
 }
 
 #nav-menu {
+    display: flex;
+    justify-content: flex-end;
     top: 0;
     right: 0;
     position: fixed;
     text-align: right;
-    width: 100%;
     height: 40px;
-    bottom: 0;
-    padding: 20px 20px 35px 20px;
+    margin: 20px 20px 35px 20px;
 }
 
 .nav-button {
     position: relative;
     z-index: 90;
-    line-height: 30px;
     color: white;
     background: transparent;
     cursor: pointer;
     border: none;
-    transition: transform 400ms ease-in-out, opacity 300ms ease-in-out;
+    transition: transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.nav-button.hidden {
+    transition: transform 180ms cubic-bezier(0.32, 0, 0.67, 0);
 }
 
 .nav-button:hover {
@@ -55,7 +63,7 @@ body > div {
 }
 
 .nav-button img {
-    margin: 0 6px;
+    margin: 0 8px;
     display: inline-block;
     width: 30px;
     height: 30px;
@@ -71,14 +79,22 @@ body > div {
     z-index: 100;
 }
 
+#nav-art {
+    transition-delay: 100ms;
+}
+
 #nav-art.hidden {
-    opacity: 0%;
-    transform: translateX(150px);
+    transform: translateY(-70px);
+    transition-delay: 0s;
+}
+
+#nav-contact {
+    transition-delay: 0s;
 }
 
 #nav-contact.hidden {
-    opacity: 0%;
-    transform: translateX(100px);
+    transform: translateY(-70px);
+    transition-delay: 50ms;
 }
 
 /* button {
@@ -159,32 +175,52 @@ button:hover {
     background-color: var(--school-color);
 }
 
-#school-animation {
-    position: absolute;
-    left: 20%;
-    top: 50%;
-    aspect-ratio: 1;
-    height: 20vh;
-    max-width: 25vw;
-    transform: translate(-50%, -50%);
+#school .parallax-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
 }
 
-#school-animation > div {
+#uoft {
+    display: flex;
+    max-width: 90%;
+    height: 20vh;
+    color: white;
+    aspect-ratio: 3.5;
+}
+
+#uoft-logo {
+    flex: 1;
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+}
+
+#uoft-logo > div {
+    left: 0;
+    top: 0;
     position: absolute;
     width: 100%;
     height: 100%;
-    left: 0;
-    top: 0;
+    aspect-ratio: 1;
 }
 
-#school-circle {
+#uoft-circle {
     border-radius: 100vh;
     background-color: white;
 }
 
-#school-logo {
+#uoft-image {
     background-image: url('assets/uoft.png');
     background-size: 50% auto;
+}
+
+
+#uoft-title {
+    flex: 3;
+    height: 100%;
+    background-image: url('assets/uoft-title.png');
+    background-size: 90% auto;
 }
 
 #software {
@@ -193,7 +229,7 @@ button:hover {
 }
 
 #google {
-    height: 130vh;
+    height: 150vh;
     background-color: white;
 }
 
@@ -276,13 +312,20 @@ button:hover {
 }
 
 #skills {
-    height: 100vh;
+    height: 180vh;
     background-color: mediumaquamarine;
     font-weight: bold;
 }
 
 .skill-header {
+    margin: 0 5rem;
+    font-size: 1.5rem;
+}
+
+.skill-section {
     font-size: 3rem;
+    overflow: visible;
+    white-space: nowrap;
 }
 
 #now {
