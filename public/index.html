@@ -44,7 +44,6 @@
       <img src='assets/icon-hamburger.svg'></img>
     </button>
   </div>
-  <div id="main">
     <div id="intro" class="parallax-section">
       <div id="david"></div>
       <div id="title"></div>
@@ -64,17 +63,22 @@
         </h1>
       </div>
     </div>
-    <div id="software" class="parallax-section">
-      
-    </div>
     <div id="google" class="parallax-section">
       <div class="parallax-container">
         <div id="google-page">
-          <div class="google-doodle"></div>
-          <div class="google-search-bar"></div>
+          <div id="google-doodle">
+            <div class="google-doodle-default"></div>
+            <div id="google-doodle-bobblehead" onclick="window.open('http://www.google.com', '_blank')"></div>
+            <div id="google-doodle-halloween" onclick="window.open('http://www.google.com', '_blank')"></div>
+            <div id="google-doodle-hiphop" onclick="window.open('http://www.google.com', '_blank')"></div>
+            <div id="google-doodle-olympics" onclick="window.open('http://www.google.com', '_blank')"></div>
+            <div id="google-doodle-rabbit" onclick="window.open('http://www.google.com', '_blank')"></div>
+            <div class="google-doodle-default"></div>
+          </div>
+          <div id="google-search-bar"></div>
           <div id="google-buttons">
-            <div class="google-button">Search Google</div>
-            <div class="google-button">I'm Feeling Lucky</div>
+            <div id="google-button-search" class="google-button">Search Google</div>
+            <div id="google-button-lucky" class="google-button">I'm Feeling Lucky</div>
           </div>
         </div>
       </div>
@@ -100,7 +104,6 @@
     <div id="now" class="parallax-section">
       NOW
     </div>
-  </div>
 </body>
 
 </html>

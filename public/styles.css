@@ -22,6 +22,10 @@ hr {
     color: black;
 }
 
+body {
+    margin: 0;
+}
+
 body > div {
     position: absolute;
     left: 0;
@@ -113,10 +117,6 @@ body > div {
 button:hover {
     background-color: #99999999;
 } */
-
-#main {
-    width: 100%;
-}
 
 .parallax-section {
     position: relative;
@@ -223,10 +223,6 @@ button:hover {
     background-size: 90% auto;
 }
 
-#software {
-    height: 130vh;
-    background-color: orange;
-}
 
 #google {
     height: 150vh;
@@ -262,16 +258,56 @@ button:hover {
     flex-direction: row;
 }
 
-.google-doodle {
-    background-image: url('assets/google.svg');
-    background-repeat: no-repeat;
-    background-position: bottom;
-    background-size: contain;
-    aspect-ratio: 1.7;
+#google-doodle {
+    display: flex;
     height: 30vh;
+    aspect-ratio: 1.7;
 }
 
-.google-search-bar {
+#google-doodle > div {
+    margin: 0 10px;
+    position: absolute;
+    aspect-ratio: 1.7;
+    width: 50vh;
+    background-color: white;
+    clip-path: polygon(0% 0%, 0 100%, var(--clip) 100%, var(--clip) 0%);
+    cursor: pointer;
+}
+
+#google-doodle > div.disabled {
+    display:none;
+}
+
+.google-doodle-default {
+    background-image: url('assets/google.svg');
+    --clip: 100%;
+}
+
+#google-doodle-baseball {
+    background-image: url('assets/doodle-baseball.gif');
+}
+
+#google-doodle-bobblehead {
+    background-image: url('assets/doodle-bobblehead.gif');
+}
+
+#google-doodle-halloween {
+    background-image: url('assets/doodle-halloween.gif');
+}
+
+#google-doodle-hiphop {
+    background-image: url('assets/doodle-hiphop.gif');
+}
+
+#google-doodle-olympics {
+    background-image: url('assets/doodle-olympics.gif');
+}
+
+#google-doodle-rabbit {
+    background-image: url('assets/doodle-rabbit.gif');
+}
+
+#google-search-bar {
     display: flex;
     text-align: left;
     z-index: 3;
@@ -282,8 +318,8 @@ button:hover {
     box-shadow: none;
     border-radius: 24px;
     margin: 1rem 0;
-    width: 100%;
-    max-width: 584px;
+    width: 500px;
+    max-width: 80vw;
 }
 
 .google-button {

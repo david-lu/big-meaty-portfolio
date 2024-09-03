@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-gsap.registerPlugin(ScrollToPlugin, ScrollTrigger);
+gsap.registerPlugin(ScrollTrigger);
 
 const vh = (x) => window.innerHeight * (x / 100);
 const vw = (y) => window.innerWidth * (y / 100);
@@ -88,52 +88,68 @@ gsap.to("#david",
 // GOOGLE
 
 gsap.fromTo(
-  '#google-page',
-  { y: vh(-50) },
+  '#google .parallax-container',
+  { y: vh(-55) },
   {
-    y: vh(120),
+    y: vh(140),
     ease: 'none',
     scrollTrigger: {
       trigger: '#google',
       start: "top bottom",
       end: "bottom top",
       scrub: 0,
+      // markers: true,
     }
   }
 );
 
-ScrollTrigger.create({
-  trigger: "#google",
-  start: "top bottom",
-  end: "bottom top",
-  scrub: 0,
-  // markers: true,
-  onUpdate: (progress) => {
-    const i = Math.round(progress * 7);
-    const bar = document.querySelector('.google-search-bar');
-    switch (i) {
-      case 2:
-      case 6:
-        bar.innerHTML = 'Yes';
-        break;
-      case 3:
-      case 7:
-        bar.innerHTML = 'No';
-        break;
-      case 4:
-        bar.innerHTML = 'WEWE';
-        break;
-      case 5:
-        bar.innerHTML = 'dfzs';
-        break;
-      default:
-        bar.innerHTML = '';
+const doodleInfos = [
+  {
+    search: 'Halloween 2018 Doodle',
+    link: ''
+  },
+  {
+    search: 'Fourth of July 2019 Doodle',
+    link: ''
+  },
+  {
+    search: '47th Anniversary of Hip hop',
+    link: ''
+  },
+  {
+    search: 'Doodle Champion Island',
+    link: ''
+  },
+  {
+    search: 'Celebrating Kid\'s Coding',
+    link: ''
+  },
+];
+const doodleElem = document.querySelector('#google-doodle');
+const searchBar = document.querySelector('#google-search-bar');
+const doodles = gsap.utils.toArray('#google-doodle > div');
+for (let i = 0; i < doodles.length - 1; i++) {
+  const a = doodles[i];
+  const b = doodles[i + 1];
+  const start = 30 - ((i / doodles.length) * 150);
+  const end = 45 - (((i + 1) / doodles.length) * 150);
+
+  gsap.fromTo(b, 
+    {'--clip': '0%'},
+    {'--clip': '100%',
+      ease: 'none',
+      scrollTrigger: {
+        trigger: "#google",
+        start: `0% ${start}%`,
+        end: `0% ${end}%`,
+        scrub: 0.3,
+        markers: true,
+      },
     }
-  }
-});
+  )
+}
 
 // SKILLS
-
 gsap.fromTo(
   '#skills .parallax-container',
   { y: vh(-45) },
@@ -161,7 +177,7 @@ gsap.utils.toArray('.skill-section').forEach((element, i) => {
         start: "top bottom",
         end: "bottom top",
         scrub: 0,
-        markers: true,
+        // markers: true,
       },
     }
   );
@@ -172,3 +188,5 @@ gsap.utils.toArray('.skill-section').forEach((element, i) => {
 // document.querySelector('#splash-scroll-button').addEventListener('click', () => {
 //   gsap.to(window, { duration: 1, scrollTo: vh(100) });
 // });
+
+// ScrollTrigger.scrollerProxy(".parallax-section", {	pinType: "fixed" });
