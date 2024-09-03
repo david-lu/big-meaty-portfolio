@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-gsap.registerPlugin(ScrollTrigger);
+gsap.registerPlugin(ScrollToPlugin, ScrollTrigger);
 
 const vh = (x) => window.innerHeight * (x / 100);
 const vw = (y) => window.innerWidth * (y / 100);
@@ -28,7 +28,6 @@ gsap.to("#title",
   }
 );
 
-
 gsap.to("#subtitle",
   {
     yPercent: -30,
@@ -36,7 +35,7 @@ gsap.to("#subtitle",
       trigger: "#intro",
       start: "top top",
       end: "bottom top",
-      scrub: 0.5,
+      scrub: 0.45,
     },
   }
 );
@@ -53,37 +52,79 @@ gsap.to("#david",
   }
 );
 
-// SCHOOL
+// MAP
+gsap.fromTo(
+  '#map-path svg',
+  { strokeDasharray: '120%',
+    strokeDashoffset: '120%',
+   },
+  {
+    strokeDashoffset: 0,
+    ease: 'none',
+    scrollTrigger: {
+      trigger: '#map',
+      start: "20% bottom",
+      end: "10% top",
+      scrub: 0.2,
+      // markers: true,
+    },
+  }
+);
 
-// gsap.fromTo(
-//   '#school .parallax-container',
-//   { y: vh(-50) },
-//   {
-//     y: vh(90),
-//     ease: 'none',
-//     scrollTrigger: {
-//       trigger: '#school',
-//       start: "top bottom",
-//       end: "bottom top",
-//       scrub: 0,
-//     }
-//   }
-// );
+ScrollTrigger.create({
+  trigger: '#map',
+  start: "6% center",
+  end: "bottom top",
+  markers: true,
+  onToggle: (self) => {
+    document.querySelector('#school-pin').classList.toggle('inactive');
+  }
+});
 
-// gsap.fromTo("#school-circle",
-//   { scale: 20 },
-//   {
-//     scale: 1,
-//     ease: "power2.out",
-//     scrollTrigger: {
-//       trigger: "#school",
-//       start: "0 center",
-//       end: "30% top",
-//       scrub: 0,
-//       markers: true,
-//     },
-//   }
-// );
+ScrollTrigger.create({
+  trigger: '#map',
+  start: "22% center",
+  end: "bottom top",
+  markers: true,
+  onToggle: (self) => {
+    document.querySelector('#samsung-pin').classList.toggle('inactive');
+  }
+});
+
+gsap.fromTo(
+  '#google-pin-expand',
+  { scale: 0 },
+  {
+    scale: 20,
+    ease: 'none',
+    scrollTrigger: {
+      trigger: '#map',
+      start: "45% center",
+      end: "bottom top",
+      ease: 'ease-in',
+      scrub: 0.1,
+      markers: true,
+    }
+  }
+);
+
+gsap.fromTo(
+  '#google-pin-logo',
+  { scale: 0 },
+  {
+    scale: 1,
+    ease: 'none',
+    scrollTrigger: {
+      trigger: '#map',
+      start: "45% center",
+      end: "50% center",
+      ease: 'ease-out',
+      scrub: 0.1,
+      markers: true,
+    }
+  }
+);
+
 
 // GOOGLE
 
@@ -143,7 +184,7 @@ for (let i = 0; i < doodles.length - 1; i++) {
         start: `0% ${start}%`,
         end: `0% ${end}%`,
         scrub: 0.3,
-        markers: true,
+        // markers: true,
       },
     }
   )
