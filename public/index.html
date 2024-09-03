@@ -44,81 +44,137 @@
       <img src='assets/icon-hamburger.svg'></img>
     </button>
   </div>
-    <div id="intro" class="parallax-section">
-      <div id="david"></div>
-      <div id="title"></div>
-      <div id="subtitle"></div>
-    </div>
-    <div id="map" class="parallax-section">
-      <div id="map-path" class="parallax-container">
-        <svg xmlns="http://www.w3.org/2000/svg" viewbox="0 0 100 500" preserveAspectRatio="none">
-          <path stroke-linejoin="round" d="M 50 40 l 0 80 l -32 70 l 64 100 l -32 80 l 0 80" stroke-linecap="round" stroke-linejoin="bevel" />
-          <div id="little-david"></div>
-        </svg>
-        <div class="pin" style="left: 50%; top: 10%">
-          <div class="pin-icon" style="background-image: url('assets/uoft.png');"></div>
+  <div id="intro" class="parallax-section">
+    <div id="david"></div>
+    <div id="title"></div>
+    <div id="subtitle"></div>
+  </div>
+  <div id="map" class="parallax-section">
+    <div id="map-path" class="parallax-container">
+      <svg xmlns="http://www.w3.org/2000/svg" viewbox="0 0 500 500" preserveAspectRatio="none">
+        <path stroke-linejoin="round" d="M 250 40 l 0 80 l -160 70 l 320 100 l -160 80 l 0 80" stroke-linecap="round"
+          stroke-linejoin="bevel" vector-effect="non-scaling-size" />
+      </svg>
+      <div class="pin" style="left: 50%; top: 10%">
+        <div class="pin-icon" style="background-image: url('assets/uoft.png');"></div>
+      </div>
+      <div id='school-pin' class="pin inactive" style="left: 20%; top: 38%">
+        <div class="pin-icon" style="background-image: url('assets/uoft.png');"></div>
+        <div class="pin-info left">
+          <p>UNIVERSITY OF TORONTO 2012-2015</p>
+          <p>Bachelor of Computer Science</p>
         </div>
-        <div id='school-pin' class="pin inactive" style="left: 20%; top: 38%">
-          <div class="pin-icon" style="background-image: url('assets/uoft.png');"></div>
-          <div class="pin-info left">
-            <p>UNIVERSITY OF TORONTO 2012-2015</p>
-            <p>Bachelor of Computer Science</p>
-          </div>
+      </div>
+      <div id='samsung-pin' class="pin inactive" style="left: 80%; top: 58%">
+        <div class="pin-icon" style="background-image: url('assets/icon-samsung.svg');"></div>
+        <div class="pin-info right">
+          <p>SAMSUNG 2013</p>
+          <p>Junior Developer</p>
         </div>
-        <div id='samsung-pin' class="pin inactive" style="left: 80%; top: 58%">
-          <div class="pin-icon" style="background-image: url('assets/icon-samsung.svg');"></div>
-          <div class="pin-info right">
-            <p>SAMSUNG 2013</p>
-            <p>Junior Developer</p>
-          </div>
-        </div>
-        <div id='google-pin' class="pin inactive" style="left: 50%; top: 90%; z-index: 90;">
-          <div id='google-pin-expand' class="pin-icon"></div>
-          <div id='google-pin-logo' class="pin-icon absolute" style="background-image: url('assets/icon-google.svg');"></div>
+      </div>
+      <div id='google-pin' class="pin inactive" style="left: 50%; top: 90%; z-index: 90;">
+        <div id='google-pin-expand' class="pin-icon"></div>
+        <div id='google-pin-logo' class="pin-icon absolute" style="background-image: url('assets/icon-google.svg');">
         </div>
       </div>
     </div>
-    <div id="google" class="parallax-section">
-      <div class="parallax-container">
-        <div id="google-page">
-          <div id="google-doodle">
-            <div class="google-doodle-default"></div>
-            <div id="google-doodle-bobblehead" onclick="window.open('http://www.google.com', '_blank')"></div>
-            <div id="google-doodle-halloween" onclick="window.open('http://www.google.com', '_blank')"></div>
-            <div id="google-doodle-hiphop" onclick="window.open('http://www.google.com', '_blank')"></div>
-            <div id="google-doodle-olympics" onclick="window.open('http://www.google.com', '_blank')"></div>
-            <div id="google-doodle-rabbit" onclick="window.open('http://www.google.com', '_blank')"></div>
-            <div class="google-doodle-default"></div>
-          </div>
-          <div id="google-search-bar"></div>
-          <div id="google-buttons">
-            <div id="google-button-search" class="google-button">Search Google</div>
-            <div id="google-button-lucky" class="google-button">I'm Feeling Lucky</div>
-          </div>
+  </div>
+  <div id="google" class="parallax-section">
+    <div class="parallax-container">
+      <div id="google-page">
+        <div id="google-doodle">
+          <div class="google-doodle-default"></div>
+          <div id="google-doodle-bobblehead" onclick="window.open('http://www.google.com', '_blank')"></div>
+          <div id="google-doodle-halloween" onclick="window.open('http://www.google.com', '_blank')"></div>
+          <div id="google-doodle-hiphop" onclick="window.open('http://www.google.com', '_blank')"></div>
+          <div id="google-doodle-olympics" onclick="window.open('http://www.google.com', '_blank')"></div>
+          <div id="google-doodle-rabbit" onclick="window.open('http://www.google.com', '_blank')"></div>
+          <div class="google-doodle-default"></div>
+        </div>
+        <div id="google-search-bar"></div>
+        <div id="google-buttons">
+          <div id="google-button-search" class="google-button">Search Google</div>
+          <div id="google-button-lucky" class="google-button">I'm Feeling Lucky</div>
         </div>
       </div>
     </div>
-    <div id="skills" class="parallax-section">
-      <div class="parallax-container">
-        <div class="skill-header">LANGUAGES</div>
-        <div class="skill-section">Python Java C++ JavaScript TypeScript Dart Kotlin</div>
-        <hr>
-        <div class="skill-header" style="text-align: right;">BACKEND</div>
-        <div class="skill-section">Node.js FastAPI Docker ExpressJs GCP Firebase nginx</div>
-        <hr>
-        <div class="skill-header">FRONTEND</div>
-        <div class="skill-section">React.js React-Native Flutter Angular</div>
-        <hr>
-        <div class="skill-header" style="text-align: right;">TOOLS</div>
-        <div class="skill-section">Eclipse Git IntelliJ CreateJs Unity Photoshop Illustrator Animate</div>
+  </div>
+  <div id="skills" class="parallax-section">
+    <div class="parallax-container">
+      <div class="skill-header">LANGUAGES</div>
+      <div class="skill-section">
+        <a target="_blank"
+          href="https://en.wikipedia.org/wiki/Ball_python#/media/File:Albino_ball_python.png">Python</a>
+        <a target="_blank" href="https://en.wikipedia.org/wiki/Java">Java</a>
+        <a target="_blank" href="https://cplusplus.com/forum/beginner/283510/">C++</a>
+        <a target="_blank" href="https://www.javascript.com/">JavaScript</a>
+        <a target="_blank" href="https://www.typescriptlang.org/">TypeScript</a>
+        <a target="_blank" href="https://dart.dev/">Dart</a>
+        <a target="_blank" href="https://www.taylorswift.com/">Swift</a>
+      </div>
+      <hr>
+      <div class="skill-header" style="text-align: right;">BACKEND</div>
+      <div class="skill-section">
+        <a target="_blank" href="">Node.js</a>
+        <a target="_blank" href="">FastAPI</a>
+        <a target="_blank" href="">Docker</a>
+        <a target="_blank" href="">JavaScript</a>
+        <a target="_blank" href="">GCP</a>
+        <a target="_blank" href="">Firebase</a>
+        <a target="_blank" href="">nginx</a>
+      </div>
+      <hr>
+      <div class="skill-header">FRONTEND</div>
+      <div class="skill-section">
+        <a target="_blank" href="">React.js</a>
+        <a target="_blank" href="">Flutter</a>
+        <a target="_blank" href="">AngularJS (RIP)</a>
+        <a target="_blank" href="">React Native</a>
+        <a target="_blank" href="">GSAP</a>
+      </div>
+      <hr>
+      <div class="skill-header" style="text-align: right;">TOOLS</div>
+      <div class="skill-section">
+        <a target="_blank" href="">Eclipse</a>
+        <a target="_blank" href="">Git</a>
+        <a target="_blank" href="">CreateJS</a>
+        <a target="_blank" href="">Unity</a>
+        <a target="_blank" href="">Adobe Suite</a>
+        <a target="_blank" href="">Diffuser</a>
+        <a target="_blank" href="">PyTorch</a>
+        <a target="_blank" href="">Jupyter</a>
       </div>
     </div>
-    <div id="animation" class="parallax-section">
-      ANIMATION
+  </div>
+  <div id="animation" class="parallax-section">
+    <div style="flex: 3">
+      <div class="animation-title animation-text">
+        CAREER<br>
+        CHANGE
+      </div>
     </div>
-    <div id="now" class="parallax-section">
-      NOW
+    <div style="flex: 2">
+      <div class="animation-text">
+        DAVID SWITCHED FROM ENGINEERING TO ANIMATION IN 2022.
+      </div>
     </div>
+    <div style="flex: 2; display: flex;justify-content: flex-end;">
+      <div class="animation-text">
+        HE IS A VISUAL DEVELOPMENT ARTIST FOR TV AND FILM.
+      </div>
+    </div>
+    <div style="flex: 5" class="animation-posters">
+      <div class="animation-poster" style="background-image: url(assets/poster-plankton.jpg)"></div>
+      <div class="animation-poster" style="background-image: url(assets/poster-transformers.jpg)"></div>
+    </div>
+  </div>
+  <div id="now" class="parallax-section">
+    <div>
+      <p>You can find David in Los Angeles, California...</p>
+      <p>and social media.</p>
+    </div>
+    <div id="now-sun" class="pin"></div>
+  </div>
 </body>
 
 </html>

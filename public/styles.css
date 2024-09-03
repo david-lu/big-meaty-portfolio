@@ -2,6 +2,12 @@
     --school-color:#116;
 }
 
+@font-face {
+    font-family: Spongebob;
+    src: url(assets/sponge.ttf);
+}
+  
+
 html {
     font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
     background-color: rgb(255, 186, 75);
@@ -20,13 +26,7 @@ div {
 
 hr {
     margin: 1rem 2rem;
-    border: 1px solid black;
-}
-
-.absolute {
-    position: absolute;
-    left: 0;
-    top: 0;
+    border: 0.5px solid black;
 }
 
 body {
@@ -145,6 +145,8 @@ button:hover {
     height: 100vh;
     color: white;
     background: radial-gradient(circle, rgba(57,240,183,1) 0%, rgba(61,163,166,1) 100%);
+    /* background: url(assets/ref.jpg); */
+    /* background-size: 100% 100%; */
 }
 
 #title {
@@ -254,8 +256,15 @@ button:hover {
     opacity: 0;
 }
 
-#google-pin div {
+#google-pin-expand {
     transition: none;
+    opacity: 0;
+}
+
+#google-pin-logo {
+    position: absolute;
+    left: 0;
+    top: 0;
 }
 
 #google {
@@ -318,27 +327,27 @@ button:hover {
 }
 
 #google-doodle-baseball {
-    background-image: url('assets/doodle-baseball.gif');
+    background-image: url('assets/doodle-baseball.png');
 }
 
 #google-doodle-bobblehead {
-    background-image: url('assets/doodle-bobblehead.gif');
+    background-image: url('assets/doodle-bobblehead.png');
 }
 
 #google-doodle-halloween {
-    background-image: url('assets/doodle-halloween.gif');
+    background-image: url('assets/doodle-halloween.png');
 }
 
 #google-doodle-hiphop {
-    background-image: url('assets/doodle-hiphop.gif');
+    background-image: url('assets/doodle-hiphop.png');
 }
 
 #google-doodle-olympics {
-    background-image: url('assets/doodle-olympics.gif');
+    background-image: url('assets/doodle-olympics.png');
 }
 
 #google-doodle-rabbit {
-    background-image: url('assets/doodle-rabbit.gif');
+    background-image: url('assets/doodle-rabbit.png');
 }
 
 #google-search-bar {
@@ -377,9 +386,46 @@ button:hover {
 }
 
 #animation {
-    height: 100vh;
-    background-color: purple;
+    display: flex;
+    flex-direction: column;
+    height: 150vh;
+    background: url('assets/bg-nick.jpg');
+    font-family: Spongebob;
+    padding: 8vw;
+    color: #aef5d4;
 }
+
+.animation-text {
+    font-size: 2rem;
+    letter-spacing: .2rem;
+    line-height: 2.5rem;
+    text-shadow: 3px 3px #000000aa;
+    max-width: min(80%, 80vh);
+}
+
+.animation-title {
+    width: 80%;
+    text-align: center;
+    font-size: 4rem;
+    letter-spacing: .4rem;
+    line-height: 5rem;
+    text-shadow: 5px 5px #000000aa;
+}
+
+.animation-posters {
+    display: flex;
+    width: 100%;
+    justify-content: space-around;
+}
+
+.animation-poster {
+    width: min(40vh, 40vw);
+    aspect-ratio: 0.68;
+    background-size: cover;
+    border-radius: 2px;
+    box-shadow: 1px 1px #000000aa;
+}
+
 
 #skills {
     height: 180vh;
@@ -400,7 +446,16 @@ button:hover {
 
 #now {
     height: 100vh;
-    background-color: blue;
+    background: linear-gradient(0deg, rgba(230,17,98,1) 20%, rgba(230,17,17,1) 44%, rgba(255,151,0,1) 100%);
+}
+
+#now-sun {
+    width: max(30vw, 15vh);
+    aspect-ratio: 1;
+    left: 67%;
+    top: 66%;
+    border-radius: 100%;
+    background: linear-gradient(0deg, rgba(230,147,17,0) 30%, rgba(230,176,17,1) 100%);
 }
 
 @media screen and (orientation:portrait) {

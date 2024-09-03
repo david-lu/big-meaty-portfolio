@@ -91,39 +91,36 @@ ScrollTrigger.create({
   }
 });
 
+const googlePinExpand = document.querySelector('#google-pin-expand');
+
 gsap.fromTo(
-  '#google-pin-expand',
-  { scale: 0 },
+  googlePinExpand,
+  { scale: 1,
+    opacity: 0,
+   },
   {
-    scale: 20,
-    ease: 'none',
+    scale: 25,
+    opacity: 50,
+    ease: 'power1.in',
     scrollTrigger: {
       trigger: '#map',
       start: "45% center",
       end: "bottom top",
-      ease: 'ease-in',
-      scrub: 0.1,
+      scrub: 0.5,
       markers: true,
     }
   }
 );
 
-gsap.fromTo(
-  '#google-pin-logo',
-  { scale: 0 },
-  {
-    scale: 1,
-    ease: 'none',
-    scrollTrigger: {
-      trigger: '#map',
-      start: "45% center",
-      end: "50% center",
-      ease: 'ease-out',
-      scrub: 0.1,
-      markers: true,
-    }
+ScrollTrigger.create({
+  trigger: '#map',
+  start: "45% center",
+  end: "bottom top",
+  markers: true,
+  onToggle: (self) => {
+    document.querySelector('#google-pin').classList.toggle('inactive');
   }
-);
+});
 
 
 // GOOGLE
