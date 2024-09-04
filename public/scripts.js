@@ -42,7 +42,31 @@ gsap.to("#subtitle",
 
 gsap.to("#david",
   {
-    yPercent: 25,
+    yPercent: 15,
+    scrollTrigger: {
+      trigger: "#intro",
+      start: "top top",
+      end: "bottom top",
+      scrub: 0.3,
+    },
+  }
+);
+
+gsap.to('#intro-layer-0',
+  {
+    yPercent: 30,
+    scrollTrigger: {
+      trigger: "#intro",
+      start: "top top",
+      end: "bottom top",
+      scrub: 0.3,
+    },
+  }
+);
+
+gsap.to('#intro-layer-1',
+  {
+    yPercent: 45,
     scrollTrigger: {
       trigger: "#intro",
       start: "top top",
@@ -122,7 +146,7 @@ gsap.fromTo(
       start: "76% bottom",
       end: "50% top",
       scrub: 0.5,
-      markers: true,
+      // markers: true,
     }
   }
 );
@@ -238,8 +262,43 @@ gsap.utils.toArray('.skill-section').forEach((element, i) => {
   element.innerHTML += ` ${text} ${text} ${text} ${text} ${text} ${text} ${text}`;
 });
 
-// document.querySelector('#splash-scroll-button').addEventListener('click', () => {
-//   gsap.to(window, { duration: 1, scrollTo: vh(100) });
-// });
+// OUTRO
+gsap.fromTo('#outro-layer-0',
+  {yPercent: -60},
+  {
+    yPercent: 0,
+    scrollTrigger: {
+      trigger: "#outro",
+      start: "top bottom",
+      end: "bottom bottom",
+      scrub: 0.3,
+      markers: true,
+    },
+  }
+);
 
-// ScrollTrigger.scrollerProxy(".parallax-section", {	pinType: "fixed" });
+gsap.fromTo('#outro-layer-1',
+  {yPercent: -40},
+  {
+    yPercent: 0,
+    scrollTrigger: {
+      trigger: "#outro",
+      start: "top bottom",
+      end: "bottom bottom",
+      scrub: 0.3,
+    },
+  }
+);
+
+gsap.fromTo("#outro-sun",
+  {yPercent: -20},
+  {
+    yPercent: 0,
+    scrollTrigger: {
+      trigger: "#outro",
+      start: "top bottom",
+      end: "bottom bottom",
+      scrub: 0.3,
+    },
+  }
+);
