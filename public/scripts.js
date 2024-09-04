@@ -79,9 +79,9 @@ gsap.to('#intro-layer-1',
 // MAP
 gsap.fromTo(
   '#map-path',
-  { y: vh(-30) },
+  { y: vh(-2) },
   {
-    y: vh(10),
+    y: vh(40),
     ease: 'none',
     scrollTrigger: {
       trigger: '#map',
@@ -101,74 +101,96 @@ gsap.fromTo(
     strokeDashoffset: 0,
     ease: 'none',
     scrollTrigger: {
-      trigger: '#map',
-      start: "35% bottom",
-      end: "10% top",
+      trigger: '#map-path',
+      start: "-10% center",
+      end: "20% top",
       scrub: 0.5,
-      // markers: true,
+      markers: true,
     },
   }
 );
 
 ScrollTrigger.create({
-  trigger: '#map',
-  start: "46% bottom",
-  end: "bottom top",
+  trigger: '#map-path',
+  start: "14% center",
+  end: "20% top",
   // markers: true,
-  onToggle: (self) => {
-    document.querySelector('#school-pin').classList.toggle('inactive');
+  onEnter: (self) => {
+    document.querySelector('#school-pin').classList.remove('inactive');
+  },
+  onLeaveBack: (self) => {
+    document.querySelector('#school-pin').classList.add('inactive');
   }
 });
 
 ScrollTrigger.create({
-  trigger: '#map',
-  start: "63% bottom",
-  end: "bottom top",
+  trigger: '#map-path',
+  start: "45% center",
+  end: "20% top",
   // markers: true,
-  onToggle: (self) => {
-    document.querySelector('#samsung-pin').classList.toggle('inactive');
+  onEnter: (self) => {
+    document.querySelector('#samsung-pin').classList.remove('inactive');
+  },
+  onLeaveBack: (self) => {
+    document.querySelector('#samsung-pin').classList.add('inactive');
   }
 });
 
 const googlePinExpand = document.querySelector('#google-pin-expand');
-
 gsap.fromTo(
   googlePinExpand,
   { scale: 1,
     opacity: 0,
    },
   {
-    scale: 20,
+    scale: 30,
     opacity: 50,
-    ease: 'power1.in',
+    ease: 'power2.in',
     scrollTrigger: {
-      trigger: '#map',
-      start: "76% bottom",
-      end: "50% top",
-      scrub: 0.5,
+      trigger: '#map-path',
+      start: "68% center",
+      end: "55% top",
+      scrub: 0.3,
       // markers: true,
     }
   }
 );
 
 ScrollTrigger.create({
-  trigger: '#map',
-  start: "45% center",
-  end: "bottom top",
+  trigger: '#map-path',
+  start: "68% center",
+  end: "20% top",
   // markers: true,
-  onToggle: (self) => {
-    document.querySelector('#google-pin').classList.toggle('inactive');
+  onEnter: (self) => {
+    document.querySelector('#google-pin').classList.remove('inactive');
+  },
+  onLeaveBack: (self) => {
+    document.querySelector('#google-pin').classList.add('inactive');
   }
 });
 
+gsap.fromTo(
+  '#map-info',
+  { y: vh(-10) },
+  {
+    y: vh(60),
+    ease: 'none',
+    scrollTrigger: {
+      trigger: '#map',
+      start: "top bottom",
+      end: "bottom top",
+      scrub: 0,
+    }
+  }
+);
 
 // GOOGLE
 
 gsap.fromTo(
   '#google-page',
-  { y: vh(-55) },
+  { y: vh(-50) },
   {
-    y: vh(70),
+    y: vh(65),
     ease: 'none',
     scrollTrigger: {
       trigger: '#google',
@@ -231,7 +253,7 @@ gsap.fromTo(
   '#skills .parallax-container',
   { y: vh(-75) },
   {
-    y: vh(80),
+    y: vh(75),
     ease: 'none',
     scrollTrigger: {
       trigger: '#skills',
@@ -262,6 +284,40 @@ gsap.utils.toArray('.skill-section').forEach((element, i) => {
   element.innerHTML += ` ${text} ${text} ${text} ${text} ${text} ${text} ${text}`;
 });
 
+// ANIMATION
+// gsap.utils.toArray('.animation-text').forEach((elem, i) => {
+//   console.log(elem);
+//   gsap.fromTo(elem,
+//     {y: vh(-30)},
+//     {
+//       y: vh(0),
+//       ease: 'power1.out',
+//       scrollTrigger: {
+//         trigger: elem,
+//         start: "top bottom",
+//         end: "100% top",
+//         scrub: 0.5,
+//         markers: true,
+//       },
+//     }
+//   );
+// })
+
+gsap.fromTo('#animation .parallax-container',
+  {y: vh(-30)},
+  {
+    y: vh(30),
+    ease: 'none',
+    scrollTrigger: {
+      trigger: '#animation',
+      start: "top bottom",
+      end: "100% top",
+      scrub: 0.5,
+      markers: true,
+    },
+  }
+);
+
 // OUTRO
 gsap.fromTo('#outro-layer-0',
   {yPercent: -60},
@@ -272,7 +328,7 @@ gsap.fromTo('#outro-layer-0',
       start: "top bottom",
       end: "bottom bottom",
       scrub: 0.3,
-      markers: true,
+      // markers: true,
     },
   }
 );

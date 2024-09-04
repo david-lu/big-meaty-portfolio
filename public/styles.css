@@ -1,5 +1,5 @@
 :root {
-    --school-color:rgb(33, 43, 80);
+    --school-color: rgb(33, 43, 80);
     --parallax-padding: calc(max(7vw, 100vw - (100vh * 1.7)) / 2);
     --parallax-narrow-padding: calc(max(7vw, 100vw - (100vh * 1.1)) / 2);
 }
@@ -8,7 +8,7 @@
     font-family: Spongebob;
     src: url(assets/sponge.ttf);
 }
-  
+
 
 html {
     font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
@@ -35,7 +35,7 @@ body {
     margin: 0;
 }
 
-body > div {
+body>div {
     position: absolute;
     left: 0;
     top: 0;
@@ -146,7 +146,7 @@ button:hover {
     justify-content: center;
     height: 100vh;
     color: white;
-    background: radial-gradient(circle, rgba(57,240,183,1) 0%, rgba(61,163,166,1) 100%);
+    background: radial-gradient(circle, rgba(57, 240, 183, 1) 0%, rgba(61, 163, 166, 1) 100%);
     /* background: url(assets/ref.jpg); */
     /* background-size: 100% 100%; */
 }
@@ -179,7 +179,7 @@ button:hover {
     width: 100%;
     background-size: contain;
     background-position: bottom;
-    background-image: url('assets/intro-david.png');   
+    background-image: url('assets/intro-david.png');
 }
 
 .parallax-bg {
@@ -190,13 +190,15 @@ button:hover {
 }
 
 #map {
-    height: 150vh;
+    flex-direction: column;
+    height: 170vh;
     background-color: var(--school-color);
     padding: 0 var(--parallax-narrow-padding);
 }
 
 #map-path {
     height: 100vh;
+    align-self: flex-start;
     /* background-color: maroon; */
 }
 
@@ -210,6 +212,20 @@ button:hover {
     stroke: white;
     stroke-width: 5px;
     transition: stroke 0.25s ease;
+}
+
+#map-info {
+    padding: 0 15vw;
+    text-align: justify;
+    color: var(--school-color);
+}
+
+#map-info a {
+    color: var(--school-color);
+}
+
+#map-info a:hover {
+    color: #747379;
 }
 
 .pin {
@@ -293,11 +309,11 @@ button:hover {
     max-width: 30vw;
 }
 
-#google-info > h1 {
+#google-info>h1 {
     text-align: center;
 }
 
-#google-info > p {
+#google-info>p {
     text-align: justify;
 }
 
@@ -318,7 +334,7 @@ button:hover {
     aspect-ratio: 1.9;
 }
 
-#google-doodle > div {
+#google-doodle>div {
     position: absolute;
     left: 0;
     top: 0;
@@ -329,8 +345,8 @@ button:hover {
     cursor: pointer;
 }
 
-#google-doodle > div.disabled {
-    display:none;
+#google-doodle>div.disabled {
+    display: none;
 }
 
 .google-doodle-default {
@@ -397,6 +413,47 @@ button:hover {
     border: 1px solid #c4c6c8;
 }
 
+#skills-header {
+    height: 8rem;
+    background-color: #ffb4d6;
+    color: rgb(222, 10, 77);
+    font-size: 5rem;
+    font-weight: bold;
+}
+
+
+#skills {
+    height: 160vh;
+    background-color: rgb(222, 10, 77);
+    font-weight: bold;
+}
+
+.skill-header {
+    margin: 0 5rem;
+    font-size: 1.5rem;
+}
+
+.skill-section {
+    font-size: 3rem;
+    overflow: visible;
+    white-space: nowrap;
+    padding-bottom: 4vh;
+}
+
+.skill-section a:nth-child(odd) {
+    color: #ffb4d6;
+}
+
+.skill-section a {
+    margin: 0 1vh;
+    color: #ff8383;
+    text-decoration-line: none;
+}
+
+.skill-section a:hover {
+    opacity: 0.5;
+}
+
 #animation {
     height: 180vh;
     background: url('assets/animation-bg.jpg');
@@ -445,41 +502,9 @@ button:hover {
 }
 
 
-#skills {
-    height: 180vh;
-    background-color: rgb(237, 36, 100);
-    font-weight: bold;
-}
-
-.skill-header {
-    margin: 0 5rem;
-    font-size: 1.5rem;
-}
-
-.skill-section {
-    font-size: 3rem;
-    overflow: visible;
-    white-space: nowrap;
-    padding-bottom: 4vh;
-}
-
-.skill-section a:nth-child(odd) {
-    color: #ffb4d6;
-}
-
-.skill-section a {
-    margin: 0 1vh;
-    color: #ff8383;
-    text-decoration-line: none;
-}
-
-.skill-section a:hover {
-    opacity: 0.5;
-}
-
 #outro {
     height: 100vh;
-    background: linear-gradient(0deg, rgba(230,17,98,1) 20%, rgba(230,17,17,1) 44%, rgba(255,151,0,1) 100%);
+    background: linear-gradient(0deg, rgba(230, 17, 98, 1) 20%, rgba(230, 17, 17, 1) 44%, rgba(255, 151, 0, 1) 100%);
 }
 
 #outro-text {
@@ -499,7 +524,7 @@ button:hover {
     left: 27%;
     bottom: 34%;
     border-radius: 100%;
-    background: linear-gradient(0deg, rgba(230,147,17,0) 30%, rgba(230,176,17,1) 100%);
+    background: linear-gradient(0deg, rgba(230, 147, 17, 0) 30%, rgba(230, 176, 17, 1) 100%);
 }
 
 @media screen and (orientation:portrait) {
