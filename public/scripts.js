@@ -54,18 +54,33 @@ gsap.to("#david",
 
 // MAP
 gsap.fromTo(
+  '#map-path',
+  { y: vh(-30) },
+  {
+    y: vh(10),
+    ease: 'none',
+    scrollTrigger: {
+      trigger: '#map',
+      start: "top bottom",
+      end: "bottom top",
+      scrub: 0,
+    }
+  }
+);
+
+gsap.fromTo(
   '#map-path svg',
-  { strokeDasharray: '120%',
-    strokeDashoffset: '120%',
+  { strokeDasharray: '170%',
+    strokeDashoffset: '170%',
    },
   {
     strokeDashoffset: 0,
     ease: 'none',
     scrollTrigger: {
       trigger: '#map',
-      start: "20% bottom",
+      start: "35% bottom",
       end: "10% top",
-      scrub: 0.2,
+      scrub: 0.5,
       // markers: true,
     },
   }
@@ -73,9 +88,9 @@ gsap.fromTo(
 
 ScrollTrigger.create({
   trigger: '#map',
-  start: "6% center",
+  start: "46% bottom",
   end: "bottom top",
-  markers: true,
+  // markers: true,
   onToggle: (self) => {
     document.querySelector('#school-pin').classList.toggle('inactive');
   }
@@ -83,9 +98,9 @@ ScrollTrigger.create({
 
 ScrollTrigger.create({
   trigger: '#map',
-  start: "22% center",
+  start: "63% bottom",
   end: "bottom top",
-  markers: true,
+  // markers: true,
   onToggle: (self) => {
     document.querySelector('#samsung-pin').classList.toggle('inactive');
   }
@@ -99,13 +114,13 @@ gsap.fromTo(
     opacity: 0,
    },
   {
-    scale: 25,
+    scale: 20,
     opacity: 50,
     ease: 'power1.in',
     scrollTrigger: {
       trigger: '#map',
-      start: "45% center",
-      end: "bottom top",
+      start: "76% bottom",
+      end: "50% top",
       scrub: 0.5,
       markers: true,
     }
@@ -116,7 +131,7 @@ ScrollTrigger.create({
   trigger: '#map',
   start: "45% center",
   end: "bottom top",
-  markers: true,
+  // markers: true,
   onToggle: (self) => {
     document.querySelector('#google-pin').classList.toggle('inactive');
   }
@@ -126,10 +141,10 @@ ScrollTrigger.create({
 // GOOGLE
 
 gsap.fromTo(
-  '#google .parallax-container',
+  '#google-page',
   { y: vh(-55) },
   {
-    y: vh(140),
+    y: vh(70),
     ease: 'none',
     scrollTrigger: {
       trigger: '#google',
@@ -169,8 +184,8 @@ const doodles = gsap.utils.toArray('#google-doodle > div');
 for (let i = 0; i < doodles.length - 1; i++) {
   const a = doodles[i];
   const b = doodles[i + 1];
-  const start = 30 - ((i / doodles.length) * 150);
-  const end = 45 - (((i + 1) / doodles.length) * 150);
+  const start = 20 - ((i / doodles.length) * 150);
+  const end = 35 - (((i + 1) / doodles.length) * 150);
 
   gsap.fromTo(b, 
     {'--clip': '0%'},
@@ -190,9 +205,9 @@ for (let i = 0; i < doodles.length - 1; i++) {
 // SKILLS
 gsap.fromTo(
   '#skills .parallax-container',
-  { y: vh(-45) },
+  { y: vh(-75) },
   {
-    y: vh(150),
+    y: vh(80),
     ease: 'none',
     scrollTrigger: {
       trigger: '#skills',
@@ -214,7 +229,7 @@ gsap.utils.toArray('.skill-section').forEach((element, i) => {
         trigger: "#skills",
         start: "top bottom",
         end: "bottom top",
-        scrub: 0,
+        scrub: 0.5,
         // markers: true,
       },
     }

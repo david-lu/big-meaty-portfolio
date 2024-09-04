@@ -1,5 +1,7 @@
 :root {
-    --school-color:#116;
+    --school-color:rgb(33, 43, 80);
+    --parallax-padding: calc(max(7vw, 100vw - (100vh * 1.7)) / 2);
+    --parallax-narrow-padding: calc(max(7vw, 100vw - (100vh * 1.4)) / 2);
 }
 
 @font-face {
@@ -126,15 +128,14 @@ button:hover {
 } */
 
 .parallax-section {
+    display: flex;
+    justify-content: flex-start;
     position: relative;
     overflow: hidden;
-    padding: 0 5vw;
+    padding: 0 var(--parallax-padding);
 }
 
 .parallax-container {
-    position: absolute;
-    left: 0;
-    top: 0;
     width: 100%;
     height: 70vh;
 }
@@ -142,6 +143,7 @@ button:hover {
 #intro {
     display: flex;
     flex-direction: column;
+    justify-content: center;
     height: 100vh;
     color: white;
     background: radial-gradient(circle, rgba(57,240,183,1) 0%, rgba(61,163,166,1) 100%);
@@ -180,14 +182,19 @@ button:hover {
     background-image: url('assets/man.png');   
 }
 
+.intro-layer {
+
+}
+
 #map {
-    height: 130vh;
+    height: 150vh;
     background-color: var(--school-color);
+    padding: 0 var(--parallax-narrow-padding);
 }
 
 #map-path {
-    /* background-color: aquamarine; */
     height: 100vh;
+    /* background-color: maroon; */
 }
 
 #map-path svg {
@@ -197,8 +204,8 @@ button:hover {
 
 #map-path path {
     fill: none;
-    stroke: hsl(38, 100%, 50%);
-    stroke-width: 1px;
+    stroke: white;
+    stroke-width: 5px;
     transition: stroke 0.25s ease;
 }
 
@@ -206,6 +213,7 @@ button:hover {
     display: flow;
     position: absolute;
     transform: translate(-50%, -50%);
+    color: white;
 }
 
 .pin-icon {
@@ -229,7 +237,6 @@ button:hover {
     bottom: 0;
     height: 100%;
     width: 30vh;
-    color: white;
     transition: 200ms ease;
 }
 
@@ -259,6 +266,7 @@ button:hover {
 #google-pin-expand {
     transition: none;
     opacity: 0;
+    /* background-color: green; */
 }
 
 #google-pin-logo {
@@ -302,16 +310,17 @@ button:hover {
 }
 
 #google-doodle {
-    display: flex;
-    height: 30vh;
-    aspect-ratio: 1.7;
+    position: relative;
+    width: min(50vh, 100vw);
+    aspect-ratio: 1.9;
 }
 
 #google-doodle > div {
-    margin: 0 10px;
     position: absolute;
-    aspect-ratio: 1.7;
-    width: 50vh;
+    left: 0;
+    top: 0;
+    aspect-ratio: 1.9;
+    width: 100%;
     background-color: white;
     clip-path: polygon(0% 0%, 0 100%, var(--clip) 100%, var(--clip) 0%);
     cursor: pointer;
@@ -387,11 +396,12 @@ button:hover {
 
 #animation {
     display: flex;
+    gap: 25px;
     flex-direction: column;
-    height: 150vh;
+    justify-content: space-evenly;
+    height: 180vh;
     background: url('assets/bg-nick.jpg');
     font-family: Spongebob;
-    padding: 8vw;
     color: #aef5d4;
 }
 
@@ -404,7 +414,7 @@ button:hover {
 }
 
 .animation-title {
-    width: 80%;
+    width: 80vw;
     text-align: center;
     font-size: 4rem;
     letter-spacing: .4rem;
@@ -442,6 +452,20 @@ button:hover {
     font-size: 3rem;
     overflow: visible;
     white-space: nowrap;
+}
+
+.skill-section a:nth-child(odd) {
+    color: #444;
+}
+
+.skill-section a {
+    margin: 0 1vh;
+    color: #777;
+    text-decoration-line: none;
+}
+
+.skill-section a:hover {
+    opacity: 0.5;
 }
 
 #now {
