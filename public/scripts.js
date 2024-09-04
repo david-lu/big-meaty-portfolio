@@ -1,6 +1,4 @@
-import * as THREE from 'three';
-
-gsap.registerPlugin(ScrollToPlugin, ScrollTrigger);
+gsap.registerPlugin(CustomEase, ScrollToPlugin, ScrollTrigger);
 
 const vh = (x) => window.innerHeight * (x / 100);
 const vw = (y) => window.innerWidth * (y / 100);
@@ -106,7 +104,7 @@ gsap.fromTo(
       start: "-10% center",
       end: "20% top",
       scrub: 0.5,
-      markers: true,
+      // markers: true,
     },
   }
 );
@@ -191,14 +189,14 @@ gsap.fromTo(
   '#google-page',
   { y: vh(-50) },
   {
-    y: vh(65),
+    y: vh(55),
     ease: 'none',
     scrollTrigger: {
       trigger: '#google',
       start: "top bottom",
       end: "bottom top",
       scrub: 0,
-      // markers: true,
+      markers: true,
     }
   }
 );
@@ -231,8 +229,8 @@ const doodles = gsap.utils.toArray('#google-doodle > div');
 for (let i = 0; i < doodles.length - 1; i++) {
   const a = doodles[i];
   const b = doodles[i + 1];
-  const start = 20 - ((i / doodles.length) * 150);
-  const end = 35 - (((i + 1) / doodles.length) * 150);
+  const start = 30 - ((i / doodles.length) * 140);
+  const end = 45 - (((i + 1) / doodles.length) * 140);
 
   gsap.fromTo(b, 
     {'--clip': '0%'},

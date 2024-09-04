@@ -311,6 +311,7 @@ button:hover {
 
 #google .parallax-container {
     display: flex;
+    /* background-color: red; */
 }
 
 #google-info {
