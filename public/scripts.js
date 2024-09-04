@@ -7,7 +7,8 @@ const vw = (y) => window.innerWidth * (y / 100);
 
 document.querySelector('#nav-hamburger').addEventListener('click', () => {
   document.querySelector('#nav-art').classList.toggle('hidden');
-  document.querySelector('#nav-contact').classList.toggle('hidden');
+  document.querySelector('#nav-linkedin').classList.toggle('hidden');
+  document.querySelector('#nav-instagram').classList.toggle('hidden');
 });
 
 document.querySelector('#nav-art').addEventListener('click', () => {
@@ -101,7 +102,7 @@ gsap.fromTo(
     strokeDashoffset: 0,
     ease: 'none',
     scrollTrigger: {
-      trigger: '#map-path',
+      trigger: '#map',
       start: "-10% center",
       end: "20% top",
       scrub: 0.5,
@@ -111,7 +112,7 @@ gsap.fromTo(
 );
 
 ScrollTrigger.create({
-  trigger: '#map-path',
+  trigger: '#map',
   start: "14% center",
   end: "20% top",
   // markers: true,
@@ -124,7 +125,7 @@ ScrollTrigger.create({
 });
 
 ScrollTrigger.create({
-  trigger: '#map-path',
+  trigger: '#map',
   start: "45% center",
   end: "20% top",
   // markers: true,
@@ -147,7 +148,7 @@ gsap.fromTo(
     opacity: 50,
     ease: 'power2.in',
     scrollTrigger: {
-      trigger: '#map-path',
+      trigger: '#map',
       start: "68% center",
       end: "55% top",
       scrub: 0.3,
@@ -157,7 +158,7 @@ gsap.fromTo(
 );
 
 ScrollTrigger.create({
-  trigger: '#map-path',
+  trigger: '#map',
   start: "68% center",
   end: "20% top",
   // markers: true,
@@ -284,77 +285,60 @@ gsap.utils.toArray('.skill-section').forEach((element, i) => {
   element.innerHTML += ` ${text} ${text} ${text} ${text} ${text} ${text} ${text}`;
 });
 
-// ANIMATION
-// gsap.utils.toArray('.animation-text').forEach((elem, i) => {
-//   console.log(elem);
-//   gsap.fromTo(elem,
-//     {y: vh(-30)},
-//     {
-//       y: vh(0),
-//       ease: 'power1.out',
-//       scrollTrigger: {
-//         trigger: elem,
-//         start: "top bottom",
-//         end: "100% top",
-//         scrub: 0.5,
-//         markers: true,
-//       },
-//     }
-//   );
-// })
-
-gsap.fromTo('#animation .parallax-container',
-  {y: vh(-30)},
-  {
-    y: vh(30),
-    ease: 'none',
-    scrollTrigger: {
-      trigger: '#animation',
-      start: "top bottom",
-      end: "100% top",
-      scrub: 0.5,
-      markers: true,
-    },
-  }
-);
-
 // OUTRO
 gsap.fromTo('#outro-layer-0',
-  {yPercent: -60},
+  {y: -vh(30)},
   {
-    yPercent: 0,
+    y: 0,
     scrollTrigger: {
+      ease: 'power1.out',
       trigger: "#outro",
       start: "top bottom",
       end: "bottom bottom",
-      scrub: 0.3,
+      scrub: 0.2,
       // markers: true,
     },
   }
 );
 
 gsap.fromTo('#outro-layer-1',
-  {yPercent: -40},
+  {y: -vh(20)},
   {
-    yPercent: 0,
+    y: 0,
     scrollTrigger: {
+      ease: 'power1.out',
       trigger: "#outro",
       start: "top bottom",
       end: "bottom bottom",
-      scrub: 0.3,
+      scrub: 0.2,
     },
   }
 );
 
 gsap.fromTo("#outro-sun",
-  {yPercent: -20},
+  {y: -vh(10)},
   {
-    yPercent: 0,
+    y: 0,
     scrollTrigger: {
+      ease: 'power1.out',
       trigger: "#outro",
       start: "top bottom",
       end: "bottom bottom",
-      scrub: 0.3,
+      scrub: 0.2,
+    },
+  }
+);
+
+gsap.fromTo("#outro-socials",
+  {y: -vh(50)},
+  {
+    y: 0,
+    scrollTrigger: {
+      ease: 'power2.out',
+      trigger: "#outro",
+      start: "top bottom",
+      end: "bottom bottom",
+      scrub: 0.2,
     },
   }
 );

@@ -20,6 +20,7 @@ div {
     justify-content: center;
     align-content: center;
     align-items: center;
+    flex-direction: column;
     background-position: center;
     background-repeat: no-repeat;
     background-size: contain;
@@ -43,6 +44,7 @@ body>div {
 
 #nav-menu {
     display: flex;
+    flex-direction: row;
     justify-content: flex-end;
     top: 0;
     right: 0;
@@ -89,11 +91,11 @@ body>div {
 }
 
 #nav-hamburger {
-    z-index: 100;
+    transform: scale(1.35);
 }
 
 #nav-art {
-    transition-delay: 100ms;
+    transition-delay: 200ms;
 }
 
 #nav-art.hidden {
@@ -101,13 +103,22 @@ body>div {
     transition-delay: 0s;
 }
 
-#nav-contact {
+#nav-linkedin {
+    transition-delay: 100ms;
+}
+
+#nav-linkedin.hidden {
+    transform: translateY(-70px);
+    transition-delay: 70ms;
+}
+
+#nav-instagram {
     transition-delay: 0s;
 }
 
-#nav-contact.hidden {
+#nav-instagram.hidden {
     transform: translateY(-70px);
-    transition-delay: 50ms;
+    transition-delay: 140ms;
 }
 
 /* button {
@@ -142,7 +153,6 @@ button:hover {
 
 #intro {
     display: flex;
-    flex-direction: column;
     justify-content: center;
     height: 100vh;
     color: white;
@@ -190,7 +200,6 @@ button:hover {
 }
 
 #map {
-    flex-direction: column;
     height: 170vh;
     background-color: var(--school-color);
     padding: 0 var(--parallax-narrow-padding);
@@ -295,13 +304,13 @@ button:hover {
 }
 
 #google {
+    flex-direction: row;
     height: 150vh;
     background-color: white;
 }
 
 #google .parallax-container {
     display: flex;
-    flex-direction: row;
 }
 
 #google-info {
@@ -414,7 +423,7 @@ button:hover {
 }
 
 #skills-header {
-    height: 8rem;
+    padding: 1rem 0;
     background-color: #ffb4d6;
     color: rgb(222, 10, 77);
     font-size: 5rem;
@@ -423,6 +432,7 @@ button:hover {
 
 
 #skills {
+    flex-direction: row;
     height: 160vh;
     background-color: rgb(222, 10, 77);
     font-weight: bold;
@@ -451,7 +461,7 @@ button:hover {
 }
 
 .skill-section a:hover {
-    opacity: 0.5;
+    color: white;
 }
 
 #animation {
@@ -501,30 +511,48 @@ button:hover {
     box-shadow: 1px 1px #000000aa;
 }
 
+#outro-header {
+    padding: 1rem 0;
+    text-align: center;
+    background-color: white;
+    color: rgb(234, 91, 25);
+    font-size: 2rem;
+    font-weight: bold;
+}
+
 
 #outro {
     height: 100vh;
+    justify-content: center;
     background: linear-gradient(0deg, rgba(230, 17, 98, 1) 20%, rgba(230, 17, 17, 1) 44%, rgba(255, 151, 0, 1) 100%);
-}
-
-#outro-text {
-    position: absolute;
-    top: 10%;
-    left: 15%;
-    width: 70%;
-    text-align: center;
-    font-size: 2rem;
-    color: white;
+    padding: 0 var(--parallax-narrow-padding);
 }
 
 #outro-sun {
     position: absolute;
-    width: max(30vw, 15vh);
+    width: min(70vw, 45vh);
     aspect-ratio: 1;
-    left: 27%;
     bottom: 34%;
     border-radius: 100%;
     background: linear-gradient(0deg, rgba(230, 147, 17, 0) 30%, rgba(230, 176, 17, 1) 100%);
+}
+
+#outro-socials {
+    display: flex;
+    flex-direction: row;
+    z-index: 50;
+    gap: 3vw;
+}
+
+.outro-icon {
+    width: 9vh;
+    aspect-ratio: 1;
+    transition: transform 300ms ease-in-out;
+    cursor: pointer;
+}
+
+.outro-icon:hover {
+    opacity: 0.8;
 }
 
 @media screen and (orientation:portrait) {
