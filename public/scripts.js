@@ -187,9 +187,9 @@ gsap.fromTo(
 
 gsap.fromTo(
   '#google-page',
-  { y: vh(-50) },
+  { y: vh(-55) },
   {
-    y: vh(55),
+    y: vh(65),
     ease: 'none',
     scrollTrigger: {
       trigger: '#google',
@@ -202,10 +202,6 @@ gsap.fromTo(
 );
 
 const doodleInfos = [
-  {
-    search: 'Halloween 2018 Doodle',
-    link: ''
-  },
   {
     search: 'Fourth of July 2019 Doodle',
     link: ''
@@ -229,8 +225,8 @@ const doodles = gsap.utils.toArray('#google-doodle > div');
 for (let i = 0; i < doodles.length - 1; i++) {
   const a = doodles[i];
   const b = doodles[i + 1];
-  const start = 30 - ((i / doodles.length) * 140);
-  const end = 45 - (((i + 1) / doodles.length) * 140);
+  const start = 25 - ((i / doodles.length) * 140);
+  const end = 40 - (((i + 1) / doodles.length) * 140);
 
   gsap.fromTo(b, 
     {'--clip': '0%'},
