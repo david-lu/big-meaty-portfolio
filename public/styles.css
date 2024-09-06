@@ -395,41 +395,21 @@ button:hover {
     aspect-ratio: 1.9;
     width: 100%;
     background-color: white;
-    clip-path: polygon(0% 0%, 0 100%, var(--clip) 100%, var(--clip) 0%);
     cursor: pointer;
 }
 
-#google-doodle>div.disabled {
-    display: none;
+.google-doodle-wipe {
+    --clip: 100%;
+    clip-path: polygon(0% 0%, 0 100%, var(--clip) 100%, var(--clip) 0%);
+    transition: 250ms ease-in-out;
+}
+
+.google-doodle-wipe.hidden {
+    --clip: 0%;
 }
 
 .google-doodle-default {
     background-image: url('assets/google.svg');
-    --clip: 100%;
-}
-
-#google-doodle-baseball {
-    background-image: url('assets/doodle-baseball.png');
-}
-
-#google-doodle-bobblehead {
-    background-image: url('assets/doodle-bobblehead.png');
-}
-
-#google-doodle-halloween {
-    background-image: url('assets/doodle-halloween.png');
-}
-
-#google-doodle-hiphop {
-    background-image: url('assets/doodle-hiphop.png');
-}
-
-#google-doodle-olympics {
-    background-image: url('assets/doodle-olympics.png');
-}
-
-#google-doodle-rabbit {
-    background-image: url('assets/doodle-rabbit.png');
 }
 
 #google-search-bar {

@@ -206,26 +206,26 @@ gsap.fromTo(
       start: "top bottom",
       end: "bottom top",
       scrub: 0,
-      markers: true,
+      // markers: true,
     }
   }
 );
 
 const doodleInfos = [
   {
-    search: 'Fourth of July 2019 Doodle',
+    search: 'Celebrating the Dachshund Bobblehead',
     link: ''
   },
   {
-    search: '47th Anniversary of Hip hop',
+    search: '44th Anniversary of the Birth of Hip Hop',
     link: ''
   },
   {
-    search: 'Doodle Champion Island',
+    search: 'Doodle Champion Island Games Begin!',
     link: ''
   },
   {
-    search: 'Celebrating Kid\'s Coding',
+    search: 'Celebrating 50 years of Kids Coding',
     link: ''
   },
 ];
@@ -238,21 +238,32 @@ for (let i = 0; i < doodles.length - 1; i++) {
   const start = 25 - ((i / doodles.length) * 140);
   const end = 40 - (((i + 1) / doodles.length) * 140);
 
-  gsap.fromTo(b,
-    { '--clip': '0%' },
+  ScrollTrigger.create(
     {
-      '--clip': '100%',
-      ease: 'none',
-      scrollTrigger: {
-        trigger: "#google",
-        start: `0% ${start}%`,
-        end: `0% ${end}%`,
-        scrub: 0.3,
-        // markers: true,
+      trigger: "#google",
+      start: `0% ${start}%`,
+      end: `0% ${end}%`,
+      onEnter: (self) => {
+        b.classList.remove('hidden');
+        const info = doodleInfos[i];
+        searchBar.innerHTML = info ? info['search'] : '';
       },
+      onLeaveBack: (self) => {
+        b.classList.add('hidden');
+        const info = doodleInfos[i - 1];
+        searchBar.innerHTML = info ? info['search'] : '';
+      }
     }
-  )
+  );
 }
+
+document.querySelector('#google-button-search').addEventListener('click', () => {
+  window.open('http://www.google.com/search?q=' + (searchBar.innerHTML || 'Google Doodles'), '_blank');
+});
+
+document.querySelector('#google-button-lucky').addEventListener('click', () => {
+  window.open('http://www.google.com/search?q=' + (searchBar.innerHTML || 'Google Doodles'), '_blank');
+});
 
 // SKILLS
 gsap.fromTo(
