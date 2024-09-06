@@ -131,6 +131,32 @@ ScrollTrigger.create({
   }
 });
 
+ScrollTrigger.create({
+  trigger: '#map',
+  start: "42% center",
+  end: "35% top",
+  // markers: true,
+  onEnter: (self) => {
+    document.querySelector('#ads-pin').classList.remove('inactive');
+  },
+  onLeaveBack: (self) => {
+    document.querySelector('#ads-pin').classList.add('inactive');
+  }
+});
+
+ScrollTrigger.create({
+  trigger: '#map',
+  start: "55% center",
+  end: "35% top",
+  // markers: true,
+  onEnter: (self) => {
+    document.querySelector('#google-pin').classList.remove('inactive');
+  },
+  onLeaveBack: (self) => {
+    document.querySelector('#google-pin').classList.add('inactive');
+  }
+});
+
 const googlePinExpand = document.querySelector('#google-pin-expand');
 gsap.fromTo(
   googlePinExpand,
@@ -152,24 +178,11 @@ gsap.fromTo(
   }
 );
 
-ScrollTrigger.create({
-  trigger: '#map',
-  start: "55% center",
-  end: "35% top",
-  // markers: true,
-  onEnter: (self) => {
-    document.querySelector('#google-pin').classList.remove('inactive');
-  },
-  onLeaveBack: (self) => {
-    document.querySelector('#google-pin').classList.add('inactive');
-  }
-});
-
 gsap.fromTo(
   '#map-info',
   { y: vh(-10) },
   {
-    y: vh(60),
+    y: vh(55),
     ease: 'none',
     scrollTrigger: {
       trigger: '#map',
@@ -298,16 +311,32 @@ outroBgs.forEach(
   }
 );
 
-gsap.fromTo("#outro-socials",
-  { y: -vh(50) },
+// gsap.fromTo("#outro-socials",
+//   { y: -vh(50) },
+//   {
+//     y: 0,
+//     scrollTrigger: {
+//       ease: 'power2.out',
+//       trigger: "#outro",
+//       start: "top bottom",
+//       end: "bottom bottom",
+//       scrub: 0.2,
+//     },
+//   }
+// );
+
+ScrollTrigger.create(
   {
-    y: 0,
-    scrollTrigger: {
-      ease: 'power2.out',
-      trigger: "#outro",
-      start: "top bottom",
-      end: "bottom bottom",
-      scrub: 0.2,
+    ease: 'power2.out',
+    trigger: "#outro",
+    start: "85% bottom",
+    end: "bottom bottom",
+    scrub: 0.2,
+    onEnter: (self) => {
+      document.querySelector('#outro-socials').classList.remove('hidden');
     },
+    onLeaveBack: (self) => {
+      document.querySelector('#outro-socials').classList.add('hidden');
+    }
   }
 );
