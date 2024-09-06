@@ -51,7 +51,7 @@ gsap.to("#fg",
   }
 );
 
-const introBgs = gsap.utils.toArray('#intro .parallax-bg').sort((a, b) => 
+const introBgs = gsap.utils.toArray('#intro .parallax-bg').sort((a, b) =>
   b.style.zIndex - a.style.zIndex
 );
 introBgs.forEach(
@@ -277,47 +277,24 @@ gsap.utils.toArray('.skill-section').forEach((element, i) => {
   element.innerHTML += ` ${text} ${text} ${text} ${text} ${text} ${text} ${text}`;
 });
 
-// OUTRO
-gsap.fromTo('#outro-layer-0',
-  { y: -vh(30) },
-  {
-    y: 0,
-    scrollTrigger: {
-      ease: 'power1.out',
-      trigger: "#outro",
-      start: "top bottom",
-      end: "bottom bottom",
-      scrub: 0.2,
-      // markers: true,
-    },
-  }
+const outroBgs = gsap.utils.toArray('#outro .parallax-bg').sort((a, b) =>
+  a.style.zIndex - b.style.zIndex
 );
-
-gsap.fromTo('#outro-layer-1',
-  { y: -vh(20) },
-  {
-    y: 0,
-    scrollTrigger: {
-      ease: 'power1.out',
-      trigger: "#outro",
-      start: "top bottom",
-      end: "bottom bottom",
-      scrub: 0.2,
-    },
-  }
-);
-
-gsap.fromTo("#outro-sun",
-  { y: -vh(10) },
-  {
-    y: 0,
-    scrollTrigger: {
-      ease: 'power1.out',
-      trigger: "#outro",
-      start: "top bottom",
-      end: "bottom bottom",
-      scrub: 0.2,
-    },
+outroBgs.forEach(
+  (elem, i) => {
+    gsap.fromTo(elem,
+      {yPercent: (i + 1) * -25},
+      {
+        yPercent: 0,
+        ease: 'power1.out',
+        scrollTrigger: {
+          trigger: "#outro",
+          start: "top bottom",
+          end: "bottom bottom",
+          scrub: 0.3,
+        },
+      }
+    );
   }
 );
 
