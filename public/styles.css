@@ -36,6 +36,7 @@ hr {
 
 body {
     margin: 0;
+    scroll-behavior: smooth;
 }
 
 body>div {

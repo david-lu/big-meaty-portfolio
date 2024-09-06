@@ -235,8 +235,8 @@ const doodles = gsap.utils.toArray('#google-doodle > div');
 for (let i = 0; i < doodles.length - 1; i++) {
   const a = doodles[i];
   const b = doodles[i + 1];
-  const start = 25 - ((i / doodles.length) * 140);
-  const end = 40 - (((i + 1) / doodles.length) * 140);
+  const start = 25 - ((i / doodles.length) * 165);
+  const end = 40 - (((i + 1) / doodles.length) * 165);
 
   ScrollTrigger.create(
     {
@@ -351,3 +351,24 @@ ScrollTrigger.create(
     }
   }
 );
+
+const scrollTime = 1;			//Scroll time
+const scrollDistance = 80;		//Distance. Use smaller value for shorter scroll and greater value for longer scroll
+  
+window.addEventListener("DOMMouseScroll", function(event){
+  console.log(event);
+  
+  event.preventDefault();	
+                  
+  var delta = event.originalEvent.wheelDelta/120 || -event.originalEvent.detail/3;
+  var scrollTop = $window.scrollTop();
+  var finalScroll = scrollTop - parseInt(delta*scrollDistance);
+    
+  TweenMax.to($window, scrollTime, {
+    scrollTo : { y: finalScroll, autoKill:true },
+      ease: Power1.easeOut,	//For more easing functions see https://api.greensock.com/js/com/greensock/easing/package-detail.html
+      autoKill: true,
+      overwrite: 5							
+    });
+        
+});
