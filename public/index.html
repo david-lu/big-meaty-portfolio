@@ -45,24 +45,31 @@
     </button>
   </div>
   <div id="intro" class="parallax-section">
-    <div id="david"></div>
-    <div id="title"></div>
-    <div id="subtitle"></div>
-    <img id="intro-layer-1" class="parallax-bg" src="assets/intro-layer-1.webp"></img>
-    <img id="intro-layer-0" class="parallax-bg" src="assets/intro-layer-0.png"></img>
+    <div id="fg-container">
+      <div id="fg" style='z-index: 20'>
+        <div id="david-arm" style='z-index: 21'></div>
+        <div id="david" style='z-index: 22'></div>
+      </div>
+    </div>
+    <div id="title" style='z-index: 10'></div>
+    <div id="subtitle" style='z-index: 25'></div>
+    <img class="parallax-bg" style='z-index: 5' src="assets/intro-layer-mountain-03.svg"></img>
+    <img class="parallax-bg" style='z-index: 6' src="assets/intro-layer-mountain-02.svg"></img>
+    <img class="parallax-bg" style='z-index: 7' src="assets/intro-layer-mountain-01.svg"></img>
+    <img class="parallax-bg" style='z-index: 8' src="assets/intro-layer-tree.svg"></img>
   </div>
   <div id="map" class="parallax-section">
     <div id="map-path" class="parallax-container">
-      <div class="pin" style="left: 50%; top: 5%"><strong>VANCOUVER BC</strong></div>
-      <svg xmlns="http://www.w3.org/2000/svg" viewbox="0 0 500 500" preserveAspectRatio="none">
-        <path stroke-linejoin="round" d="M 250 40 l 0 80 l -160 70 l 320 100 l -160 80 l 0 70" stroke-linecap="round"
-          stroke-linejoin="bevel" vector-effect="non-scaling-size" />
+      <div class="pin" style="left: 50%; top: 2%"><strong>VANCOUVER BC</strong></div>
+      <svg id="path" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 860" preserveAspectRatio="none">
+        <path stroke-linejoin="round" fill="none" stroke="#231f20" stroke-miterlimit="10"
+          d="m319.872,100.832c0,151.498-153.639,109.187-183.481,160.327-27.715,47.494,65.72,74.07,185.572,83.439,115.606,9.037,196.455,27.371,182.509,76.662-16.612,58.715-349.851,30.388-351.902,109.336-1.802,69.361,153.24,43.646,174.667,89.78,14.744,31.744-7.28,18.239-7.28,141.116" />
       </svg>
-      <div class="pin" style="left: 50%; top: 13%">
+      <div class="pin" style="left: 50%; top: 8%">
         <div class="pin-icon" style="background-image: url('assets/icon-vancouver.jpg'); 
                     padding: 0;"></div>
       </div>
-      <div id='school-pin' class="pin inactive" style="left: 20%; top: 38%">
+      <div id='school-pin' class="pin inactive" style="left: 20%; top: 32%">
         <div class="pin-icon" style="background-image: url('assets/icon-uoft.png');"></div>
         <div class="pin-info left">
           <p><strong>UNIVERSITY OF TORONTO</strong></p>
@@ -70,7 +77,7 @@
           <p>Specializing in Machine Learning</p>
         </div>
       </div>
-      <div id='samsung-pin' class="pin inactive" style="left: 80%; top: 58%">
+      <div id='samsung-pin' class="pin inactive" style="left: 80%; top: 47%">
         <div class="pin-icon" style="background-image: url('assets/icon-samsung.svg');"></div>
         <div class="pin-info right">
           <p><strong>SAMSUNG</strong></p>
@@ -90,9 +97,11 @@
       </div>
     </div>
     <div id="map-info" style="z-index: 100">
-      David spent 6 years making the the <strong><a target="_blank" href="https://doodles.google/">Google Doodles</a></strong> on the Google front page.
+      David spent 6 years making the the <strong><a target="_blank" href="https://doodles.google/">Google
+          Doodles</a></strong> on the Google front page.
       <br><br>
-      He was a tech lead on many popular projects and was also responsible for maintaining the Doodles serving infrastructure.
+      He was a tech lead on many popular projects and was also responsible for maintaining the Doodles serving
+      infrastructure.
       <br><br>
       During his tenure, David did a bit of everything... from backend to mobile development to art direction.
     </div>
@@ -172,8 +181,8 @@
   </div>
   <div id="outro" class="parallax-section">
     <div id="outro-sun"></div>
-    <img id="outro-layer-1" class="parallax-bg" src="assets/intro-layer-1.webp"></img>
-    <img id="outro-layer-0" class="parallax-bg" src="assets/intro-layer-0.png"></img>
+    <img id="outro-layer-1" class="parallax-bg" src="assets/intro-layer-mountain-01.svg"></img>
+    <img id="outro-layer-0" class="parallax-bg" src="assets/intro-layer-mountain-02.svg"></img>
     <div id="outro-socials" style="flex: 2">
       <div class="outro-icon" style="background-image: url(assets/icon-github-outro.svg);"></div>
       <div class="outro-icon" style="background-image: url(assets/icon-instagram-outro.svg);"></div>

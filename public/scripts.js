@@ -39,7 +39,7 @@ gsap.to("#subtitle",
   }
 );
 
-gsap.to("#david",
+gsap.to("#fg",
   {
     yPercent: 15,
     scrollTrigger: {
@@ -51,27 +51,22 @@ gsap.to("#david",
   }
 );
 
-gsap.to('#intro-layer-0',
-  {
-    yPercent: 30,
-    scrollTrigger: {
-      trigger: "#intro",
-      start: "top top",
-      end: "bottom top",
-      scrub: 0.3,
-    },
-  }
+const introBgs = gsap.utils.toArray('#intro .parallax-bg').sort((a, b) => 
+  b.style.zIndex - a.style.zIndex
 );
-
-gsap.to('#intro-layer-1',
-  {
-    yPercent: 45,
-    scrollTrigger: {
-      trigger: "#intro",
-      start: "top top",
-      end: "bottom top",
-      scrub: 0.3,
-    },
+introBgs.forEach(
+  (elem, i) => {
+    gsap.to(elem,
+      {
+        yPercent: (i + 1) * 7,
+        scrollTrigger: {
+          trigger: "#intro",
+          start: "top top",
+          end: "bottom top",
+          scrub: 0.3,
+        },
+      }
+    );
   }
 );
 
@@ -93,16 +88,17 @@ gsap.fromTo(
 
 gsap.fromTo(
   '#map-path svg',
-  { strokeDasharray: '170%',
-    strokeDashoffset: '170%',
-   },
+  {
+    strokeDasharray: '210%',
+    strokeDashoffset: '210%',
+  },
   {
     strokeDashoffset: 0,
     ease: 'none',
     scrollTrigger: {
       trigger: '#map',
-      start: "-10% center",
-      end: "20% top",
+      start: "2% center",
+      end: "35% top",
       scrub: 0.5,
       // markers: true,
     },
@@ -111,8 +107,8 @@ gsap.fromTo(
 
 ScrollTrigger.create({
   trigger: '#map',
-  start: "14% center",
-  end: "20% top",
+  start: "12% center",
+  end: "35% top",
   // markers: true,
   onEnter: (self) => {
     document.querySelector('#school-pin').classList.remove('inactive');
@@ -124,8 +120,8 @@ ScrollTrigger.create({
 
 ScrollTrigger.create({
   trigger: '#map',
-  start: "45% center",
-  end: "20% top",
+  start: "26% center",
+  end: "35% top",
   // markers: true,
   onEnter: (self) => {
     document.querySelector('#samsung-pin').classList.remove('inactive');
@@ -138,17 +134,18 @@ ScrollTrigger.create({
 const googlePinExpand = document.querySelector('#google-pin-expand');
 gsap.fromTo(
   googlePinExpand,
-  { scale: 1,
+  {
+    scale: 1,
     opacity: 0,
-   },
+  },
   {
     scale: 30,
     opacity: 50,
     ease: 'power2.in',
     scrollTrigger: {
       trigger: '#map',
-      start: "68% center",
-      end: "55% top",
+      start: "55% center",
+      end: "54% top",
       scrub: 0.3,
       // markers: true,
     }
@@ -157,8 +154,8 @@ gsap.fromTo(
 
 ScrollTrigger.create({
   trigger: '#map',
-  start: "68% center",
-  end: "20% top",
+  start: "55% center",
+  end: "35% top",
   // markers: true,
   onEnter: (self) => {
     document.querySelector('#google-pin').classList.remove('inactive');
@@ -228,9 +225,10 @@ for (let i = 0; i < doodles.length - 1; i++) {
   const start = 25 - ((i / doodles.length) * 140);
   const end = 40 - (((i + 1) / doodles.length) * 140);
 
-  gsap.fromTo(b, 
-    {'--clip': '0%'},
-    {'--clip': '100%',
+  gsap.fromTo(b,
+    { '--clip': '0%' },
+    {
+      '--clip': '100%',
       ease: 'none',
       scrollTrigger: {
         trigger: "#google",
@@ -281,7 +279,7 @@ gsap.utils.toArray('.skill-section').forEach((element, i) => {
 
 // OUTRO
 gsap.fromTo('#outro-layer-0',
-  {y: -vh(30)},
+  { y: -vh(30) },
   {
     y: 0,
     scrollTrigger: {
@@ -296,7 +294,7 @@ gsap.fromTo('#outro-layer-0',
 );
 
 gsap.fromTo('#outro-layer-1',
-  {y: -vh(20)},
+  { y: -vh(20) },
   {
     y: 0,
     scrollTrigger: {
@@ -310,7 +308,7 @@ gsap.fromTo('#outro-layer-1',
 );
 
 gsap.fromTo("#outro-sun",
-  {y: -vh(10)},
+  { y: -vh(10) },
   {
     y: 0,
     scrollTrigger: {
@@ -324,7 +322,7 @@ gsap.fromTo("#outro-sun",
 );
 
 gsap.fromTo("#outro-socials",
-  {y: -vh(50)},
+  { y: -vh(50) },
   {
     y: 0,
     scrollTrigger: {
