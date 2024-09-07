@@ -1,7 +1,7 @@
 :root {
     --school-color: rgb(33, 43, 80);
-    --parallax-padding: calc(max(7vw, 100vw - (100vh * 1.7)) / 2);
-    --parallax-narrow-padding: calc(max(7vw, 100vw - (100vh * 1.1)) / 2);
+    --parallax-padding: calc(max(7vw, 100vw - (100vh * 1.1)) / 2);
+    --parallax-wide-padding: calc(max(7vw, 100vw - (100vh * 1.7)) / 2);
     --backEaseOut: cubic-bezier(0.34, 1.56, 0.64, 1);
     --easeOut: cubic-bezier(0.32, 0, 0.67, 0);
 }
@@ -124,23 +124,6 @@ body>div {
     transition-delay: 140ms;
 }
 
-/* button {
-    background-color: #99999955;
-    color: #fff;
-    padding: 1rem 1.5rem 1rem 1.5rem;
-    text-align: center;
-    cursor: pointer;
-    border: #77777755;
-    border-width: 2;
-    border-radius: 35px;
-    font-size: 1rem;
-    z-index: 100;
-}
-
-button:hover {
-    background-color: #99999999;
-} */
-
 .parallax-section {
     display: flex;
     justify-content: flex-start;
@@ -171,7 +154,6 @@ button:hover {
     background-image: url('assets/title.svg');
     background-position: bottom;
     background-size: 100% 100%;
-    filter: drop-shadow(5px 5px 0px rgb(61, 58, 60));
 }
 
 #subtitle {
@@ -181,12 +163,11 @@ button:hover {
     background-image: url('assets/subtitle.svg');
     background-position: top;
     background-size: 100% 100%;
-    filter: drop-shadow(5px 5px 0px rgb(61, 58, 60));
 }
 
 #fg-container {
     position: absolute;
-    height: 64vh;
+    height: 61vh;
     max-width: 80vw;
     bottom: 0;
     aspect-ratio: 1.2;
@@ -247,7 +228,6 @@ button:hover {
 #map {
     height: 200vh;
     background-color: var(--school-color);
-    padding: 0 var(--parallax-narrow-padding);
 }
 
 #map-path {
@@ -462,6 +442,7 @@ button:hover {
     height: 160vh;
     background-color: rgb(222, 10, 77);
     font-weight: bold;
+    padding: 0 var(--parallax-wide-padding);
 }
 
 .skill-header {
@@ -495,7 +476,6 @@ button:hover {
     background: url('assets/animation-bg.jpg');
     font-family: Spongebob;
     color: #aef5d4;
-    padding: 0 var(--parallax-narrow-padding);
 }
 
 #animation .parallax-container {
@@ -551,7 +531,6 @@ button:hover {
     height: 100vh;
     justify-content: center;
     background: linear-gradient(0deg, rgba(230, 17, 98, 1) 20%, rgba(230, 17, 17, 1) 44%, rgba(255, 151, 0, 1) 100%);
-    padding: 0 var(--parallax-narrow-padding);
 }
 
 #outro-sun {
