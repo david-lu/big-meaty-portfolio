@@ -97,7 +97,7 @@ gsap.fromTo(
     ease: 'none',
     scrollTrigger: {
       trigger: '#map',
-      start: "2% center",
+      start: "-5% center",
       end: "35% top",
       scrub: 0.5,
       // markers: true,
@@ -107,7 +107,7 @@ gsap.fromTo(
 
 ScrollTrigger.create({
   trigger: '#map',
-  start: "12% center",
+  start: "7% center",
   end: "35% top",
   // markers: true,
   onEnter: (self) => {
@@ -120,7 +120,7 @@ ScrollTrigger.create({
 
 ScrollTrigger.create({
   trigger: '#map',
-  start: "26% center",
+  start: "24% center",
   end: "35% top",
   // markers: true,
   onEnter: (self) => {
@@ -133,7 +133,7 @@ ScrollTrigger.create({
 
 ScrollTrigger.create({
   trigger: '#map',
-  start: "42% center",
+  start: "41% center",
   end: "35% top",
   // markers: true,
   onEnter: (self) => {
@@ -146,7 +146,7 @@ ScrollTrigger.create({
 
 ScrollTrigger.create({
   trigger: '#map',
-  start: "55% center",
+  start: "57% center",
   end: "35% top",
   // markers: true,
   onEnter: (self) => {
@@ -170,7 +170,7 @@ gsap.fromTo(
     ease: 'power2.in',
     scrollTrigger: {
       trigger: '#map',
-      start: "55% center",
+      start: "57% center",
       end: "54% top",
       scrub: 0.3,
       // markers: true,
