@@ -316,25 +316,26 @@ outroBgs.forEach(
           start: "top bottom",
           end: "bottom bottom",
           scrub: 0.3,
+          marker: true
         },
       }
     );
   }
 );
 
-// gsap.fromTo("#outro-socials",
-//   { y: -vh(50) },
-//   {
-//     y: 0,
-//     scrollTrigger: {
-//       ease: 'power2.out',
-//       trigger: "#outro",
-//       start: "top bottom",
-//       end: "bottom bottom",
-//       scrub: 0.2,
-//     },
-//   }
-// );
+gsap.fromTo('#outro-sun',
+  {yPercent: -40},
+  {
+    yPercent: 0,
+    ease: 'power1.out',
+    scrollTrigger: {
+      trigger: "#outro",
+      start: "top bottom",
+      end: "bottom bottom",
+      scrub: 0.3,
+    },
+  }
+);
 
 ScrollTrigger.create(
   {
@@ -351,24 +352,3 @@ ScrollTrigger.create(
     }
   }
 );
-
-const scrollTime = 1;			//Scroll time
-const scrollDistance = 80;		//Distance. Use smaller value for shorter scroll and greater value for longer scroll
-  
-window.addEventListener("DOMMouseScroll", function(event){
-  console.log(event);
-  
-  event.preventDefault();	
-                  
-  var delta = event.originalEvent.wheelDelta/120 || -event.originalEvent.detail/3;
-  var scrollTop = $window.scrollTop();
-  var finalScroll = scrollTop - parseInt(delta*scrollDistance);
-    
-  TweenMax.to($window, scrollTime, {
-    scrollTo : { y: finalScroll, autoKill:true },
-      ease: Power1.easeOut,	//For more easing functions see https://api.greensock.com/js/com/greensock/easing/package-detail.html
-      autoKill: true,
-      overwrite: 5							
-    });
-        
-});
