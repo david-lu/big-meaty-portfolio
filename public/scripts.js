@@ -4,13 +4,9 @@ const vh = (x) => window.innerHeight * (x / 100);
 const vw = (y) => window.innerWidth * (y / 100);
 
 document.querySelector('#nav-hamburger').addEventListener('click', () => {
-  document.querySelector('#nav-art').classList.toggle('hidden');
+  document.querySelector('#nav-github').classList.toggle('hidden');
   document.querySelector('#nav-linkedin').classList.toggle('hidden');
   document.querySelector('#nav-instagram').classList.toggle('hidden');
-});
-
-document.querySelector('#nav-art').addEventListener('click', () => {
-  window.open('http://luguowei.com');
 });
 
 // INTRO

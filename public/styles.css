@@ -97,11 +97,11 @@ body>div {
     transform: scale(1.35);
 }
 
-#nav-art {
+#nav-github {
     transition-delay: 200ms;
 }
 
-#nav-art.hidden {
+#nav-github.hidden {
     transform: translateY(-70px);
     transition-delay: 0s;
 }
