@@ -318,7 +318,7 @@ outroBgs.forEach(
           trigger: "#outro",
           start: "top bottom",
           end: "bottom bottom",
-          scrub: 0.3,
+          scrub: 0,
           marker: true
         },
       }

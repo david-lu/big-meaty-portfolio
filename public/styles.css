@@ -386,6 +386,7 @@ body>div {
 }
 
 .google-doodle-wipe.hidden {
+    visibility: hidden;
     --clip: 0%;
 }
 
