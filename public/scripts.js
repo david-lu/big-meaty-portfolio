@@ -299,7 +299,7 @@ gsap.utils.toArray('.skill-section').forEach((element, i) => {
         trigger: "#skills",
         start: "top bottom",
         end: "bottom top",
-        scrub: 0,
+        scrub: 0.5,
         // markers: true,
       },
     }
