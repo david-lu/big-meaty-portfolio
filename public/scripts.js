@@ -282,23 +282,30 @@ gsap.fromTo(
 );
 
 gsap.utils.toArray('.skill-section').forEach((element, i) => {
-  const negative = (i % 2 == 0) ? -1 : 1;
+  const isEven = (i % 2 == 0);
+  const negativeFactor = isEven ? 1 : -1;
+  const threshold = 150;
+
+  const width = element.scrollWidth || 400;
+  const fromX = isEven ? -width * 1 : -width / 2;
+  const toX = fromX + (negativeFactor * vh(100));
+
   gsap.fromTo(element,
-    { x: -vh(350) },
+    { x: fromX },
     {
-      x: -vh(350) + (vh(350) * negative),
+      x: toX,
       ease: "none",
       scrollTrigger: {
         trigger: "#skills",
         start: "top bottom",
         end: "bottom top",
-        scrub: 0.5,
+        scrub: 0,
         // markers: true,
       },
     }
   );
   const text = element.innerHTML;
-  element.innerHTML += ` ${text} ${text} ${text} ${text} ${text} ${text} ${text}`;
+  element.innerHTML += ` ${text} ${text} ${text}`;
 });
 
 const outroBgs = gsap.utils.toArray('#outro .parallax-bg').sort((a, b) =>
