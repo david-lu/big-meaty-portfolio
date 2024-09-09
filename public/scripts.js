@@ -1,4 +1,4 @@
-gsap.registerPlugin(CustomEase, ScrollToPlugin, ScrollTrigger);
+gsap.registerPlugin(ScrollTrigger);
 
 const vh = (x) => window.innerHeight * (x / 100);
 const vw = (y) => window.innerWidth * (y / 100);
