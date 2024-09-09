@@ -59,7 +59,7 @@ introBgs.forEach(
           trigger: "#intro",
           start: "top top",
           end: "bottom top",
-          scrub: 0.3,
+          scrub: 0,
         },
       }
     );
@@ -295,7 +295,7 @@ gsap.utils.toArray('.skill-section').forEach((element, i) => {
         trigger: "#skills",
         start: "top bottom",
         end: "bottom top",
-        scrub: 0.5,
+        scrub: 0,
         // markers: true,
       },
     }
