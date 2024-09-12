@@ -1,28 +1,42 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1000 500">
+<svg id="mountain-0" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1000 500">
   <defs>
-    <linearGradient id="linear-gradient" x1="794.649" y1="446.06" x2="794.649" y2="281.605" gradientUnits="userSpaceOnUse">
+    <linearGradient id="linear-gradient" x1="796.797" y1="432.174" x2="796.797" y2="267.719" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#ec6f8d"/>
       <stop offset="1" stop-color="#a5587f"/>
     </linearGradient>
-    <linearGradient id="linear-gradient-2" x1="700.154" y1="443.149" x2="700.154" y2="245.165" xlink:href="#linear-gradient"/>
-    <linearGradient id="linear-gradient-3" x1="938.203" y1="473.74" x2="938.203" y2="275.755" xlink:href="#linear-gradient"/>
-    <linearGradient id="linear-gradient-4" x1="294.168" y1="431.159" x2="294.168" y2="252.494" gradientUnits="userSpaceOnUse">
+    <linearGradient id="linear-gradient-2" x1="938.203" y1="473.74" x2="938.203" y2="275.755" xlink:href="#linear-gradient"/>
+    <linearGradient id="linear-gradient-3" x1="294.168" y1="431.159" x2="294.168" y2="252.494" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#ec6f8d"/>
       <stop offset="1" stop-color="#a5587f"/>
     </linearGradient>
-    <linearGradient id="linear-gradient-5" x1="43.37" y1="444.347" x2="43.37" y2="265.683" xlink:href="#linear-gradient-4"/>
-    <linearGradient id="linear-gradient-6" x1="492.95" y1="453.631" x2="492.95" y2="337.302" xlink:href="#linear-gradient-4"/>
+    <linearGradient id="linear-gradient-4" x1="692.711" y1="466.056" x2="758.774" y2="275.989" xlink:href="#linear-gradient-3"/>
+    <linearGradient id="linear-gradient-5" x1="43.37" y1="444.347" x2="43.37" y2="265.683" xlink:href="#linear-gradient-3"/>
+    <linearGradient id="linear-gradient-6" x1="507.079" y1="466.856" x2="530.02" y2="268.313" xlink:href="#linear-gradient-3"/>
+    <clipPath id="clippath">
+      <path d="m804.399,500.659l-133.075-133.075c-11.896-11.896-31.183-11.896-43.078,0l-133.075,133.075h309.228Z" fill="none"/>
+    </clipPath>
+    <linearGradient id="linear-gradient-7" x1="660.5" y1="458.925" x2="660.5" y2="327.665" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ec6f8d"/>
+      <stop offset="1" stop-color="#a5587f"/>
+    </linearGradient>
+    <clipPath id="clippath-1">
+      <path d="m563.915,470.681l-133.075-133.075c-11.896-11.896-31.183-11.896-43.078,0l-133.075,133.075h309.228Z" fill="none"/>
+    </clipPath>
+    <linearGradient id="linear-gradient-8" x1="420.016" y1="428.946" x2="420.016" y2="297.686" xlink:href="#linear-gradient-7"/>
   </defs>
-  <g id="Layer_6" data-name="Layer 6">
-    <line x1="354.941" y1="477.558" x2="354.941" y2="501.989" fill="none" stroke="#3c6571" stroke-linecap="round" stroke-miterlimit="10" stroke-width="3"/>
+  <path d="m983.998,487.725l-171.333-171.333c-8.764-8.764-22.973-8.764-31.737,0l-171.333,171.333h374.403Z" fill="url(#linear-gradient)"/>
+  <path d="m1171.413,540.617l-200.722-200.722c-17.943-17.943-47.034-17.943-64.977,0l-200.722,200.722h466.42Z" fill="url(#linear-gradient-2)"/>
+  <path d="m526.452,500.069l-202.203-202.203c-16.614-16.614-43.549-16.614-60.163,0L61.884,500.069h464.569Z" fill="url(#linear-gradient-3)"/>
+  <path d="m911.505,504.867l-202.203-202.203c-16.614-16.614-43.549-16.614-60.163,0l-202.203,202.203h464.569Z" fill="url(#linear-gradient-4)"/>
+  <path d="m275.655,513.257l-202.203-202.203c-16.614-16.614-43.549-16.614-60.163,0l-202.203,202.203h464.569Z" fill="url(#linear-gradient-5)"/>
+  <path d="m654.801,497.298l-131.654-131.654c-10.817-10.817-28.355-10.817-39.172,0l-131.654,131.654h302.48Z" fill="url(#linear-gradient-6)"/>
+  <g clip-path="url(#clippath)">
+    <rect x="464.114" y="329.853" width="343.587" height="175.522" fill="#e26984"/>
+    <path d="m815.114,503.263l-133.075-133.075c-11.896-11.896-31.183-11.896-43.078,0l-133.075,133.075h309.228Z" fill="url(#linear-gradient-7)"/>
   </g>
-  <g id="Layer_10" data-name="Layer 10">
-    <path d="m981.85,501.611l-171.333-171.333c-8.764-8.764-22.973-8.764-31.737,0l-171.333,171.333h374.403Z" fill="url(#linear-gradient)"/>
-    <path d="m933.364,510.027l-200.722-200.722c-17.943-17.943-47.034-17.943-64.977,0l-200.722,200.722h466.42Z" fill="url(#linear-gradient-2)"/>
-    <path d="m1171.413,540.617l-200.722-200.722c-17.943-17.943-47.034-17.943-64.977,0l-200.722,200.722h466.42Z" fill="url(#linear-gradient-3)"/>
-    <path d="m526.452,500.069l-202.203-202.203c-16.614-16.614-43.549-16.614-60.163,0L61.884,500.069h464.569Z" fill="url(#linear-gradient-4)"/>
-    <path d="m275.655,513.257l-202.203-202.203c-16.614-16.614-43.549-16.614-60.163,0l-202.203,202.203h464.569Z" fill="url(#linear-gradient-5)"/>
-    <path d="m644.19,498.498l-131.654-131.654c-10.817-10.817-28.355-10.817-39.172,0l-131.654,131.654h302.48Z" fill="url(#linear-gradient-6)"/>
+  <g clip-path="url(#clippath-1)">
+    <rect x="223.629" y="299.875" width="343.587" height="175.522" fill="#e26984"/>
+    <path d="m574.629,473.285l-133.075-133.075c-11.896-11.896-31.183-11.896-43.078,0l-133.075,133.075h309.228Z" fill="url(#linear-gradient-8)"/>
   </g>
 </svg>
