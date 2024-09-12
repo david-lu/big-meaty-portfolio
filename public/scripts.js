@@ -1,4 +1,5 @@
 gsap.registerPlugin(ScrollTrigger);
+SmoothScroll({});
 
 const vh = (x) => window.innerHeight * (x / 100);
 const vw = (y) => window.innerWidth * (y / 100);
