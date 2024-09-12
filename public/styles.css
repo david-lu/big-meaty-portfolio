@@ -1,6 +1,7 @@
 :root {
     --school-color: rgb(28, 27, 63);
     --parallax-padding: calc(max(7vw, 100vw - (100vh * 1.1)) / 2);
+    --parallax-narrow-padding: calc(max(7vw, 100vw - (100vh * 0.8)) / 2);
     --parallax-wide-padding: calc(max(7vw, 100vw - (100vh * 1.7)) / 2);
     --backEaseOut: cubic-bezier(0.34, 1.56, 0.64, 1);
     --easeOut: cubic-bezier(0.32, 0, 0.67, 0);
@@ -97,11 +98,11 @@ body>div {
     transform: scale(1.35);
 }
 
-#nav-art {
+#nav-github {
     transition-delay: 200ms;
 }
 
-#nav-art.hidden {
+#nav-github.hidden {
     transform: translateY(-70px);
     transition-delay: 0s;
 }
@@ -228,6 +229,7 @@ body>div {
 #map {
     height: 200vh;
     background-color: var(--school-color);
+    padding: 0 var(--parallax-narrow-padding);
 }
 
 #map-path {
@@ -249,7 +251,7 @@ body>div {
 }
 
 #map-info {
-    padding: 0 15vw;
+    padding: 0 3vw;
     text-align: justify;
     color: var(--school-color);
 }
@@ -386,6 +388,7 @@ body>div {
 }
 
 .google-doodle-wipe.hidden {
+    visibility: hidden;
     --clip: 0%;
 }
 
@@ -443,6 +446,7 @@ body>div {
     background-color: rgb(222, 10, 77);
     font-weight: bold;
     padding: 0 var(--parallax-wide-padding);
+    text-rendering: optimizeSpeed;
 }
 
 .skill-header {
@@ -451,7 +455,7 @@ body>div {
 }
 
 .skill-section {
-    font-size: 3rem;
+    font-size: 2rem;
     overflow: visible;
     white-space: nowrap;
     padding-bottom: 4vh;

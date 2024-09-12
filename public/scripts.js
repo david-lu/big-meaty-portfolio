@@ -1,16 +1,12 @@
-gsap.registerPlugin(CustomEase, ScrollToPlugin, ScrollTrigger);
+gsap.registerPlugin(ScrollTrigger);
 
 const vh = (x) => window.innerHeight * (x / 100);
 const vw = (y) => window.innerWidth * (y / 100);
 
 document.querySelector('#nav-hamburger').addEventListener('click', () => {
-  document.querySelector('#nav-art').classList.toggle('hidden');
+  document.querySelector('#nav-github').classList.toggle('hidden');
   document.querySelector('#nav-linkedin').classList.toggle('hidden');
   document.querySelector('#nav-instagram').classList.toggle('hidden');
-});
-
-document.querySelector('#nav-art').addEventListener('click', () => {
-  window.open('http://luguowei.com');
 });
 
 // INTRO
@@ -63,7 +59,7 @@ introBgs.forEach(
           trigger: "#intro",
           start: "top top",
           end: "bottom top",
-          scrub: 0.3,
+          scrub: 0,
         },
       }
     );
@@ -282,23 +278,30 @@ gsap.fromTo(
 );
 
 gsap.utils.toArray('.skill-section').forEach((element, i) => {
-  const negative = (i % 2 == 0) ? -1 : 1;
+  const isEven = (i % 2 == 0);
+  const negativeFactor = isEven ? 1 : -1;
+  const threshold = 150;
+
+  const width = element.scrollWidth || 400;
+  const fromX = isEven ? -width * 1 : -width / 2;
+  const toX = fromX + (negativeFactor * vh(100));
+
   gsap.fromTo(element,
-    { x: -vh(350) },
+    { x: fromX },
     {
-      x: -vh(350) + (vh(350) * negative),
+      x: toX,
       ease: "none",
       scrollTrigger: {
         trigger: "#skills",
         start: "top bottom",
         end: "bottom top",
-        scrub: 0.5,
+        scrub: 0,
         // markers: true,
       },
     }
   );
   const text = element.innerHTML;
-  element.innerHTML += ` ${text} ${text} ${text} ${text} ${text} ${text} ${text}`;
+  element.innerHTML += ` ${text} ${text} ${text}`;
 });
 
 const outroBgs = gsap.utils.toArray('#outro .parallax-bg').sort((a, b) =>
@@ -315,7 +318,7 @@ outroBgs.forEach(
           trigger: "#outro",
           start: "top bottom",
           end: "bottom bottom",
-          scrub: 0.3,
+          scrub: 0,
           marker: true
         },
       }
