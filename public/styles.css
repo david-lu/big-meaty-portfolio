@@ -180,13 +180,14 @@ body>div {
     height: 100vh;
     color: white;
     background: linear-gradient(180deg, #7096C1 20%, #EC6F8D 70vh);
+    padding: 0 var(--parallax-wide-padding);
     /* background: url(assets/ref.jpg); */
     /* background-size: 100% 100%; */
 }
 
 #title {
     width: 100%;
-    height: 40vh;
+    height: 43vh;
     margin: 0 2vh;
     background-image: url('assets/title.svg');
     background-position: bottom;
@@ -196,7 +197,7 @@ body>div {
 #subtitle {
     width: 100%;
     height: 10vh;
-    margin: 0 2vh 4vh 2vh ;
+    margin: 6vh 2vh 7vh 2vh ;
     background-image: url('assets/subtitle.svg');
     background-position: top;
     background-size: 100% 100%;
@@ -641,6 +642,7 @@ body>div {
 
     #subtitle {
         height: 7vh;
+        margin: 1vh 2vh;
     }
 
     #google .parallax-container {
