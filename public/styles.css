@@ -577,15 +577,16 @@ body>div {
 }
 
 #outro-socials {
-    display: flex;
-    flex-direction: row;
+    text-align: center;
     z-index: 50;
     width: 100%;
     gap: 3vw;
 }
 
 .outro-icon {
+    display: inline-block;
     width: 9vh;
+    margin: 5px;
     aspect-ratio: 1;
     transition: transform 300ms var(--backEaseOut);
     cursor: pointer;
@@ -620,6 +621,10 @@ body>div {
     transition-delay: 240ms;
 }
 
+.outro-socials-break {
+    display: none;
+}
+
 @media (max-aspect-ratio: 1) {
     .parallax-bg {
         width: 180%;
@@ -640,6 +645,10 @@ body>div {
 
     #google .parallax-container {
         flex-direction: column-reverse;
+    }
+
+    .outro-socials-break {
+        display: inline-block;
     }
 }
 
