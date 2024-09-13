@@ -1,5 +1,5 @@
 :root {
-    --school-color: rgb(28, 27, 63);
+    --map-color: rgb(28, 27, 63);
     --parallax-padding: calc(max(7vw, 100vw - (100vh * 1.1)) / 2);
     --parallax-narrow-padding: calc(max(7vw, 100vw - (100vh * 0.8)) / 2);
     --parallax-wide-padding: calc(max(7vw, 100vw - (100vh * 1.7)) / 2);
@@ -138,6 +138,42 @@ body>div {
     height: 70vh;
 }
 
+.parallax-bg {
+    width: 100%;
+    position: absolute;
+    bottom: 0;
+}
+
+.scroll-button {
+    z-index: 100;
+    background-color: #ffffff22;
+    border-width: 3px;
+    border-style: solid;
+    border-color: #FFF;
+    border-radius: 250px;
+    color: #FFF;
+    cursor: pointer;
+    display: inline-block;
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 20px;
+    margin: 0;
+    outline: none;
+    padding: 15px 15px;
+    position: relative;
+    text-align: center;
+    user-select: none;
+    width: auto;
+}
+
+.scroll-button:hover {
+    background-color: #FFFFFF44;
+}
+
+.scroll-button:active {
+    background-color: #FFFFFF77;
+}
+
 #intro {
     display: flex;
     justify-content: center;
@@ -220,15 +256,26 @@ body>div {
     transform-origin: 95% 82%;
 }
 
-.parallax-bg {
-    width: 100%;
+#intro-scroll-button {
     position: absolute;
-    bottom: 0;
+    bottom: 3%;
+    animation: pulse-animation 2s infinite;
 }
+
+@keyframes pulse-animation {
+    0% {
+        box-shadow: 0 0 0 0px #ffffff44;
+    }
+
+    100% {
+        box-shadow: 0 0 0 20px #ffffff00;
+    }
+}
+
 
 #map {
     height: 200vh;
-    background-color: var(--school-color);
+    background-color: var(--map-color);
     padding: 0 var(--parallax-narrow-padding);
 }
 
@@ -251,13 +298,14 @@ body>div {
 }
 
 #map-info {
+    display: flex;
     padding: 0 3vw;
     text-align: justify;
-    color: var(--school-color);
+    color: var(--map-color);
 }
 
 #map-info a {
-    color: var(--school-color);
+    color: var(--map-color);
 }
 
 #map-info a:hover {
@@ -318,6 +366,20 @@ body>div {
     opacity: 0;
 }
 
+#map-scroll-button {
+    border-color: var(--map-color);
+    color: var(--map-color);
+    background-color: transparent;
+}
+
+#map-scroll-button:hover {
+    background-color: #3e3e4933;
+}
+
+#map-scroll-button:active {
+    background-color: #3030385d;
+}
+
 #google-pin-expand {
     transition: none;
     opacity: 0;
@@ -367,7 +429,7 @@ body>div {
 
 #google-doodle {
     position: relative;
-    width: min(50vh, 100vw);
+    width: min(50vh, 92vw);
     aspect-ratio: 1.9;
 }
 
@@ -475,50 +537,18 @@ body>div {
     color: white;
 }
 
-#animation {
-    height: 180vh;
-    background: url('assets/animation-bg.jpg');
-    font-family: Spongebob;
-    color: #aef5d4;
+#skills-scroll-button {
+    border-color: black;
+    color: black;
+    background-color: transparent;
 }
 
-#animation .parallax-container {
-    display: flex;
-    gap: 25px;
-    flex-direction: column;
-    justify-content: space-evenly;
-    height: 120vh;
+#skills-scroll-button:hover {
+    background-color: #3e3e4933;
 }
 
-.animation-text {
-    font-size: 2rem;
-    letter-spacing: .2rem;
-    line-height: 2.5rem;
-    text-shadow: 3px 3px #000000aa;
-    max-width: min(80%, 80vh);
-}
-
-.animation-title {
-    width: 80vw;
-    text-align: center;
-    font-size: 4rem;
-    letter-spacing: .4rem;
-    line-height: 5rem;
-    text-shadow: 5px 5px #000000aa;
-}
-
-.animation-posters {
-    display: flex;
-    width: 100%;
-    justify-content: space-around;
-}
-
-.animation-poster {
-    width: min(40vh, 40vw);
-    aspect-ratio: 0.68;
-    background-size: cover;
-    border-radius: 2px;
-    box-shadow: 1px 1px #000000aa;
+#skills-scroll-button:active {
+    background-color: #3030385d;
 }
 
 #outro-header {
@@ -590,7 +620,11 @@ body>div {
     transition-delay: 240ms;
 }
 
-@media screen and (orientation:portrait) {
+@media (max-aspect-ratio: 1) {
+    .parallax-bg {
+        width: 180%;
+    }
+
     #intro {
         justify-content: flex-start;
     }
@@ -600,15 +634,18 @@ body>div {
         margin: 12vh 0 0 0;
     }
 
-    .parallax-bg {
-        width: 180%;
-    }
-
     #subtitle {
         height: 7vh;
     }
 
     #google .parallax-container {
         flex-direction: column-reverse;
+    }
+}
+
+@media (max-aspect-ratio: 0.75) {
+    #intro-scroll-button {
+        position: relative;
+        bottom: inherit;
     }
 }

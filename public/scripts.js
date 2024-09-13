@@ -1,4 +1,4 @@
-gsap.registerPlugin(ScrollTrigger);
+gsap.registerPlugin(ScrollToPlugin, ScrollTrigger);
 SmoothScroll({});
 
 const vh = (x) => window.innerHeight * (x / 100);
@@ -8,6 +8,19 @@ document.querySelector('#nav-hamburger').addEventListener('click', () => {
   document.querySelector('#nav-github').classList.toggle('hidden');
   document.querySelector('#nav-linkedin').classList.toggle('hidden');
   document.querySelector('#nav-instagram').classList.toggle('hidden');
+});
+
+// SCROLL BUTTONS
+document.querySelector('#intro-scroll-button').addEventListener('click', () => {
+  gsap.to(window, { ease: 'sine.inOut', duration: 6, scrollTo: vh(205) });
+});
+
+document.querySelector('#map-scroll-button').addEventListener('click', () => {
+  gsap.to(window, { ease: 'sine.inOut', duration: 6, scrollTo: vh(485) });
+});
+
+document.querySelector('#skills-scroll-button').addEventListener('click', () => {
+  gsap.to(window, { ease: 'sine.inOut', duration: 4, scrollTo: 'max' });
 });
 
 // INTRO
@@ -177,9 +190,9 @@ gsap.fromTo(
 
 gsap.fromTo(
   '#map-info',
-  { y: vh(-10) },
+  { y: vh(-15) },
   {
-    y: vh(55),
+    y: vh(50),
     ease: 'none',
     scrollTrigger: {
       trigger: '#map',
