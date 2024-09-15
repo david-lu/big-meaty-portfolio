@@ -3,6 +3,7 @@ SmoothScroll({});
 
 const vh = (x) => window.innerHeight * (x / 100);
 const vw = (y) => window.innerWidth * (y / 100);
+const rem = (val) => parseFloat(getComputedStyle(document.documentElement).fontSize) * val;
 
 document.querySelector('#nav-hamburger').addEventListener('click', () => {
   document.querySelector('#nav-github').classList.toggle('hidden');
@@ -12,11 +13,11 @@ document.querySelector('#nav-hamburger').addEventListener('click', () => {
 
 // SCROLL BUTTONS
 document.querySelector('#intro-scroll-button').addEventListener('click', () => {
-  gsap.to(window, { ease: 'sine.inOut', duration: 6, scrollTo: vh(205) });
+  gsap.to(window, { ease: 'sine.inOut', duration: 6, scrollTo: vh(207) + rem(4) });
 });
 
 document.querySelector('#map-scroll-button').addEventListener('click', () => {
-  gsap.to(window, { ease: 'sine.inOut', duration: 6, scrollTo: vh(485) });
+  gsap.to(window, { ease: 'sine.inOut', duration: 6, scrollTo: vh(485) + rem(8) });
 });
 
 document.querySelector('#skills-scroll-button').addEventListener('click', () => {
@@ -324,7 +325,7 @@ const outroBgs = gsap.utils.toArray('#outro .parallax-bg').sort((a, b) =>
 outroBgs.forEach(
   (elem, i) => {
     gsap.fromTo(elem,
-      {yPercent: (i + 1) * -25},
+      { yPercent: (i + 1) * -25 },
       {
         yPercent: 0,
         ease: 'power1.out',
@@ -341,7 +342,7 @@ outroBgs.forEach(
 );
 
 gsap.fromTo('#outro-sun',
-  {yPercent: -40},
+  { yPercent: -40 },
   {
     yPercent: 0,
     ease: 'power1.out',
