@@ -24,8 +24,17 @@ document.querySelector('#skills-scroll-button').addEventListener('click', () => 
   gsap.to(window, { ease: 'sine.inOut', duration: 4, scrollTo: 'max' });
 });
 
-// INTRO
+// DOODLE BUTTONS
+document.querySelector('#google-button-search').addEventListener('click', () => {
+  window.open('http://www.google.com/search?q=' + (searchBar.innerHTML || 'Google Doodles'), '_blank');
+});
 
+document.querySelector('#google-button-lucky').addEventListener('click', () => {
+  window.open('http://www.google.com/search?q=' + (searchBar.innerHTML || 'Google Doodles'), '_blank');
+});
+
+
+// INTRO
 gsap.to("#title",
   {
     yPercent: -10,
@@ -84,9 +93,9 @@ introBgs.forEach(
 // MAP
 gsap.fromTo(
   '#map-path',
-  { y: vh(-2) },
+  { y: '-2vh' },
   {
-    y: vh(40),
+    y: '40vh',
     ease: 'none',
     scrollTrigger: {
       trigger: '#map',
@@ -191,9 +200,9 @@ gsap.fromTo(
 
 gsap.fromTo(
   '#map-info',
-  { y: vh(-15) },
+  { y: '-15vh' },
   {
-    y: vh(50),
+    y: '50vh',
     ease: 'none',
     scrollTrigger: {
       trigger: '#map',
@@ -208,9 +217,9 @@ gsap.fromTo(
 
 gsap.fromTo(
   '#google-page',
-  { y: vh(-55) },
+  { y: '-55vh' },
   {
-    y: vh(65),
+    y: '65vh',
     ease: 'none',
     scrollTrigger: {
       trigger: '#google',
@@ -268,20 +277,12 @@ for (let i = 0; i < doodles.length - 1; i++) {
   );
 }
 
-document.querySelector('#google-button-search').addEventListener('click', () => {
-  window.open('http://www.google.com/search?q=' + (searchBar.innerHTML || 'Google Doodles'), '_blank');
-});
-
-document.querySelector('#google-button-lucky').addEventListener('click', () => {
-  window.open('http://www.google.com/search?q=' + (searchBar.innerHTML || 'Google Doodles'), '_blank');
-});
-
 // SKILLS
 gsap.fromTo(
   '#skills .parallax-container',
-  { y: vh(-75) },
+  { y: '-75vh' },
   {
-    y: vh(75),
+    y: '75vh',
     ease: 'none',
     scrollTrigger: {
       trigger: '#skills',
@@ -294,12 +295,8 @@ gsap.fromTo(
 
 gsap.utils.toArray('.skill-section').forEach((element, i) => {
   const isEven = (i % 2 == 0);
-  const negativeFactor = isEven ? 1 : -1;
-  const threshold = 150;
-
-  const width = element.scrollWidth || 400;
-  const fromX = isEven ? -width * 1 : -width / 2;
-  const toX = fromX + (negativeFactor * vh(100));
+  const fromX = isEven ? '-150vh' : 0;
+  const toX = isEven ? 0 : '-150vh';
 
   gsap.fromTo(element,
     { x: fromX },
