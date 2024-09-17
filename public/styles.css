@@ -161,16 +161,20 @@ body>div {
     color: #FFF;
     cursor: pointer;
     display: inline-block;
-    font-size: 20px;
+    font-size: 23px;
     font-weight: 600;
-    line-height: 20px;
+    line-height: 23px;
     margin: 0;
     outline: none;
-    padding: 15px 15px;
+    padding: 12px 12px;
     position: relative;
     text-align: center;
     user-select: none;
     width: auto;
+}
+
+.scroll-button::before {
+    content: '\1F80B';
 }
 
 .scroll-button:hover {
