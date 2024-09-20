@@ -5,6 +5,8 @@ const vh = (x) => window.innerHeight * (x / 100);
 const vw = (y) => window.innerWidth * (y / 100);
 const rem = (val) => parseFloat(getComputedStyle(document.documentElement).fontSize) * val;
 
+// ScrollTrigger.normalizeScroll(true);
+
 document.querySelector('#nav-hamburger').addEventListener('click', () => {
   document.querySelector('#nav-github').classList.toggle('hidden');
   document.querySelector('#nav-linkedin').classList.toggle('hidden');
@@ -322,10 +324,11 @@ const outroBgs = gsap.utils.toArray('#outro .parallax-bg').sort((a, b) =>
 outroBgs.forEach(
   (elem, i) => {
     gsap.fromTo(elem,
-      { y: `-${120 + (i * 15)}vh` },
+      { y: `-${100 + (i * 10)}vh` },
       {
         y: 0,
         ease: 'none',
+        lazy: false,
         scrollTrigger: {
           trigger: "#outro",
           start: "top bottom",
@@ -338,7 +341,7 @@ outroBgs.forEach(
 );
 
 gsap.fromTo('#outro-info',
-  { y: `-90vh` },
+  { y: `-50vh` },
   {
     y: 0,
     ease: 'none',
@@ -352,7 +355,7 @@ gsap.fromTo('#outro-info',
 );
 
 gsap.fromTo('#outro-sun',
-  { y: `-70vh` },
+  { y: `-60vh` },
   {
     y: 0,
     ease: 'none',

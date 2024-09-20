@@ -206,7 +206,6 @@ body>div {
     background-image: url('assets/title.svg');
     background-position: bottom;
     background-size: 100% 100%;
-    will-change: transform;
 }
 
 #subtitle {
@@ -216,7 +215,6 @@ body>div {
     background-image: url('assets/subtitle.svg');
     background-position: top;
     background-size: 100% 100%;
-    will-change: transform;
 }
 
 #fg-container {
@@ -581,7 +579,7 @@ body>div {
 
 
 #outro {
-    height: 160vh;
+    height: 140vh;
     justify-content: flex-end;
     background: linear-gradient(0deg, rgba(230, 17, 98, 1) 20%, rgba(230, 17, 17, 1) 44%, rgba(255, 151, 0, 1) 100%);
 }
