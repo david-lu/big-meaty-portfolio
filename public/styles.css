@@ -136,7 +136,7 @@ body>div {
 
 .parallax-container {
     width: 100%;
-    height: 70vh;
+    height: 100vh;
 }
 
 .parallax-header {
@@ -291,7 +291,7 @@ body>div {
 
 #map {
     overflow: clip visible;
-    height: 200vh;
+    height: 210vh;
     background: linear-gradient(180deg, var(--map-secondary-color), var(--map-color) 60%);
     padding: 0 var(--parallax-narrow-padding);
 }
@@ -411,7 +411,7 @@ body>div {
 
 #google {
     flex-direction: row;
-    height: 150vh;
+    height: 175vh;
     background-color: white;
 }
 

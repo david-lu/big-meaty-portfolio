@@ -13,11 +13,11 @@ document.querySelector('#nav-hamburger').addEventListener('click', () => {
 
 // SCROLL BUTTONS
 document.querySelector('#intro-scroll-button').addEventListener('click', () => {
-  gsap.to(window, { ease: 'sine.inOut', duration: 6, scrollTo: vh(207) + rem(4) });
+  gsap.to(window, { ease: 'sine.inOut', duration: 6, scrollTo: vh(217) + rem(4) });
 });
 
 document.querySelector('#map-scroll-button').addEventListener('click', () => {
-  gsap.to(window, { ease: 'sine.inOut', duration: 6, scrollTo: vh(485) + rem(8) });
+  gsap.to(window, { ease: 'sine.inOut', duration: 6, scrollTo: vh(505) + rem(8) });
 });
 
 document.querySelector('#skills-scroll-button').addEventListener('click', () => {
@@ -217,9 +217,9 @@ gsap.fromTo(
 
 gsap.fromTo(
   '#google-page',
-  { y: '-55vh' },
+  { y: '-65vh' },
   {
-    y: '65vh',
+    y: '75vh',
     ease: 'none',
     scrollTrigger: {
       trigger: '#google',
@@ -255,8 +255,8 @@ const doodles = gsap.utils.toArray('#google-doodle > div');
 for (let i = 0; i < doodles.length - 1; i++) {
   const a = doodles[i];
   const b = doodles[i + 1];
-  const start = 25 - ((i / doodles.length) * 165);
-  const end = 40 - (((i + 1) / doodles.length) * 165);
+  const start = - ((i / doodles.length) * 140);
+  const end = 20 - (((i + 1) / doodles.length) * 140);
 
   ScrollTrigger.create(
     {
