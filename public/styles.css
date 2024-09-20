@@ -147,11 +147,11 @@ body>div {
     font-size: 3.5rem;
 }
 
-
 .parallax-bg {
     width: 100%;
     position: absolute;
     bottom: 0;
+    will-change: transform;
 }
 
 .scroll-button {
@@ -206,6 +206,7 @@ body>div {
     background-image: url('assets/title.svg');
     background-position: bottom;
     background-size: 100% 100%;
+    will-change: transform;
 }
 
 #subtitle {
@@ -215,6 +216,7 @@ body>div {
     background-image: url('assets/subtitle.svg');
     background-position: top;
     background-size: 100% 100%;
+    will-change: transform;
 }
 
 #fg-container {
@@ -234,6 +236,7 @@ body>div {
     aspect-ratio: 1.2;
     background-size: contain;
     background-image: url('assets/intro-layer-fg.svg');
+    will-change: transform;
 }
 
 #david {
@@ -302,7 +305,7 @@ body>div {
 #map-path {
     height: 130vh;
     align-self: flex-start;
-    /* background-color: maroon; */
+    will-change: transform;
 }
 
 #map-path svg {
@@ -322,6 +325,7 @@ body>div {
     padding: 0 3vw;
     text-align: justify;
     color: var(--map-color);
+    will-change: transform;
 }
 
 #map-info a {
@@ -403,6 +407,7 @@ body>div {
 #google-pin-expand {
     transition: none;
     opacity: 0;
+    will-change: transform, opacity;
     /* background-color: green; */
 }
 
@@ -435,6 +440,7 @@ body>div {
     display: flex;
     flex-direction: column;
     margin: 2rem;
+    will-change: transform;
 }
 
 #google-buttons {
@@ -483,7 +489,7 @@ body>div {
     border: 1px solid #dfe1e5;
     box-shadow: none;
     border-radius: 24px;
-    margin: 1rem 0;
+    margin: 0.7rem 0;
     width: 500px;
     max-width: 80vw;
 }
@@ -523,6 +529,10 @@ body>div {
     text-rendering: optimizeSpeed;
 }
 
+#skills .parallax-container {
+    will-change: transform;
+}
+
 .skill-header {
     margin: 0 5rem;
     font-size: 1.5rem;
@@ -533,6 +543,7 @@ body>div {
     overflow: visible;
     white-space: nowrap;
     padding-bottom: 4vh;
+    will-change: transform;
 }
 
 .skill-section a:nth-child(odd) {
