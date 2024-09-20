@@ -17,7 +17,7 @@ document.querySelector('#intro-scroll-button').addEventListener('click', () => {
 });
 
 document.querySelector('#map-scroll-button').addEventListener('click', () => {
-  gsap.to(window, { ease: 'sine.inOut', duration: 6, scrollTo: vh(505) + rem(8) });
+  gsap.to(window, { ease: 'sine.inOut', duration: 6, scrollTo: vh(525) + rem(8) });
 });
 
 document.querySelector('#skills-scroll-button').addEventListener('click', () => {
@@ -66,7 +66,7 @@ gsap.to("#fg",
       trigger: "#intro",
       start: "top top",
       end: "bottom top",
-      scrub: 0.3,
+      scrub: 0,
     },
   }
 );
@@ -280,9 +280,9 @@ for (let i = 0; i < doodles.length - 1; i++) {
 // SKILLS
 gsap.fromTo(
   '#skills .parallax-container',
-  { y: '-75vh' },
+  { y: '-65vh' },
   {
-    y: '75vh',
+    y: '70vh',
     ease: 'none',
     scrollTrigger: {
       trigger: '#skills',
@@ -295,8 +295,8 @@ gsap.fromTo(
 
 gsap.utils.toArray('.skill-section').forEach((element, i) => {
   const isEven = (i % 2 == 0);
-  const fromX = isEven ? '-150vh' : 0;
-  const toX = isEven ? 0 : '-150vh';
+  const fromX = isEven ? '-350px' : 0;
+  const toX = isEven ? 0 : '-350px';
 
   gsap.fromTo(element,
     { x: fromX },
@@ -313,7 +313,7 @@ gsap.utils.toArray('.skill-section').forEach((element, i) => {
     }
   );
   const text = element.innerHTML;
-  element.innerHTML += ` ${text} ${text} ${text}`;
+  element.innerHTML += `${text} ${text}`;
 });
 
 const outroBgs = gsap.utils.toArray('#outro .parallax-bg').sort((a, b) =>
@@ -322,43 +322,55 @@ const outroBgs = gsap.utils.toArray('#outro .parallax-bg').sort((a, b) =>
 outroBgs.forEach(
   (elem, i) => {
     gsap.fromTo(elem,
-      { yPercent: (i + 1) * -25 },
+      { y: `-${120 + (i * 15)}vh` },
       {
-        yPercent: 0,
-        ease: 'power1.out',
+        y: 0,
+        ease: 'none',
         scrollTrigger: {
           trigger: "#outro",
           start: "top bottom",
           end: "bottom bottom",
           scrub: 0,
-          marker: true
         },
       }
     );
   }
 );
 
-gsap.fromTo('#outro-sun',
-  { yPercent: -40 },
+gsap.fromTo('#outro-info',
+  { y: `-90vh` },
   {
-    yPercent: 0,
-    ease: 'power1.out',
+    y: 0,
+    ease: 'none',
     scrollTrigger: {
       trigger: "#outro",
       start: "top bottom",
       end: "bottom bottom",
-      scrub: 0.3,
+      scrub: 0,
+    },
+  }
+);
+
+gsap.fromTo('#outro-sun',
+  { y: `-70vh` },
+  {
+    y: 0,
+    ease: 'none',
+    scrollTrigger: {
+      trigger: "#outro",
+      start: "top bottom",
+      end: "bottom bottom",
+      scrub: 0,
     },
   }
 );
 
 ScrollTrigger.create(
   {
-    ease: 'power2.out',
     trigger: "#outro",
-    start: "85% bottom",
+    start: "90% bottom",
     end: "bottom bottom",
-    scrub: 0.2,
+    scrub: 0,
     onEnter: (self) => {
       document.querySelector('#outro-socials').classList.remove('hidden');
     },
