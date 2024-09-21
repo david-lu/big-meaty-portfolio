@@ -303,7 +303,7 @@ body>div {
 #map-path {
     height: 130vh;
     align-self: flex-start;
-    will-change: transform;
+    /* will-change: transform; */
 }
 
 #map-path svg {
@@ -405,7 +405,7 @@ body>div {
 #google-pin-expand {
     transition: none;
     opacity: 0;
-    will-change: transform, opacity;
+    /* will-change: transform, opacity; */
     /* background-color: green; */
 }
 
@@ -438,7 +438,7 @@ body>div {
     display: flex;
     flex-direction: column;
     margin: 2rem;
-    will-change: transform;
+    /* will-change: transform; */
 }
 
 #google-buttons {
@@ -449,31 +449,8 @@ body>div {
 #google-doodle {
     position: relative;
     width: min(50vh, 92vw);
-    aspect-ratio: 1.9;
-}
-
-#google-doodle>div {
-    position: absolute;
-    left: 0;
-    top: 0;
-    aspect-ratio: 1.9;
-    width: 100%;
-    background-color: white;
-    cursor: pointer;
-}
-
-.google-doodle-wipe {
-    --clip: 100%;
-    clip-path: polygon(0% 0%, 0 100%, var(--clip) 100%, var(--clip) 0%);
-    transition: 250ms ease-in-out;
-}
-
-.google-doodle-wipe.hidden {
-    visibility: hidden;
-    --clip: 0%;
-}
-
-.google-doodle-default {
+    aspect-ratio: 2;
+    /* will-change: transform; */
     background-image: url('assets/google.svg');
 }
 
@@ -527,9 +504,9 @@ body>div {
     text-rendering: optimizeSpeed;
 }
 
-#skills .parallax-container {
+/* #skills .parallax-container {
     will-change: transform;
-}
+} */
 
 .skill-header {
     margin: 0 5rem;

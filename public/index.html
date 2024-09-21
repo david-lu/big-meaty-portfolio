@@ -6,7 +6,13 @@
   <meta charset="utf-8">
   <link rel="stylesheet" href="styles.css">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="preload" href="/assets/doodle-hiphop.png" as="image">
+  <link rel="preload" href="/assets/doodle-rabbit.png" as="image">
+  <link rel="preload" href="/assets/doodle-bobblehead.png" as="image">
+  <link rel="preload" href="/assets/doodle-olympics.png" as="image">
+  <link rel="preload" href="/assets/google.svg" as="image">
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/CustomEase.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollToPlugin.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/smoothscroll/1.4.10/SmoothScroll.min.js"
@@ -124,22 +130,7 @@
   <div id="google" class="parallax-section">
     <div class="parallax-container">
       <div id="google-page">
-        <div id="google-doodle">
-          <div class="google-doodle-default"></div>
-          <div class="google-doodle-wipe hidden" style="background-image: url('assets/doodle-bobblehead.png')"
-            onclick="window.open('https://doodles.google/doodle/celebrating-the-dachshund-bobblehead/', '_blank')">
-          </div>
-          <div class="google-doodle-wipe hidden" style="background-image: url('assets/doodle-hiphop.png')"
-            onclick="window.open('https://doodles.google/doodle/44th-anniversary-of-the-birth-of-hip-hop/', '_blank')">
-          </div>
-          <div class="google-doodle-wipe hidden" style="background-image: url('assets/doodle-olympics.png')"
-            onclick="window.open('https://doodles.google/doodle/doodle-champion-island-games-begin/', '_blank')">
-          </div>
-          <div class="google-doodle-wipe hidden" style="background-image: url('assets/doodle-rabbit.png')"
-            onclick="window.open('https://doodles.google/doodle/celebrating-50-years-of-kids-coding/', '_blank')">
-          </div>
-          <div class="google-doodle-default google-doodle-wipe hidden"></div>
-        </div>
+        <div id="google-doodle"></div>
         <div id="google-search-bar"></div>
         <div id="google-buttons">
           <div id="google-button-search" class="google-button">Search Google</div>
@@ -180,7 +171,7 @@
       <div class="skill-section">
         <a target="_blank" href="https://react.dev/">React.js</a>
         <a target="_blank" href="https://flutter.dev/">Flutter</a>
-        <a target="_blank" href="https://angularjs.org/">AngularJS (RIP)</a>
+        <a target="_blank" href="https://angularjs.org/">AngularJS</a>
         <a target="_blank" href="https://reactnative.dev/">React Native</a>
         <a target="_blank" href="https://gsap.com/">GSAP</a>
       </div>
@@ -216,7 +207,8 @@
         <div id="outro-instagram-button" class="outro-icon"
           style="background-image: url(assets/icon-instagram-outro.svg);"
           onclick="window.open('https://www.instagram.com/davidludraws','_blank')"></div>
-        <div id="outro-linkedin-button" class="outro-icon" style="background-image: url(assets/icon-linkedin-outro.svg);"
+        <div id="outro-linkedin-button" class="outro-icon"
+          style="background-image: url(assets/icon-linkedin-outro.svg);"
           onclick="window.open('https://www.linkedin.com/in/guoweilu','_blank')">
         </div>
         <div id="outro-github-button" class="outro-icon" style="background-image: url(assets/icon-github-outro.svg);"

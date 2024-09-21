@@ -1,4 +1,4 @@
-gsap.registerPlugin(ScrollToPlugin, ScrollTrigger);
+gsap.registerPlugin(CustomEase, ScrollToPlugin, ScrollTrigger);
 SmoothScroll({});
 
 const vh = (x) => window.innerHeight * (x / 100);
@@ -180,6 +180,7 @@ ScrollTrigger.create({
 });
 
 const googlePinExpand = document.querySelector('#google-pin-expand');
+const map = document.querySelector('#map');
 gsap.fromTo(
   googlePinExpand,
   {
@@ -194,8 +195,16 @@ gsap.fromTo(
       trigger: '#map',
       start: "57% center",
       end: "54% top",
-      scrub: 0.3,
+      scrub: 0,
       // markers: true,
+      onLeave: () => {
+        googlePinExpand.style.visibility = 'hidden';
+        map.style.background = 'white';
+      },
+      onEnterBack: () => {
+        googlePinExpand.style.removeProperty('visibility');
+        map.style.removeProperty('background');
+      }
     }
   }
 );
@@ -223,6 +232,7 @@ gsap.fromTo(
   {
     y: '75vh',
     ease: 'none',
+    // lazy: false,
     scrollTrigger: {
       trigger: '#google',
       start: "top bottom",
@@ -235,30 +245,80 @@ gsap.fromTo(
 
 const doodleInfos = [
   {
+    image: 'assets/google.svg',
+    search: '',
+    link: ''
+  },
+  {
+    image: 'assets/doodle-bobblehead.png',
     search: 'Celebrating the Dachshund Bobblehead',
     link: ''
   },
   {
+    image: 'assets/doodle-hiphop.png',
     search: '44th Anniversary of the Birth of Hip Hop',
     link: ''
   },
   {
+    image: 'assets/doodle-olympics.png',
     search: 'Doodle Champion Island Games Begin!',
     link: ''
   },
   {
+    image: 'assets/doodle-rabbit.png',
     search: 'Celebrating 50 years of Kids Coding',
+    link: ''
+  },
+  {
+    image: 'assets/google.svg',
+    search: '',
     link: ''
   },
 ];
 const doodleElem = document.querySelector('#google-doodle');
 const searchBar = document.querySelector('#google-search-bar');
-const doodles = gsap.utils.toArray('#google-doodle > div');
-for (let i = 0; i < doodles.length - 1; i++) {
-  const a = doodles[i];
-  const b = doodles[i + 1];
-  const start = - ((i / doodles.length) * 140);
-  const end = 20 - (((i + 1) / doodles.length) * 140);
+
+let currentIndex = 0;
+let targetIndex = 0;
+let inProgress = false;
+
+// Animation
+const tl = gsap.timeline({});
+tl.to(doodleElem, {
+  scale: 0.7, duration: 0.12, ease: 'power2.inOut',
+  onComplete: () => {
+    currentIndex = targetIndex;
+    const info = doodleInfos[currentIndex];
+    doodleElem.style.backgroundImage = `url(${info['image']})`;
+    searchBar.innerHTML = info['search'];
+  }
+});
+tl.to(doodleElem, {
+  scale: 1, duration: 0.16, ease: 'back.out',
+  onComplete: () => {
+    inProgress = false;
+    if (targetIndex != currentIndex) {
+      showDoodle(targetIndex);
+    }
+  }
+});
+tl.pause();
+
+const showDoodle = (newIndex) => {
+  // console.log(newIndex, targetIndex, currentIndex);
+  targetIndex = newIndex;
+  if (inProgress || currentIndex == targetIndex) {
+    return;
+  }
+  inProgress = true;
+  tl.restart();
+};
+const doodleLength = doodleInfos.length;
+
+for (let i = 0; i < doodleInfos.length; i++) {
+  const t = 170 / doodleInfos.length;
+  const start = 40 - (i * t);
+  const end = 40 - ((i + 1) * t);
 
   ScrollTrigger.create(
     {
@@ -266,15 +326,11 @@ for (let i = 0; i < doodles.length - 1; i++) {
       start: `0% ${start}%`,
       end: `0% ${end}%`,
       onEnter: (self) => {
-        b.classList.remove('hidden');
-        const info = doodleInfos[i];
-        searchBar.innerHTML = info ? info['search'] : '';
+        showDoodle(i);
       },
-      onLeaveBack: (self) => {
-        b.classList.add('hidden');
-        const info = doodleInfos[i - 1];
-        searchBar.innerHTML = info ? info['search'] : '';
-      }
+      onEnterBack: (self) => {
+        showDoodle(i);
+      },
     }
   );
 }
