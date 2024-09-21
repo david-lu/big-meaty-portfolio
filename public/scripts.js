@@ -233,7 +233,7 @@ ScrollTrigger.create(
     scrub: 0,
     // markers: true,
     onUpdate: (self) => {
-      const factor = gsap.utils.clamp(0.3, 3, Math.pow(getAspectRatio(), 1.5));
+      const factor = gsap.utils.clamp(0.3, 2.4, Math.pow(getAspectRatio(), 2));
 
       googleSections.forEach((element, i) => {
         const isEven = (i % 2 == 0);
