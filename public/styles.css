@@ -417,99 +417,82 @@ body>div {
 
 #google {
     flex-direction: row;
-    height: 175vh;
+    height: 130vh;
     background-color: white;
 }
 
-#google-info {
-    margin: 2rem;
-    max-width: 30vw;
-}
-
-#google-info>h1 {
-    text-align: center;
-}
-
-#google-info>p {
-    text-align: justify;
-}
-
-#google-page {
-    display: flex;
-    flex-direction: column;
-    margin: 2rem;
+#google .parallax-container {
+    gap: 3rem;
+    align-content: center;
     will-change: transform;
 }
 
-#google-buttons {
+.google-section {
+    height: min(20vh, 33vw);
+    overflow: visible;
     display: flex;
     flex-direction: row;
+    align-items: stretch;
+    flex-wrap: nowrap;
+    gap: 3vw;
+    will-change: transform;
 }
 
-#google-doodle {
+.doodle {
     position: relative;
-    width: min(50vh, 92vw);
-    aspect-ratio: 1.9;
+    height: 100%;
+    cursor: pointer;
+    transition: transform 250ms ease-in-out;
 }
 
-#google-doodle>div {
+.doodle-img {
+    z-index: 5;
+    position: relative;
+    height: 100%;
+}
+
+.doodle-img-hover {
     position: absolute;
-    left: 0;
     top: 0;
-    aspect-ratio: 1.9;
-    width: 100%;
-    background-color: white;
-    cursor: pointer;
-}
-
-.google-doodle-wipe {
-    --clip: 100%;
-    clip-path: polygon(0% 0%, 0 100%, var(--clip) 100%, var(--clip) 0%);
-    transition: 250ms ease-in-out;
-}
-
-.google-doodle-wipe.hidden {
+    left: 0;
+    z-index: 6;
+    height: 100%;
     visibility: hidden;
-    --clip: 0%;
 }
 
-.google-doodle-default {
-    background-image: url('assets/google.svg');
-}
-
-#google-search-bar {
-    display: flex;
-    text-align: left;
-    z-index: 3;
-    position: relative;
-    min-height: 3rem;
-    background: #fff;
-    border: 1px solid #dfe1e5;
-    box-shadow: none;
-    border-radius: 24px;
-    margin: 0.7rem 0;
-    width: 500px;
-    max-width: 80vw;
-}
-
-.google-button {
-    background-color: #f0f2f4;
-    border: 1px solid #f0f2f4;
-    border-radius: 4px;
-    color: #3c4043;
-    font-family: Roboto, Arial, sans-serif;
-    font-size: 14px;
-    margin: 11px 4px;
-    padding: 0 16px;
-    height: 2rem;
-    line-height: 2rem;
-    min-width: 54px;
+.doodle div {
+    z-index: 4;
     text-align: center;
-    cursor: pointer;
+    box-sizing: border-box;
+    /* padding: 2vw; */
+    position: absolute;
+    top: 0;
+    left: 0;
+    font-size: 1rem;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: flex-end;
+    flex-direction: column;
+    align-items: center;
+    transition: 250ms ease-in-out;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    opacity: 0;
 }
 
-.google-button:hover {
-    border: 1px solid #c4c6c8;
+.doodle:hover {
+    transform: scale(1.1);
+}
+
+.doodle:hover .doodle-img-hover {
+    visibility: visible;
+}
+
+.doodle:hover div {
+    transform: translateY(1.5rem);
+    opacity: 1;
+    color: black;
 }
 
 #skills-header {
@@ -541,7 +524,6 @@ body>div {
     overflow: visible;
     white-space: nowrap;
     padding-bottom: 4vh;
-    will-change: transform;
 }
 
 .skill-section a:nth-child(odd) {

@@ -1,6 +1,7 @@
 gsap.registerPlugin(ScrollToPlugin, ScrollTrigger);
 SmoothScroll({});
 
+const getAspectRatio = () => window.innerHeight / window.innerWidth;
 const vh = (x) => window.innerHeight * (x / 100);
 const vw = (y) => window.innerWidth * (y / 100);
 const rem = (val) => parseFloat(getComputedStyle(document.documentElement).fontSize) * val;
@@ -19,22 +20,12 @@ document.querySelector('#intro-scroll-button').addEventListener('click', () => {
 });
 
 document.querySelector('#map-scroll-button').addEventListener('click', () => {
-  gsap.to(window, { ease: 'sine.inOut', duration: 6, scrollTo: vh(525) + rem(8) });
+  gsap.to(window, { ease: 'sine.inOut', duration: 6, scrollTo: vh(475) + rem(8) });
 });
 
 document.querySelector('#skills-scroll-button').addEventListener('click', () => {
   gsap.to(window, { ease: 'sine.inOut', duration: 4, scrollTo: 'max' });
 });
-
-// DOODLE BUTTONS
-document.querySelector('#google-button-search').addEventListener('click', () => {
-  window.open('http://www.google.com/search?q=' + (searchBar.innerHTML || 'Google Doodles'), '_blank');
-});
-
-document.querySelector('#google-button-lucky').addEventListener('click', () => {
-  window.open('http://www.google.com/search?q=' + (searchBar.innerHTML || 'Google Doodles'), '_blank');
-});
-
 
 // INTRO
 gsap.to("#title",
@@ -216,68 +207,50 @@ gsap.fromTo(
 );
 
 // GOOGLE
+// gsap.fromTo(
+// '#google .parallax-container',
+//   { y: '-25vh' },
+//   {
+//     y: '25vh',
+//     ease: 'none',
+//     lazy: false,
+//     scrollTrigger: {
+//       trigger: '#google',
+//       start: "top bottom",
+//       end: "bottom top",
+//       scrub: 0,
+//     }
+//   }
+// );
 
-gsap.fromTo(
-  '#google-page',
-  { y: '-65vh' },
+
+const googleSections = gsap.utils.toArray('.google-section');
+ScrollTrigger.create(
   {
-    y: '75vh',
-    ease: 'none',
-    scrollTrigger: {
-      trigger: '#google',
-      start: "top bottom",
-      end: "bottom top",
-      scrub: 0,
-      // markers: true,
+    trigger: "#google",
+    start: "top bottom",
+    end: "bottom top",
+    scrub: 0,
+    // markers: true,
+    onUpdate: (self) => {
+      const factor = gsap.utils.clamp(0.3, 2.4, Math.pow(getAspectRatio(), 2));
+
+      googleSections.forEach((element, i) => {
+        const isEven = (i % 2 == 0);
+
+        const fromX = isEven ? -30 * factor : 15 * factor;
+        const toX = isEven ? 15 * factor : -30 * factor;
+
+        gsap.set(element, { xPercent: gsap.utils.interpolate(fromX, toX, self.progress) });
+      });
     }
-  }
+  },
 );
 
-const doodleInfos = [
-  {
-    search: 'Celebrating the Dachshund Bobblehead',
-    link: ''
-  },
-  {
-    search: '44th Anniversary of the Birth of Hip Hop',
-    link: ''
-  },
-  {
-    search: 'Doodle Champion Island Games Begin!',
-    link: ''
-  },
-  {
-    search: 'Celebrating 50 years of Kids Coding',
-    link: ''
-  },
-];
-const doodleElem = document.querySelector('#google-doodle');
-const searchBar = document.querySelector('#google-search-bar');
-const doodles = gsap.utils.toArray('#google-doodle > div');
-for (let i = 0; i < doodles.length - 1; i++) {
-  const a = doodles[i];
-  const b = doodles[i + 1];
-  const start = - ((i / doodles.length) * 140);
-  const end = 20 - (((i + 1) / doodles.length) * 140);
-
-  ScrollTrigger.create(
-    {
-      trigger: "#google",
-      start: `0% ${start}%`,
-      end: `0% ${end}%`,
-      onEnter: (self) => {
-        b.classList.remove('hidden');
-        const info = doodleInfos[i];
-        searchBar.innerHTML = info ? info['search'] : '';
-      },
-      onLeaveBack: (self) => {
-        b.classList.add('hidden');
-        const info = doodleInfos[i - 1];
-        searchBar.innerHTML = info ? info['search'] : '';
-      }
-    }
-  );
-}
+googleSections.forEach((element, i) => {
+  const text = element.innerHTML;
+  element.innerHTML += `${text} ${text}`;
+});
 
 // SKILLS
 gsap.fromTo(
@@ -286,6 +259,7 @@ gsap.fromTo(
   {
     y: '70vh',
     ease: 'none',
+    lazy: false,
     scrollTrigger: {
       trigger: '#skills',
       start: "top bottom",
@@ -295,25 +269,30 @@ gsap.fromTo(
   }
 );
 
-gsap.utils.toArray('.skill-section').forEach((element, i) => {
-  const isEven = (i % 2 == 0);
-  const fromX = isEven ? '-350px' : 0;
-  const toX = isEven ? 0 : '-350px';
+const skillSections = gsap.utils.toArray('.skill-section');
+ScrollTrigger.create(
+  {
+    trigger: "#skills",
+    start: "top bottom",
+    end: "bottom top",
+    scrub: 0.5,
+    // markers: true,
+    onUpdate: (self) => {
+      const factor = gsap.utils.clamp(0.3, 3, Math.pow(getAspectRatio(), 1.5));
 
-  gsap.fromTo(element,
-    { x: fromX },
-    {
-      x: toX,
-      ease: "none",
-      scrollTrigger: {
-        trigger: "#skills",
-        start: "top bottom",
-        end: "bottom top",
-        scrub: 0,
-        // markers: true,
-      },
+      skillSections.forEach((element, i) => {
+        const isEven = (i % 2 == 0);
+
+        const fromX = isEven ? -30 * factor : 15 * factor;
+        const toX = isEven ? 15 * factor : -30 * factor;
+
+        gsap.set(element, { xPercent: gsap.utils.interpolate(fromX, toX, self.progress) });
+      });
     }
-  );
+  },
+);
+
+skillSections.forEach((element, i) => {
   const text = element.innerHTML;
   element.innerHTML += `${text} ${text}`;
 });
