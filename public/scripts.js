@@ -26,16 +26,6 @@ document.querySelector('#skills-scroll-button').addEventListener('click', () => 
   gsap.to(window, { ease: 'sine.inOut', duration: 4, scrollTo: 'max' });
 });
 
-// DOODLE BUTTONS
-document.querySelector('#google-button-search').addEventListener('click', () => {
-  window.open('http://www.google.com/search?q=' + (searchBar.innerHTML || 'Google Doodles'), '_blank');
-});
-
-document.querySelector('#google-button-lucky').addEventListener('click', () => {
-  window.open('http://www.google.com/search?q=' + (searchBar.innerHTML || 'Google Doodles'), '_blank');
-});
-
-
 // INTRO
 gsap.to("#title",
   {
@@ -216,68 +206,45 @@ gsap.fromTo(
 );
 
 // GOOGLE
-
 gsap.fromTo(
-  '#google-page',
-  { y: '-65vh' },
+'#google .parallax-container',
+  { y: '-45vh' },
   {
-    y: '75vh',
+    y: '50vh',
     ease: 'none',
+    lazy: false,
     scrollTrigger: {
       trigger: '#google',
       start: "top bottom",
       end: "bottom top",
       scrub: 0,
-      // markers: true,
     }
   }
 );
 
-const doodleInfos = [
-  {
-    search: 'Celebrating the Dachshund Bobblehead',
-    link: ''
-  },
-  {
-    search: '44th Anniversary of the Birth of Hip Hop',
-    link: ''
-  },
-  {
-    search: 'Doodle Champion Island Games Begin!',
-    link: ''
-  },
-  {
-    search: 'Celebrating 50 years of Kids Coding',
-    link: ''
-  },
-];
-const doodleElem = document.querySelector('#google-doodle');
-const searchBar = document.querySelector('#google-search-bar');
-const doodles = gsap.utils.toArray('#google-doodle > div');
-for (let i = 0; i < doodles.length - 1; i++) {
-  const a = doodles[i];
-  const b = doodles[i + 1];
-  const start = - ((i / doodles.length) * 140);
-  const end = 20 - (((i + 1) / doodles.length) * 140);
+gsap.utils.toArray('.google-section').forEach((element, i) => {
+  const isEven = (i % 2 == 0);
+  const fromX = isEven ? -60 : 30; 
+  const toX = isEven ? 30 : -60;
 
-  ScrollTrigger.create(
+  gsap.fromTo(element,
+    { xPercent: fromX },
     {
-      trigger: "#google",
-      start: `0% ${start}%`,
-      end: `0% ${end}%`,
-      onEnter: (self) => {
-        b.classList.remove('hidden');
-        const info = doodleInfos[i];
-        searchBar.innerHTML = info ? info['search'] : '';
+      xPercent: toX,
+      ease: "none",
+      lazy: false,
+      scrollTrigger: {
+        trigger: "#google",
+        start: "top bottom",
+        end: "bottom top",
+        scrub: 0,
+        // markers: true,
       },
-      onLeaveBack: (self) => {
-        b.classList.add('hidden');
-        const info = doodleInfos[i - 1];
-        searchBar.innerHTML = info ? info['search'] : '';
-      }
     }
   );
-}
+  const text = element.innerHTML;
+  element.innerHTML += `${text} ${text}`;
+});
 
 // SKILLS
 gsap.fromTo(
@@ -286,6 +253,7 @@ gsap.fromTo(
   {
     y: '70vh',
     ease: 'none',
+    lazy: false,
     scrollTrigger: {
       trigger: '#skills',
       start: "top bottom",
@@ -297,13 +265,13 @@ gsap.fromTo(
 
 gsap.utils.toArray('.skill-section').forEach((element, i) => {
   const isEven = (i % 2 == 0);
-  const fromX = isEven ? '-350px' : 0;
-  const toX = isEven ? 0 : '-350px';
+  const fromX = isEven ? -15 : 25;
+  const toX = isEven ? 25 : -15;
 
   gsap.fromTo(element,
-    { x: fromX },
+    { xPercent: fromX },
     {
-      x: toX,
+      xPercent: toX,
       ease: "none",
       scrollTrigger: {
         trigger: "#skills",
@@ -324,11 +292,10 @@ const outroBgs = gsap.utils.toArray('#outro .parallax-bg').sort((a, b) =>
 outroBgs.forEach(
   (elem, i) => {
     gsap.fromTo(elem,
-      { y: `-${100 + (i * 10)}vh` },
+      { y: `-${60 + (i * 10)}vh` },
       {
         y: 0,
         ease: 'none',
-        lazy: false,
         scrollTrigger: {
           trigger: "#outro",
           start: "top bottom",
@@ -341,7 +308,7 @@ outroBgs.forEach(
 );
 
 gsap.fromTo('#outro-info',
-  { y: `-50vh` },
+  { y: `-10vh` },
   {
     y: 0,
     ease: 'none',
@@ -355,7 +322,7 @@ gsap.fromTo('#outro-info',
 );
 
 gsap.fromTo('#outro-sun',
-  { y: `-60vh` },
+  { y: `-15vh` },
   {
     y: 0,
     ease: 'none',
