@@ -1,6 +1,7 @@
 gsap.registerPlugin(ScrollToPlugin, ScrollTrigger);
 SmoothScroll({});
 
+const getAspectRatio = () => window.innerHeight / window.innerWidth;
 const vh = (x) => window.innerHeight * (x / 100);
 const vw = (y) => window.innerWidth * (y / 100);
 const rem = (val) => parseFloat(getComputedStyle(document.documentElement).fontSize) * val;
@@ -19,7 +20,7 @@ document.querySelector('#intro-scroll-button').addEventListener('click', () => {
 });
 
 document.querySelector('#map-scroll-button').addEventListener('click', () => {
-  gsap.to(window, { ease: 'sine.inOut', duration: 6, scrollTo: vh(525) + rem(8) });
+  gsap.to(window, { ease: 'sine.inOut', duration: 6, scrollTo: vh(475) + rem(8) });
 });
 
 document.querySelector('#skills-scroll-button').addEventListener('click', () => {
@@ -206,42 +207,47 @@ gsap.fromTo(
 );
 
 // GOOGLE
-gsap.fromTo(
-'#google .parallax-container',
-  { y: '-45vh' },
+// gsap.fromTo(
+// '#google .parallax-container',
+//   { y: '-25vh' },
+//   {
+//     y: '25vh',
+//     ease: 'none',
+//     lazy: false,
+//     scrollTrigger: {
+//       trigger: '#google',
+//       start: "top bottom",
+//       end: "bottom top",
+//       scrub: 0,
+//     }
+//   }
+// );
+
+
+const googleSections = gsap.utils.toArray('.google-section');
+ScrollTrigger.create(
   {
-    y: '50vh',
-    ease: 'none',
-    lazy: false,
-    scrollTrigger: {
-      trigger: '#google',
-      start: "top bottom",
-      end: "bottom top",
-      scrub: 0,
+    trigger: "#google",
+    start: "top bottom",
+    end: "bottom top",
+    scrub: 0,
+    // markers: true,
+    onUpdate: (self) => {
+      const factor = gsap.utils.clamp(0.3, 3, Math.pow(getAspectRatio(), 1.5));
+
+      googleSections.forEach((element, i) => {
+        const isEven = (i % 2 == 0);
+
+        const fromX = isEven ? -30 * factor : 15 * factor;
+        const toX = isEven ? 15 * factor : -30 * factor;
+
+        gsap.set(element, { xPercent: gsap.utils.interpolate(fromX, toX, self.progress) });
+      });
     }
-  }
+  },
 );
 
-gsap.utils.toArray('.google-section').forEach((element, i) => {
-  const isEven = (i % 2 == 0);
-  const fromX = isEven ? -60 : 30; 
-  const toX = isEven ? 30 : -60;
-
-  gsap.fromTo(element,
-    { xPercent: fromX },
-    {
-      xPercent: toX,
-      ease: "none",
-      lazy: false,
-      scrollTrigger: {
-        trigger: "#google",
-        start: "top bottom",
-        end: "bottom top",
-        scrub: 0,
-        // markers: true,
-      },
-    }
-  );
+googleSections.forEach((element, i) => {
   const text = element.innerHTML;
   element.innerHTML += `${text} ${text}`;
 });
@@ -263,25 +269,30 @@ gsap.fromTo(
   }
 );
 
-gsap.utils.toArray('.skill-section').forEach((element, i) => {
-  const isEven = (i % 2 == 0);
-  const fromX = isEven ? -15 : 25;
-  const toX = isEven ? 25 : -15;
+const skillSections = gsap.utils.toArray('.skill-section');
+ScrollTrigger.create(
+  {
+    trigger: "#skills",
+    start: "top bottom",
+    end: "bottom top",
+    scrub: 0.5,
+    // markers: true,
+    onUpdate: (self) => {
+      const factor = gsap.utils.clamp(0.3, 3, Math.pow(getAspectRatio(), 1.5));
 
-  gsap.fromTo(element,
-    { xPercent: fromX },
-    {
-      xPercent: toX,
-      ease: "none",
-      scrollTrigger: {
-        trigger: "#skills",
-        start: "top bottom",
-        end: "bottom top",
-        scrub: 0,
-        // markers: true,
-      },
+      skillSections.forEach((element, i) => {
+        const isEven = (i % 2 == 0);
+
+        const fromX = isEven ? -30 * factor : 15 * factor;
+        const toX = isEven ? 15 * factor : -30 * factor;
+
+        gsap.set(element, { xPercent: gsap.utils.interpolate(fromX, toX, self.progress) });
+      });
     }
-  );
+  },
+);
+
+skillSections.forEach((element, i) => {
   const text = element.innerHTML;
   element.innerHTML += `${text} ${text}`;
 });
