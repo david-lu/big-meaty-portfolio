@@ -1,61 +1,55 @@
 gsap.registerPlugin(ScrollToPlugin, ScrollTrigger);
 SmoothScroll({});
 
+// HELPERS
+const $ = document.querySelector.bind(document)
 const getAspectRatio = () => window.innerHeight / window.innerWidth;
 const vh = (x) => window.innerHeight * (x / 100);
 const vw = (y) => window.innerWidth * (y / 100);
 const rem = (val) => parseFloat(getComputedStyle(document.documentElement).fontSize) * val;
 
+// INTRO ANIMATION
 window.onload = () => {
-  document.querySelector('#title').classList.remove('hidden');
-  document.querySelector('#subtitle').classList.remove('hidden');
-  document.querySelector('#intro-scroll-button').classList.remove('hidden');
+  $('#title').classList.remove('hidden');
+  $('#subtitle').classList.remove('hidden');
+  $('#intro-scroll-button').disabled = false;
 };
 
-document.querySelector('#nav-hamburger').addEventListener('click', () => {
-  document.querySelector('#nav-github').classList.toggle('hidden');
-  document.querySelector('#nav-linkedin').classList.toggle('hidden');
-  document.querySelector('#nav-instagram').classList.toggle('hidden');
+$('#nav-hamburger').addEventListener('click', () => {
+  $('#nav-github').disabled = !$('#nav-github').disabled;
+  $('#nav-linkedin').disabled = !$('#nav-linkedin').disabled;
+  $('#nav-instagram').disabled = !$('#nav-instagram').disabled;
 });
 
 // SCROLL BUTTONS
-document.querySelector('#intro-scroll-button').addEventListener('click', () => {
+$('#intro-scroll-button').addEventListener('click', () => {
+  $('#intro-scroll-button').disabled = true;
   gsap.to(window, { ease: 'sine.inOut', duration: 6, scrollTo: vh(217) + rem(4) });
 });
-
-document.querySelector('#map-scroll-button').addEventListener('click', () => {
-  gsap.to(window, { ease: 'sine.inOut', duration: 6, scrollTo: vh(475) + rem(8) });
+ScrollTrigger.create({
+  trigger: '#intro', start: "top bottom", end: "bottom top",
+  onEnterBack: (self) => $('#intro-scroll-button').disabled = false
 });
 
-document.querySelector('#skills-scroll-button').addEventListener('click', () => {
+$('#map-scroll-button').addEventListener('click', () => {
+  $('#map-scroll-button').disabled = true;
+  gsap.to(window, { ease: 'sine.inOut', duration: 6, scrollTo: vh(470) + rem(8) });
+});
+ScrollTrigger.create({
+  trigger: '#map', start: "top bottom", end: "bottom top",
+  onEnterBack: (self) => $('#map-scroll-button').disabled = false
+});
+
+$('#skills-scroll-button').addEventListener('click', () => {
+  $('#skills-scroll-button').disabled = true;
   gsap.to(window, { ease: 'sine.inOut', duration: 4, scrollTo: 'max' });
+});
+ScrollTrigger.create({
+  trigger: '#skills', start: "top bottom", end: "bottom top",
+  onEnterBack: (self) => $('#skills-scroll-button').disabled = false
 });
 
 // INTRO
-// gsap.to("#title",
-//   {
-//     y: '-20vh',
-//     scrollTrigger: {
-//       trigger: "#intro",
-//       start: "top top",
-//       end: "bottom top",
-//       scrub: 0.5,
-//     },
-//   }
-// );
-
-// gsap.to("#subtitle",
-//   {
-//     y: '-15vh',
-//     scrollTrigger: {
-//       trigger: "#intro",
-//       start: "top top",
-//       end: "bottom top",
-//       scrub: 0.45,
-//     },
-//   }
-// );
-
 gsap.to("#fg",
   {
     yPercent: 15,
@@ -68,8 +62,8 @@ gsap.to("#fg",
   }
 );
 
-const introBgs = gsap.utils.toArray('#intro .parallax-bg').sort((a, b) =>
-  b.style.zIndex - a.style.zIndex
+const introBgs = gsap.utils.toArray('#intro .parallax-bg').sort(
+  (a, b) => b.style.zIndex - a.style.zIndex
 );
 introBgs.forEach(
   (elem, i) => {
@@ -117,7 +111,6 @@ gsap.fromTo(
       start: "-5% center",
       end: "35% top",
       scrub: 0.5,
-      // markers: true,
     },
   }
 );
@@ -126,55 +119,35 @@ ScrollTrigger.create({
   trigger: '#map',
   start: "7% center",
   end: "35% top",
-  // markers: true,
-  onEnter: (self) => {
-    document.querySelector('#school-pin').classList.remove('inactive');
-  },
-  onLeaveBack: (self) => {
-    document.querySelector('#school-pin').classList.add('inactive');
-  }
+  onEnter: (self) => $('#school-pin').classList.remove('inactive'),
+  onLeaveBack: (self) => $('#school-pin').classList.add('inactive')
 });
 
 ScrollTrigger.create({
   trigger: '#map',
   start: "24% center",
   end: "35% top",
-  // markers: true,
-  onEnter: (self) => {
-    document.querySelector('#samsung-pin').classList.remove('inactive');
-  },
-  onLeaveBack: (self) => {
-    document.querySelector('#samsung-pin').classList.add('inactive');
-  }
+  onEnter: (self) => $('#samsung-pin').classList.remove('inactive'),
+  onLeaveBack: (self) => $('#samsung-pin').classList.add('inactive')
 });
 
 ScrollTrigger.create({
   trigger: '#map',
   start: "41% center",
   end: "35% top",
-  // markers: true,
-  onEnter: (self) => {
-    document.querySelector('#ads-pin').classList.remove('inactive');
-  },
-  onLeaveBack: (self) => {
-    document.querySelector('#ads-pin').classList.add('inactive');
-  }
+  onEnter: (self) => $('#ads-pin').classList.remove('inactive'),
+  onLeaveBack: (self) => $('#ads-pin').classList.add('inactive')
 });
 
 ScrollTrigger.create({
   trigger: '#map',
   start: "57% center",
   end: "35% top",
-  // markers: true,
-  onEnter: (self) => {
-    document.querySelector('#google-pin').classList.remove('inactive');
-  },
-  onLeaveBack: (self) => {
-    document.querySelector('#google-pin').classList.add('inactive');
-  }
+  onEnter: (self) => $('#google-pin').classList.remove('inactive'),
+  onLeaveBack: (self) => $('#google-pin').classList.add('inactive')
 });
 
-const googlePinExpand = document.querySelector('#google-pin-expand');
+const googlePinExpand = $('#google-pin-expand');
 gsap.fromTo(
   googlePinExpand,
   {
@@ -211,23 +184,6 @@ gsap.fromTo(
 );
 
 // GOOGLE
-// gsap.fromTo(
-// '#google .parallax-container',
-//   { y: '-25vh' },
-//   {
-//     y: '25vh',
-//     ease: 'none',
-//     lazy: false,
-//     scrollTrigger: {
-//       trigger: '#google',
-//       start: "top bottom",
-//       end: "bottom top",
-//       scrub: 0,
-//     }
-//   }
-// );
-
-
 const googleSections = gsap.utils.toArray('.google-section');
 ScrollTrigger.create(
   {
@@ -241,7 +197,6 @@ ScrollTrigger.create(
 
       googleSections.forEach((element, i) => {
         const isEven = (i % 2 == 0);
-
         const fromX = isEven ? -30 * factor : 15 * factor;
         const toX = isEven ? 15 * factor : -30 * factor;
 
@@ -250,7 +205,6 @@ ScrollTrigger.create(
     }
   },
 );
-
 googleSections.forEach((element, i) => {
   const text = element.innerHTML;
   element.innerHTML += `${text} ${text}`;
@@ -273,7 +227,6 @@ gsap.fromTo(
   }
 );
 
-// OUTRO
 const skillSections = gsap.utils.toArray('.skill-section');
 ScrollTrigger.create(
   {
@@ -287,7 +240,6 @@ ScrollTrigger.create(
 
       skillSections.forEach((element, i) => {
         const isEven = (i % 2 == 0);
-
         const fromX = isEven ? -30 * factor : 15 * factor;
         const toX = isEven ? 15 * factor : -30 * factor;
 
@@ -296,14 +248,15 @@ ScrollTrigger.create(
     }
   },
 );
-
 skillSections.forEach((element, i) => {
   const text = element.innerHTML;
   element.innerHTML += `${text} ${text}`;
 });
 
-const outroBgs = gsap.utils.toArray('#outro .parallax-bg').sort((a, b) =>
-  a.style.zIndex - b.style.zIndex
+
+// OUTRO
+const outroBgs = gsap.utils.toArray('#outro .parallax-bg').sort(
+  (a, b) => a.style.zIndex - b.style.zIndex
 );
 outroBgs.forEach(
   (elem, i) => {
@@ -344,10 +297,10 @@ ScrollTrigger.create(
     end: "bottom bottom",
     scrub: 0,
     onEnter: (self) => {
-      document.querySelector('#outro-socials').classList.remove('hidden');
+      $('#outro-socials').classList.remove('hidden');
     },
     onLeaveBack: (self) => {
-      document.querySelector('#outro-socials').classList.add('hidden');
+      $('#outro-socials').classList.add('hidden');
     }
   }
 );

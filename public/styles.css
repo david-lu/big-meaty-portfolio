@@ -71,7 +71,8 @@ body>div {
     transition: transform 300ms var(--backEaseOut);
 }
 
-.nav-button.hidden {
+.nav-button:disabled {
+    transform: translateY(-70px);
     transition: transform 180ms var(--easeOut);
 }
 
@@ -106,8 +107,7 @@ body>div {
     transition-delay: 200ms;
 }
 
-#nav-github.hidden {
-    transform: translateY(-70px);
+#nav-github:disabled {
     transition-delay: 0s;
 }
 
@@ -115,8 +115,7 @@ body>div {
     transition-delay: 100ms;
 }
 
-#nav-linkedin.hidden {
-    transform: translateY(-70px);
+#nav-linkedin:disabled {
     transition-delay: 70ms;
 }
 
@@ -124,8 +123,7 @@ body>div {
     transition-delay: 0s;
 }
 
-#nav-instagram.hidden {
-    transform: translateY(-70px);
+#nav-instagram:disabled {
     transition-delay: 140ms;
 }
 
@@ -175,6 +173,13 @@ body>div {
     text-align: center;
     user-select: none;
     width: auto;
+    transition: transform 350ms, opacity 200ms;
+}
+
+.scroll-button:disabled {
+    transform: scale(1.3);
+    opacity: 0;
+    cursor: initial;
 }
 
 .scroll-button::before {
@@ -293,13 +298,11 @@ body>div {
     position: absolute;
     bottom: 3%;
     animation: pulse-animation 2s infinite;
-    transition: transform 350ms var(--backEaseOut), opacity 200ms;
     transition-delay: 1200ms;
 }
 
-#intro-scroll-button.hidden {
-    transform: scale(0);
-    opacity: 0;
+#intro-scroll-button:disabled {
+    transition-delay: 0ms;
 }
 
 @keyframes pulse-animation {
