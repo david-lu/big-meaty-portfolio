@@ -148,7 +148,7 @@ body>div {
 }
 
 .parallax-bg {
-    width: 100%;
+    min-height: 100%;
     position: absolute;
     bottom: 0;
     will-change: transform;
@@ -563,7 +563,7 @@ body>div {
 #outro {
     height: 100vh;
     justify-content: flex-end;
-    background: linear-gradient(0deg, rgba(230, 17, 98, 1) 20%, rgba(230, 17, 17, 1) 44%, rgba(255, 151, 0, 1) 100%);
+    background: linear-gradient(180deg, rgb(222, 10, 77) 0%, rgb(233, 107, 23) 60%);
 }
 
 #outro-info {
@@ -575,11 +575,11 @@ body>div {
 
 #outro-sun {
     position: absolute;
-    width: min(85vw, 60vh);
+    width: min(75vw, 50vh);
     aspect-ratio: 1;
-    bottom: 16vh;
+    top: 26vh;
     border-radius: 100%;
-    background: linear-gradient(0deg, rgba(230, 147, 17, 0) 30%, rgba(230, 176, 17, 1) 100%);
+    background: linear-gradient(0deg, rgba(247, 184, 11, 0) 0%, rgb(248, 204, 71) 100%);
 }
 
 #outro-socials {
@@ -632,7 +632,8 @@ body>div {
 
 @media (max-aspect-ratio: 1) {
     .parallax-bg {
-        width: 180%;
+        height: initial;
+        width: 220%;
     }
 
     #intro {

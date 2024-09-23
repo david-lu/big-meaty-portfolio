@@ -28,29 +28,29 @@ document.querySelector('#skills-scroll-button').addEventListener('click', () => 
 });
 
 // INTRO
-gsap.to("#title",
-  {
-    yPercent: -10,
-    scrollTrigger: {
-      trigger: "#intro",
-      start: "top top",
-      end: "bottom top",
-      scrub: 0.5,
-    },
-  }
-);
+// gsap.to("#title",
+//   {
+//     y: '-20vh',
+//     scrollTrigger: {
+//       trigger: "#intro",
+//       start: "top top",
+//       end: "bottom top",
+//       scrub: 0.5,
+//     },
+//   }
+// );
 
-gsap.to("#subtitle",
-  {
-    yPercent: -30,
-    scrollTrigger: {
-      trigger: "#intro",
-      start: "top top",
-      end: "bottom top",
-      scrub: 0.45,
-    },
-  }
-);
+// gsap.to("#subtitle",
+//   {
+//     y: '-15vh',
+//     scrollTrigger: {
+//       trigger: "#intro",
+//       start: "top top",
+//       end: "bottom top",
+//       scrub: 0.45,
+//     },
+//   }
+// );
 
 gsap.to("#fg",
   {
@@ -303,7 +303,7 @@ const outroBgs = gsap.utils.toArray('#outro .parallax-bg').sort((a, b) =>
 outroBgs.forEach(
   (elem, i) => {
     gsap.fromTo(elem,
-      { y: `-${60 + (i * 10)}vh` },
+      { y: `-${50 + (i * 10)}vh` },
       {
         y: 0,
         ease: 'none',
@@ -333,10 +333,10 @@ gsap.fromTo('#outro-info',
 );
 
 gsap.fromTo('#outro-sun',
-  { y: `-15vh` },
+  { y: `12vh` },
   {
     y: 0,
-    ease: 'none',
+    ease: 'power1.out',
     scrollTrigger: {
       trigger: "#outro",
       start: "top bottom",
