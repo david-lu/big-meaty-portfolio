@@ -6,8 +6,6 @@ const vh = (x) => window.innerHeight * (x / 100);
 const vw = (y) => window.innerWidth * (y / 100);
 const rem = (val) => parseFloat(getComputedStyle(document.documentElement).fontSize) * val;
 
-// ScrollTrigger.normalizeScroll(true);
-
 document.querySelector('#nav-hamburger').addEventListener('click', () => {
   document.querySelector('#nav-github').classList.toggle('hidden');
   document.querySelector('#nav-linkedin').classList.toggle('hidden');
@@ -269,6 +267,7 @@ gsap.fromTo(
   }
 );
 
+// OUTRO
 const skillSections = gsap.utils.toArray('.skill-section');
 ScrollTrigger.create(
   {
@@ -303,10 +302,10 @@ const outroBgs = gsap.utils.toArray('#outro .parallax-bg').sort((a, b) =>
 outroBgs.forEach(
   (elem, i) => {
     gsap.fromTo(elem,
-      { y: `-${50 + (i * 10)}vh` },
+      { yPercent: -50 + (i * 10) },
       {
-        y: 0,
-        ease: 'none',
+        yPercent: 2,
+        // ease: 'sine.out',
         scrollTrigger: {
           trigger: "#outro",
           start: "top bottom",
@@ -318,30 +317,16 @@ outroBgs.forEach(
   }
 );
 
-gsap.fromTo('#outro-info',
-  { y: `-10vh` },
-  {
-    y: 0,
-    ease: 'none',
-    scrollTrigger: {
-      trigger: "#outro",
-      start: "top bottom",
-      end: "bottom bottom",
-      scrub: 0,
-    },
-  }
-);
-
 gsap.fromTo('#outro-sun',
-  { y: `12vh` },
+  { y: '12vh' },
   {
-    y: 0,
-    ease: 'power1.out',
+    y: '1px',
+    ease: 'power2.out',
     scrollTrigger: {
       trigger: "#outro",
       start: "top bottom",
       end: "bottom bottom",
-      scrub: 0,
+      scrub: 0.8,
     },
   }
 );
@@ -349,7 +334,7 @@ gsap.fromTo('#outro-sun',
 ScrollTrigger.create(
   {
     trigger: "#outro",
-    start: "90% bottom",
+    start: "80% bottom",
     end: "bottom bottom",
     scrub: 0,
     onEnter: (self) => {
