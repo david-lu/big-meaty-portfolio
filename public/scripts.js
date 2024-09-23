@@ -298,9 +298,11 @@ ScrollTrigger.create(
     scrub: 0,
     onEnter: (self) => {
       $('#outro-socials').classList.remove('hidden');
+      $('html').style.setProperty('background-color', 'var(--bg-outro-color)');
     },
     onLeaveBack: (self) => {
       $('#outro-socials').classList.add('hidden');
+      $('html').style.removeProperty('background-color');
     }
   }
 );

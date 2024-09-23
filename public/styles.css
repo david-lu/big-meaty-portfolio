@@ -1,4 +1,6 @@
 :root {
+    --bg-intro-color: #7096C1;
+    --bg-outro-color: #ac3d71;
     --map-color: rgb(23, 29, 46);
     --map-secondary-color: rgb(39, 50, 84);
     --parallax-padding: calc(max(7vw, 100vw - (100vh * 1.1)) / 2);
@@ -13,11 +15,9 @@
     src: url(assets/sponge.ttf);
 }
 
-
 html {
     font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
-    background-color: #7096C1;
-    /* scroll-behavior: smooth; */
+    background-color: var(--bg-intro-color);
 }
 
 div {
