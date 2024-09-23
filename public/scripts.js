@@ -6,6 +6,12 @@ const vh = (x) => window.innerHeight * (x / 100);
 const vw = (y) => window.innerWidth * (y / 100);
 const rem = (val) => parseFloat(getComputedStyle(document.documentElement).fontSize) * val;
 
+window.onload = () => {
+  document.querySelector('#title').classList.remove('hidden');
+  document.querySelector('#subtitle').classList.remove('hidden');
+  document.querySelector('#intro-scroll-button').classList.remove('hidden');
+};
+
 document.querySelector('#nav-hamburger').addEventListener('click', () => {
   document.querySelector('#nav-github').classList.toggle('hidden');
   document.querySelector('#nav-linkedin').classList.toggle('hidden');

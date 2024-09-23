@@ -206,6 +206,8 @@ body>div {
     background-image: url('assets/title.svg');
     background-position: bottom;
     background-size: 100% 100%;
+    transition: transform 600ms, opacity 700ms;
+    transition-delay: 200ms;
 }
 
 #subtitle {
@@ -215,6 +217,18 @@ body>div {
     background-image: url('assets/subtitle.svg');
     background-position: top;
     background-size: 100% 100%;
+    transition: transform 600ms, opacity 700ms;
+    transition-delay: 600ms;
+}
+
+#title.hidden {
+    transform: translateY(5vh);
+    opacity: 0;
+}
+
+#subtitle.hidden {
+    transform: translateY(5vh);
+    opacity: 0;
 }
 
 #fg-container {
@@ -244,6 +258,7 @@ body>div {
     width: 100%;
     height: 100%;
     background-image: url('assets/intro-layer-david.svg');
+    will-change: transform;
 }
 
 @keyframes arm-anim {
@@ -270,12 +285,20 @@ body>div {
     animation: arm-anim 1.5s infinite;
     transition-timing-function: ease;
     transform-origin: 95% 82%;
+    will-change: transform;
 }
 
 #intro-scroll-button {
     position: absolute;
     bottom: 3%;
     animation: pulse-animation 2s infinite;
+    transition: transform 350ms var(--backEaseOut), opacity 200ms;
+    transition-delay: 1200ms;
+}
+
+#intro-scroll-button.hidden {
+    transform: scale(0);
+    opacity: 0;
 }
 
 @keyframes pulse-animation {
@@ -356,8 +379,10 @@ body>div {
 }
 
 .pin-info {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
     position: absolute;
-    display: inline-block;
     margin: 0 10px;
     bottom: 0;
     height: 100%;
@@ -372,6 +397,7 @@ body>div {
 .pin-info.right {
     right: 100%;
     text-align: right;
+    align-items: flex-end;
 }
 
 .pin-info.left {
@@ -567,6 +593,8 @@ body>div {
 }
 
 #outro-info {
+    display: flex;
+    align-items: center;
     flex: 4;
     font-size: 1.5rem;
     margin: 0 8vw;
