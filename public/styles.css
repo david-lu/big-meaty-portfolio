@@ -17,6 +17,7 @@
 html {
     font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
     background-color: #7096C1;
+    scroll-behavior: smooth;
 }
 
 div {
