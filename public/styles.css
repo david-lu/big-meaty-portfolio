@@ -435,7 +435,7 @@ body>div {
 #google-pin-expand {
     transition: none;
     opacity: 0;
-    will-change: transform, opacity;
+    /* will-change: transform, opacity; */
     /* background-color: green; */
 }
 
@@ -454,7 +454,7 @@ body>div {
 #google .parallax-container {
     gap: 3rem;
     align-content: center;
-    will-change: transform;
+    /* will-change: transform; */
 }
 
 .google-section {
@@ -541,7 +541,8 @@ body>div {
 }
 
 #skills .parallax-container {
-    will-change: transform;
+    height: 66vh;
+    /* will-change: transform; */
 }
 
 .skill-header {

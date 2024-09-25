@@ -200,7 +200,12 @@ ScrollTrigger.create(
         const fromX = isEven ? -30 * factor : 15 * factor;
         const toX = isEven ? 15 * factor : -30 * factor;
 
-        gsap.set(element, { xPercent: gsap.utils.interpolate(fromX, toX, self.progress) });
+        gsap.set(element,
+          {
+            x: `${gsap.utils.interpolate(fromX, toX, self.progress)}%`,
+            force3D: true
+          }
+        );
       });
     }
   },
@@ -217,7 +222,6 @@ gsap.fromTo(
   {
     y: '70vh',
     ease: 'none',
-    lazy: false,
     scrollTrigger: {
       trigger: '#skills',
       start: "top bottom",
@@ -233,7 +237,7 @@ ScrollTrigger.create(
     trigger: "#skills",
     start: "top bottom",
     end: "bottom top",
-    scrub: 0.5,
+    scrub: 0,
     // markers: true,
     onUpdate: (self) => {
       const factor = gsap.utils.clamp(0.3, 3, Math.pow(getAspectRatio(), 1.5));
