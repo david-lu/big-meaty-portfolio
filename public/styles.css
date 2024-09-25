@@ -18,7 +18,10 @@
 html {
     font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
     background-color: var(--bg-intro-color);
+    font-size: 16px;
 }
+
+
 
 div {
     box-sizing: border-box;
@@ -197,7 +200,7 @@ body>div {
 #intro {
     display: flex;
     justify-content: center;
-    height: 100vh;
+    height: 100dvh;
     color: white;
     background: linear-gradient(180deg, #7096C1 20%, #EC6F8D 70vh);
     padding: 0 var(--parallax-wide-padding);
