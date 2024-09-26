@@ -175,7 +175,7 @@ body>div {
     text-align: center;
     user-select: none;
     width: auto;
-    transition: transform 350ms, opacity 200ms;
+    transition: transform 500ms, opacity 300ms;
 }
 
 .scroll-button:disabled {
@@ -218,33 +218,34 @@ body>div {
 
 #title {
     width: 100%;
-    height: 43vh;
-    margin: 0 2vh;
+    aspect-ratio: 3.1;
+    max-height: 43vh;
+    margin: 2vh 0 15vh 0;
     background-image: url('assets/title.svg');
     background-position: bottom;
     background-size: 100% 100%;
-    transition: transform 600ms, opacity 700ms;
-    transition-delay: 200ms;
+    transition: transform 900ms, opacity 1000ms;
+    transition-delay: 600ms;
 }
 
 #subtitle {
     width: 100%;
-    height: 10vh;
-    margin: 6vh 2vh 7vh 2vh;
+    aspect-ratio: 12;
+    max-height: 10vh;
     background-image: url('assets/subtitle.svg');
     background-position: top;
     background-size: 100% 100%;
-    transition: transform 600ms, opacity 700ms;
-    transition-delay: 600ms;
+    transition: transform 900ms, opacity 1000ms;
+    transition-delay: 300ms;
 }
 
 #title.hidden {
-    transform: scale(1.1);
+    transform: translateY(3vh);
     opacity: 0;
 }
 
 #subtitle.hidden {
-    transform: scale(1.1);
+    transform: translateY(5vh);
     opacity: 0;
 }
 
@@ -309,7 +310,7 @@ body>div {
     position: absolute;
     bottom: 3%;
     animation: pulse-animation 2s infinite;
-    transition-delay: 1200ms;
+    transition-delay: 900ms;
 }
 
 #intro-scroll-button:disabled {
@@ -709,13 +710,11 @@ body>div {
     }
 
     #title {
-        height: 20vh;
-        margin: 12vh 0 0 0;
+        margin: 1vh 0 2vh 0;
     }
 
     #subtitle {
-        height: 7vh;
-        margin: 1vh 2vh;
+        margin: 12vh 0 0 0;
     }
 
     #google .parallax-container {
@@ -723,7 +722,7 @@ body>div {
     }
 }
 
-@media (max-aspect-ratio: 0.6) {
+@media (max-aspect-ratio: 0.55) {
     #intro-scroll-button {
         position: relative;
         bottom: inherit;
