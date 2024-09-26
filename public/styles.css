@@ -21,9 +21,8 @@ html {
     font-size: 16px;
 }
 
-
-
 div {
+    display: flex;
     box-sizing: border-box;
     justify-content: center;
     align-content: center;
@@ -53,7 +52,6 @@ body>div {
 }
 
 #nav-menu {
-    display: flex;
     flex-direction: row;
     justify-content: flex-end;
     top: 0;
@@ -87,7 +85,6 @@ body>div {
 
 .nav-button>div {
     height: 35px;
-    display: flex;
 }
 
 .nav-button img {
@@ -133,7 +130,6 @@ body>div {
 }
 
 .parallax-section {
-    display: flex;
     justify-content: flex-start;
     position: relative;
     overflow: hidden;
@@ -141,7 +137,6 @@ body>div {
 }
 
 .parallax-container {
-    display: flex;
     width: 100%;
     height: 100vh;
 }
@@ -175,7 +170,7 @@ body>div {
     text-align: center;
     user-select: none;
     width: auto;
-    transition: transform 500ms, opacity 300ms;
+    transition: transform 350ms, opacity 300ms;
 }
 
 .scroll-button:disabled {
@@ -206,14 +201,11 @@ body>div {
 }
 
 #intro {
-    display: flex;
     justify-content: center;
     height: 100svh;
     color: white;
     background: linear-gradient(180deg, #7096C1 20%, #EC6F8D 70vh);
     padding: 0 var(--parallax-wide-padding);
-    /* background: url(assets/ref.jpg); */
-    /* background-size: 100% 100%; */
 }
 
 #title {
@@ -358,7 +350,6 @@ body>div {
 }
 
 #map-info {
-    display: flex;
     padding: 0 3vw;
     text-align: justify;
     color: var(--map-color);
@@ -395,7 +386,6 @@ body>div {
 }
 
 .pin-info {
-    display: flex;
     justify-content: center;
     align-items: flex-start;
     position: absolute;
@@ -477,7 +467,6 @@ body>div {
 .google-section {
     height: min(20vh, 33vw);
     overflow: visible;
-    display: flex;
     flex-direction: row;
     align-items: stretch;
     flex-wrap: nowrap;
@@ -518,7 +507,6 @@ body>div {
     font-size: 1rem;
     width: 100%;
     height: 100%;
-    display: flex;
     justify-content: flex-end;
     flex-direction: column;
     align-items: center;
@@ -549,43 +537,147 @@ body>div {
 
 
 #skills {
-    flex-direction: row;
-    height: 150vh;
+    height: 100vh;
     background-color: rgb(222, 10, 77);
     font-weight: bold;
-    padding: 0 var(--parallax-wide-padding);
+    padding: 0;
     text-rendering: optimizeSpeed;
 }
 
-#skills .parallax-container {
-    height: 66vh;
+#skills-container {
+    flex-direction: row;
+    height: 100vh;
     /* will-change: transform; */
 }
 
-.skill-header {
-    margin: 0 5rem;
-    font-size: 1.5rem;
-}
-
 .skill-section {
-    font-size: 2rem;
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    flex-direction: column;
     overflow: visible;
     white-space: nowrap;
-    padding-bottom: 4vh;
 }
 
-.skill-section a:nth-child(odd) {
-    color: #ffb4d6;
+#language-skills {
+    color: #a92030;
+    background: #e56c7a;
 }
 
-.skill-section a {
-    margin: 0 1vh;
-    color: #ff8383;
-    text-decoration-line: none;
+#language-skills .skill-bar {
+    background-color: #c7162a;
+    border-color: #a92030;
 }
 
-.skill-section a:hover {
-    color: white;
+#frontend-skills {
+    color: #ffe4b1;
+    background: #F5B53D;
+}
+
+#frontend-skills .skill-bar {
+    background-color: #f6e5c6;
+    border-color: #ffe4b1;
+}
+
+#backend-skills {
+    background: #828C65;
+}
+
+#tool-skills {
+    background: rgb(197, 54, 41);
+}
+
+.skill-icon {
+    width: 40%;
+    /* background: url(assets/icon-cv.png); */
+    background: green;
+    background-size: contain;
+    aspect-ratio: 1;
+}
+
+.skill-label {
+    font-size: 1.2rem;
+    padding: 0.5rem 1rem 0.2rem 1rem;
+}
+
+.skill-list {
+    width: 100%;
+    padding: 2.5vw;
+    align-items: flex-start;
+}
+
+.skill-bar {
+    position: relative;
+    width: 100%;
+    height: 1.5rem;
+    border-radius: 20px;
+    border: 4px solid #fff;
+    background: #dcdcdc;
+}
+
+.skill-section.hidden .skill-bar::before {
+    width: 10%;
+}
+
+.skill-section.hidden .skill-bar::after {
+    width: 4%;
+}
+
+.skill-bar::before {
+    content: '';
+    top: 0;
+    left: 0;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 20px;
+    transition: 400ms;
+    background: rgb(234, 56, 56);
+}
+
+.skill-bar::after {
+    content: '';
+    top: 0;
+    left: 2px;
+    margin: 3px;
+    position: absolute;
+    width: 88%;
+    height: 30%;
+    border-radius: 20px;
+    transition: 400ms;
+    background: rgb(255 141 141);
+}
+
+.skill-bar.level-1::before {
+    width: 20%;
+}
+
+.skill-bar.level-1::after {
+    width: 8%;
+}
+
+.skill-bar.level-2::before {
+    width: 40%;
+}
+
+.skill-bar.level-2::after {
+    width: 28%;
+}
+
+.skill-bar.level-3::before {
+    width: 60%;
+}
+
+.skill-bar.level-3::after {
+    width: 48%;
+}
+
+.skill-bar.level-4::before {
+    width: 80%;
+}
+
+.skill-bar.level-4::after {
+    width: 68%;
 }
 
 #skills-scroll-button {
@@ -613,7 +705,6 @@ body>div {
     background-color: white;
 }
 
-
 #outro {
     height: 100svh;
     justify-content: flex-end;
@@ -621,7 +712,6 @@ body>div {
 }
 
 #outro-info {
-    display: flex;
     align-items: center;
     flex: 4;
     font-size: 1.2rem;
@@ -643,6 +733,7 @@ body>div {
 
 #outro-socials {
     flex: 2;
+    flex-direction: row;
     text-align: center;
     width: 100%;
     gap: 3vw;
@@ -719,6 +810,14 @@ body>div {
 
     #google .parallax-container {
         flex-direction: column-reverse;
+    }
+
+    #skills-container {
+        flex-direction: column;
+    }
+
+    .skill-section {
+        flex-direction: row;
     }
 }
 

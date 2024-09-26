@@ -40,14 +40,14 @@ ScrollTrigger.create({
   onEnterBack: (self) => $('#map-scroll-button').disabled = false
 });
 
-$('#skills-scroll-button').addEventListener('click', () => {
-  $('#skills-scroll-button').disabled = true;
-  gsap.to(window, { ease: 'sine.inOut', duration: 4, scrollTo: 'max' });
-});
-ScrollTrigger.create({
-  trigger: '#skills', start: "top bottom", end: "bottom top",
-  onEnterBack: (self) => $('#skills-scroll-button').disabled = false
-});
+// $('#skills-scroll-button').addEventListener('click', () => {
+//   $('#skills-scroll-button').disabled = true;
+//   gsap.to(window, { ease: 'sine.inOut', duration: 4, scrollTo: 'max' });
+// });
+// ScrollTrigger.create({
+//   trigger: '#skills', start: "top bottom", end: "bottom top",
+//   onEnterBack: (self) => $('#skills-scroll-button').disabled = false
+// });
 
 // INTRO
 gsap.to("#fg",
@@ -211,16 +211,16 @@ ScrollTrigger.create(
   },
 );
 googleSections.forEach((element, i) => {
-  const text = element.innerHTML;
-  element.innerHTML += `${text} ${text}`;
+  const inner = element.innerHTML;
+  element.innerHTML += `${inner}${inner}`;
 });
 
 // SKILLS
 gsap.fromTo(
-  '#skills .parallax-container',
-  { y: '-65vh' },
+  '#skills-container',
+  { y: '-35vh' },
   {
-    y: '70vh',
+    y: '35vh',
     ease: 'none',
     scrollTrigger: {
       trigger: '#skills',
@@ -232,31 +232,42 @@ gsap.fromTo(
 );
 
 const skillSections = gsap.utils.toArray('.skill-section');
-ScrollTrigger.create(
-  {
-    trigger: "#skills",
-    start: "top bottom",
-    end: "bottom top",
-    scrub: 0,
-    // markers: true,
-    onUpdate: (self) => {
-      const factor = gsap.utils.clamp(0.3, 3, Math.pow(getAspectRatio(), 1.5));
-
-      skillSections.forEach((element, i) => {
-        const isEven = (i % 2 == 0);
-        const fromX = isEven ? -30 * factor : 15 * factor;
-        const toX = isEven ? 15 * factor : -30 * factor;
-
-        gsap.set(element, { xPercent: gsap.utils.interpolate(fromX, toX, self.progress) });
-      });
-    }
-  },
-);
-skillSections.forEach((element, i) => {
-  const text = element.innerHTML;
-  element.innerHTML += `${text} ${text}`;
+skillSections.forEach((section, i) => {
+  const f = gsap.utils.interpolate(50, 10, i / skillSections.length);
+  ScrollTrigger.create(
+    {
+      trigger: "#skills",
+      start: `top ${f}%`,
+      end: "bottom top",
+      scrub: 0,
+      // markers: true,
+      onToggle: () => {
+        // console.log(i);
+        section.classList.toggle('hidden');
+      }
+    },
+  );
 });
+// ScrollTrigger.create(
+//   {
+//     trigger: "#skills",
+//     start: "top bottom",
+//     end: "bottom top",
+//     scrub: 0,
+//     // markers: true,
+//     onUpdate: (self) => {
+//       const factor = gsap.utils.clamp(0.3, 3, Math.pow(getAspectRatio(), 1.5));
 
+//       skillSections.forEach((element, i) => {
+//         const isEven = (i % 2 == 0);
+//         const fromX = isEven ? -30 * factor : 15 * factor;
+//         const toX = isEven ? 15 * factor : -30 * factor;
+
+//         gsap.set(element, { xPercent: gsap.utils.interpolate(fromX, toX, self.progress) });
+//       });
+//     }
+//   },
+// );
 
 // OUTRO
 const outroBgs = gsap.utils.toArray('#outro .parallax-bg').sort(
