@@ -240,11 +240,12 @@ skillSections.forEach((section, i) => {
       start: `top ${f}%`,
       end: "bottom top",
       scrub: 0,
-      // markers: true,
-      onToggle: () => {
-        // console.log(i);
-        section.classList.toggle('hidden');
-      }
+      onEnter: (self) => {
+        section.classList.remove('hidden');
+      },
+      onLeaveBack: (self) => {
+        section.classList.add('hidden');
+      },
     },
   );
 });

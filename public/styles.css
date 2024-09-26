@@ -557,6 +557,13 @@ body>div {
     flex-direction: column;
     overflow: visible;
     white-space: nowrap;
+    --clip: 100%;
+    clip-path: polygon(0% 0%, 100% 0%, 100% var(--clip), 0% var(--clip));
+    transition: 600ms ease-in-out;
+}
+
+.skill-section.hidden {
+    --clip: 0%;
 }
 
 #language-skills {
