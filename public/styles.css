@@ -72,7 +72,6 @@ body>div {
     cursor: pointer;
     border: none;
     transition: transform 300ms var(--backEaseOut);
-    user-select: none;
 }
 
 .nav-button:disabled {
@@ -607,7 +606,7 @@ body>div {
 
 
 #outro {
-    height: 100vh;
+    height: 100svh;
     justify-content: flex-end;
     background: linear-gradient(180deg, rgb(222, 10, 77) 0%, rgb(233, 107, 23) 60%);
 }
