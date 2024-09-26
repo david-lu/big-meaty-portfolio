@@ -79,8 +79,10 @@ body>div {
     transition: transform 180ms var(--easeOut);
 }
 
-.nav-button:hover {
-    opacity: 50%;
+@media (hover: hover) {
+    .nav-button:hover {
+        opacity: 50%;
+    }
 }
 
 .nav-button>div {
@@ -168,7 +170,7 @@ body>div {
     display: inline-block;
     margin: 0;
     outline: none;
-    padding: 12px 12px;
+    padding: 8px;
     position: relative;
     text-align: center;
     user-select: none;
@@ -186,15 +188,17 @@ body>div {
     content: '';
     display: block;
     background: white;
-    width: 23px;
-    height: 23px;
+    width: max(23px, 4vh);
+    height: max(23px, 4vh);
     user-select: none;
     mask-image: url(assets/down.svg);
     mask-size: contain;
 }
 
-.scroll-button:hover {
-    background-color: #FFFFFF44;
+@media (hover: hover) {
+    .scroll-button:hover {
+        background-color: #FFFFFF44;
+    }
 }
 
 .scroll-button:active {
@@ -434,8 +438,10 @@ body>div {
     background: var(--map-color);
 }
 
-#map-scroll-button:hover {
-    background-color: #3e3e4933;
+@media (hover: hover) {
+    #map-scroll-button:hover {
+        background-color: #3e3e4933;
+    }
 }
 
 #map-scroll-button:active {
@@ -591,8 +597,10 @@ body>div {
     background: black;
 }
 
-#skills-scroll-button:hover {
-    background-color: #3e3e4933;
+@media (hover: hover) {
+    #skills-scroll-button:hover {
+        background-color: #3e3e4933;
+    }
 }
 
 #skills-scroll-button:active {
