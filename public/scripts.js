@@ -190,7 +190,7 @@ ScrollTrigger.create(
     trigger: "#google",
     start: "top bottom",
     end: "bottom top",
-    scrub: 0,
+    scrub: 0.2,
     // markers: true,
     onUpdate: (self) => {
       const factor = gsap.utils.clamp(0.3, 2.4, Math.pow(getAspectRatio(), 2));
@@ -265,10 +265,10 @@ const outroBgs = gsap.utils.toArray('#outro .parallax-bg').sort(
 outroBgs.forEach(
   (elem, i) => {
     gsap.fromTo(elem,
-      { yPercent: -50 + (i * 10) },
+      { y: `${-62 + (i * 10)}vh` },
       {
-        yPercent: 2,
-        // ease: 'sine.out',
+        y: 2,
+        ease: 'none',
         scrollTrigger: {
           trigger: "#outro",
           start: "top bottom",

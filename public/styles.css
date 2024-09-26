@@ -72,6 +72,7 @@ body>div {
     cursor: pointer;
     border: none;
     transition: transform 300ms var(--backEaseOut);
+    user-select: none;
 }
 
 .nav-button:disabled {
@@ -166,9 +167,6 @@ body>div {
     color: #FFF;
     cursor: pointer;
     display: inline-block;
-    font-size: 23px;
-    font-weight: 600;
-    line-height: 23px;
     margin: 0;
     outline: none;
     padding: 12px 12px;
@@ -186,7 +184,14 @@ body>div {
 }
 
 .scroll-button::before {
-    content: '⬇';
+    content: '';
+    display: block;
+    background: white;
+    width: 23px;
+    height: 23px;
+    user-select: none;
+    mask-image: url(assets/down.svg);
+    mask-size: contain;
 }
 
 .scroll-button:hover {
@@ -200,7 +205,7 @@ body>div {
 #intro {
     display: flex;
     justify-content: center;
-    height: 100dvh;
+    height: 100svh;
     color: white;
     background: linear-gradient(180deg, #7096C1 20%, #EC6F8D 70vh);
     padding: 0 var(--parallax-wide-padding);
@@ -423,8 +428,11 @@ body>div {
 
 #map-scroll-button {
     border-color: var(--map-color);
-    color: var(--map-color);
     background-color: transparent;
+}
+
+#map-scroll-button::before {
+    background: var(--map-color);
 }
 
 #map-scroll-button:hover {
@@ -580,6 +588,10 @@ body>div {
     background-color: transparent;
 }
 
+#skills-scroll-button::before {
+    background: black;
+}
+
 #skills-scroll-button:hover {
     background-color: #3e3e4933;
 }
@@ -604,7 +616,7 @@ body>div {
     display: flex;
     align-items: center;
     flex: 4;
-    font-size: 1.5rem;
+    font-size: 1.2rem;
     margin: 0 8vw;
     text-align: justify;
     color: rgb(255, 232, 181);
@@ -617,6 +629,8 @@ body>div {
     top: 26vh;
     border-radius: 100%;
     background: linear-gradient(0deg, rgba(247, 184, 11, 0) 0%, rgb(248, 204, 71) 100%);
+    z-index: 1;
+    will-change: transform;
 }
 
 #outro-socials {
@@ -624,6 +638,7 @@ body>div {
     text-align: center;
     width: 100%;
     gap: 3vw;
+    z-index: 7;
 }
 
 .outro-icon {
@@ -705,6 +720,10 @@ body>div {
     #intro-scroll-button {
         position: relative;
         bottom: inherit;
+    }
+
+    #outro-socials {
+        z-index: 5;
     }
 
     .outro-socials-break {
