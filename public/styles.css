@@ -239,19 +239,19 @@ body>div {
 }
 
 #title.hidden {
-    transform: translateY(5vh);
+    transform: scale(1.1);
     opacity: 0;
 }
 
 #subtitle.hidden {
-    transform: translateY(5vh);
+    transform: scale(1.1);
     opacity: 0;
 }
 
 #fg-container {
     position: absolute;
-    height: 66vh;
-    max-width: 88vw;
+    height: 60svh;
+    max-width: 100vw;
     bottom: 0;
     aspect-ratio: 1.2;
 }
@@ -723,7 +723,7 @@ body>div {
     }
 }
 
-@media (max-aspect-ratio: 0.66) {
+@media (max-aspect-ratio: 0.6) {
     #intro-scroll-button {
         position: relative;
         bottom: inherit;
