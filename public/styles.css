@@ -635,6 +635,7 @@ body>div {
 
 #outro-socials {
     flex: 2;
+    flex-direction: row;
     text-align: center;
     width: 100%;
     gap: 3vw;
