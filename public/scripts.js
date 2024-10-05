@@ -218,7 +218,7 @@ googleSections.forEach((element, i) => {
 // SKILLS
 const skillSections = gsap.utils.toArray('.skill-section');
 skillSections.forEach((skillSection, i) => {
-  const top = 80 - (10 * (i + 1));
+  const top = 110 - (17 * (i + 1));
 
   gsap.fromTo(
     skillSection,

@@ -633,8 +633,13 @@ body>div {
 
 .skill-list a span {
     display: inline-flex;
-    transition: 200ms;
+    transition: 250ms;
 }
+
+.skill-section.hidden .skill-list a span {
+    transition: 150ms;
+}
+
 
 .skill-section.hidden .skill-list a span {
     transform: translateY(-100%);
@@ -737,6 +742,7 @@ body>div {
 }
 
 #outro-socials {
+    display: inline-block;
     flex: 2;
     flex-direction: row;
     text-align: center;
