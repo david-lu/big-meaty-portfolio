@@ -24,7 +24,7 @@ $('#nav-hamburger').addEventListener('click', () => {
 // SCROLL BUTTONS
 $('#intro-scroll-button').addEventListener('click', () => {
   $('#intro-scroll-button').disabled = true;
-  gsap.to(window, { ease: 'sine.inOut', duration: 6, scrollTo: vh(217) + rem(4) });
+  gsap.to(window, { ease: 'sine.inOut', duration: 6, scrollTo: vh(225) + rem(4) });
 });
 ScrollTrigger.create({
   trigger: '#intro', start: "top bottom", end: "bottom top",
@@ -33,7 +33,7 @@ ScrollTrigger.create({
 
 $('#map-scroll-button').addEventListener('click', () => {
   $('#map-scroll-button').disabled = true;
-  gsap.to(window, { ease: 'sine.inOut', duration: 6, scrollTo: vh(470) + rem(8) });
+  gsap.to(window, { ease: 'sine.inOut', duration: 6, scrollTo: vh(460) + rem(8) });
 });
 ScrollTrigger.create({
   trigger: '#map', start: "top bottom", end: "bottom top",

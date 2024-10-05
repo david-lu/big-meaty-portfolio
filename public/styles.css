@@ -332,13 +332,13 @@ body>div {
 
 #map {
     overflow: clip visible;
-    height: 210vh;
+    height: 220vh;
     background: linear-gradient(180deg, var(--map-secondary-color), var(--map-color) 60%);
     padding: 0 var(--parallax-narrow-padding);
 }
 
 #map-path {
-    height: 130vh;
+    height: 140vh;
     align-self: flex-start;
     will-change: transform;
 }
@@ -399,7 +399,6 @@ body>div {
     bottom: 0;
     height: 100%;
     width: 30vh;
-    transition: 200ms ease;
 }
 
 .pin-info p {
@@ -416,14 +415,39 @@ body>div {
     left: 100%;
 }
 
-.pin.inactive .pin-info.right {
-    transform: translateX(50%);
-    opacity: 0;
+.pin-info p {
+    display: inline-block;
+    transition: 350ms ease-out;
 }
 
-.pin.inactive .pin-info.left {
-    transform: translateX(-50%);
+.pin.inactive .pin-info p {
     opacity: 0;
+    transform: translateY(-100%);
+    transition: 200ms ease-in;
+}
+
+.pin-info p:nth-child(1) {
+    transition-delay: 70ms;
+}
+
+.pin-info p:nth-child(2) {
+    transition-delay: 140ms;
+}
+
+.pin-info p:nth-child(3) {
+    transition-delay: 210ms;
+}
+
+.pin.inactive .pin-info p:nth-last-child(1) {
+    transition-delay: 0ms;
+}
+
+.pin.inactive .pin-info p:nth-last-child(2) {
+    transition-delay: 50ms;
+}
+
+.pin.inactive .pin-info p:nth-last-child(3) {
+    transition-delay: 100ms;
 }
 
 #map-scroll-button {
