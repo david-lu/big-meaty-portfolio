@@ -141,7 +141,7 @@ ScrollTrigger.create({
 
 ScrollTrigger.create({
   trigger: '#map',
-  start: "57% center",
+  start: "55% center",
   end: "35% top",
   onEnter: (self) => $('#google-pin').classList.remove('inactive'),
   onLeaveBack: (self) => $('#google-pin').classList.add('inactive')
@@ -216,47 +216,35 @@ googleSections.forEach((element, i) => {
 });
 
 // SKILLS
-gsap.fromTo(
-  '#skills .parallax-container',
-  { y: '-65vh' },
-  {
-    y: '70vh',
-    ease: 'none',
-    scrollTrigger: {
-      trigger: '#skills',
-      start: "top bottom",
-      end: "bottom top",
-      scrub: 0,
-    }
-  }
-);
-
 const skillSections = gsap.utils.toArray('.skill-section');
-ScrollTrigger.create(
-  {
-    trigger: "#skills",
-    start: "top bottom",
-    end: "bottom top",
-    scrub: 0,
-    // markers: true,
-    onUpdate: (self) => {
-      const factor = gsap.utils.clamp(0.3, 3, Math.pow(getAspectRatio(), 1.5));
+skillSections.forEach((skillSection, i) => {
+  const top = 80 - (10 * (i + 1));
 
-      skillSections.forEach((element, i) => {
-        const isEven = (i % 2 == 0);
-        const fromX = isEven ? -30 * factor : 15 * factor;
-        const toX = isEven ? 15 * factor : -30 * factor;
-
-        gsap.set(element, { xPercent: gsap.utils.interpolate(fromX, toX, self.progress) });
-      });
+  gsap.fromTo(
+    skillSection,
+    { y: '-35vh' },
+    {
+      y: '30vh',
+      ease: 'none',
+      immediateRender: false,
+      scrollTrigger: {
+        trigger: '#skills',
+        start: "top bottom",
+        end: "bottom top",
+        scrub: 0,
+      }
     }
-  },
-);
-skillSections.forEach((element, i) => {
-  const text = element.innerHTML;
-  element.innerHTML += `${text} ${text}`;
-});
+  );
 
+  ScrollTrigger.create({
+    trigger: "#skills",
+    start: `top ${top}%`,
+    end: "bottom bottom",
+    scrub: 0,
+    onEnter: (self) => skillSection.classList.remove('hidden'),
+    onLeaveBack: (self) => skillSection.classList.add('hidden')
+  });
+});
 
 // OUTRO
 const outroBgs = gsap.utils.toArray('#outro .parallax-bg').sort(
