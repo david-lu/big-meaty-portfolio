@@ -6,6 +6,17 @@
   <meta charset="utf-8">
   <link rel="stylesheet" href="styles.css">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
+
+  <!-- PRELOAD -->
+  <link rel="preload" as="image" href="assets/intro-layer-mountain-01.svg">
+  <link rel="preload" as="image" href="assets/intro-layer-mountain-02.svg">
+  <link rel="preload" as="image" href="assets/intro-layer-mountain-03.svg">
+  <link rel="preload" as="image" href="assets/intro-layer-tree.svg">
+  <link rel="preload" as="image" href="assets/intro-layer-fg.svg">
+  <link rel="preload" as="image" href="assets/intro-layer-david.svg">
+  <link rel="preload" as="image" href="assets/intro-layer-david-arm.svg">
+
+  <!-- SCRIPTS -->
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollToPlugin.min.js"></script>
@@ -19,6 +30,8 @@
 
     gtag('config', 'G-9P1VT52DKP');
   </script>
+
+  <!-- FACEBOOK GRAPHS -->
   <meta property='og:title' content='David Lu' />
   <meta property='og:image' content='https://david-lu.com/assets/banner.png' />
   <meta property='og:description' content='Full-stack Engineer Portfolio' />
@@ -33,15 +46,15 @@
   <div id="nav-menu" style="z-index: 100">
     <button id='nav-github' class="nav-button" disabled
       onclick="window.open('https://www.github.com/david-lu','_blank')">
-      <img src='assets/icon-github.svg'></img>
+      <img loading="lazy" src='assets/icon-github.svg'></img>
     </button>
     <button id='nav-linkedin' class="nav-button" disabled
       onclick="window.open('https://www.linkedin.com/in/guoweilu','_blank')">
-      <img src='assets/icon-linkedin.svg'></img>
+      <img loading="lazy" src='assets/icon-linkedin.svg'></img>
     </button>
     <button id='nav-instagram' class="nav-button" disabled
       onclick="window.open('https://www.instagram.com/davidludraws','_blank')">
-      <img src='assets/icon-instagram.svg'></img>
+      <img loading="lazy" src='assets/icon-instagram.svg'></img>
     </button>
     <button id='nav-hamburger' class="nav-button">
       <img src='assets/icon-hamburger.svg'></img>
@@ -260,8 +273,8 @@
   </div>
   <div id="outro" class="parallax-section">
     <div id="outro-sun"></div>
-    <img class="parallax-bg" style='z-index: 6' src="assets/outro-layer-griffith.svg"></img>
-    <img class="parallax-bg" style='z-index: 5' src="assets/outro-layer-city.svg"></img>
+    <img loading="lazy" class="parallax-bg" style='z-index: 6' src="assets/outro-layer-griffith.svg"></img>
+    <img loading="lazy" class="parallax-bg" style='z-index: 5' src="assets/outro-layer-city.svg"></img>
     <div id="outro-info" style="z-index: 5;">
       David is currently based in Los Angeles and is looking for remote positions.
     </div>

@@ -298,8 +298,8 @@ body>div {
     width: 42%;
     aspect-ratio: 1.75;
     background-image: url('assets/intro-layer-david-arm.svg');
-    animation: arm-anim 1.5s infinite;
-    transition-timing-function: ease;
+    animation: arm-anim 1s infinite;
+    animation-timing-function: ease-in-out;
     transform-origin: 95% 82%;
     will-change: transform;
 }
