@@ -33,7 +33,7 @@ $('#nav-hamburger').addEventListener('click', () => {
 // SCROLL BUTTONS
 $('#intro-scroll-button').addEventListener('click', () => {
   $('#intro-scroll-button').disabled = true;
-  gsap.to(window, { ease: 'sine.inOut', duration: 6, scrollTo: { y: '#google', offsetY: vh(95) } });
+  gsap.to(window, { ease: 'sine.inOut', duration: 8, scrollTo: { y: '#google', offsetY: vh(95) } });
 });
 ScrollTrigger.create({
   trigger: '#intro', start: "top bottom", end: "bottom top",
@@ -109,8 +109,8 @@ gsap.fromTo(
 gsap.fromTo(
   '#map-path svg',
   {
-    strokeDasharray: '210%',
-    strokeDashoffset: '210%',
+    strokeDasharray: '250%',
+    strokeDashoffset: '250%',
   },
   {
     strokeDashoffset: 0,
@@ -126,7 +126,7 @@ gsap.fromTo(
 
 ScrollTrigger.create({
   trigger: '#map',
-  start: "7% center",
+  start: "5% center",
   end: "35% top",
   onEnter: (self) => $('#school-pin').classList.remove('inactive'),
   onLeaveBack: (self) => $('#school-pin').classList.add('inactive')
@@ -134,7 +134,7 @@ ScrollTrigger.create({
 
 ScrollTrigger.create({
   trigger: '#map',
-  start: "24% center",
+  start: "17.5% center",
   end: "35% top",
   onEnter: (self) => $('#samsung-pin').classList.remove('inactive'),
   onLeaveBack: (self) => $('#samsung-pin').classList.add('inactive')
@@ -142,7 +142,7 @@ ScrollTrigger.create({
 
 ScrollTrigger.create({
   trigger: '#map',
-  start: "41% center",
+  start: "30% center",
   end: "35% top",
   onEnter: (self) => $('#ads-pin').classList.remove('inactive'),
   onLeaveBack: (self) => $('#ads-pin').classList.add('inactive')
@@ -150,7 +150,7 @@ ScrollTrigger.create({
 
 ScrollTrigger.create({
   trigger: '#map',
-  start: "55% center",
+  start: "53.4% center",
   end: "35% top",
   onEnter: (self) => $('#google-pin').classList.remove('inactive'),
   onLeaveBack: (self) => $('#google-pin').classList.add('inactive')
@@ -169,7 +169,7 @@ gsap.fromTo(
     ease: 'power2.in',
     scrollTrigger: {
       trigger: '#map',
-      start: "57% center",
+      start: "55% center",
       end: "54% top",
       scrub: 0.3,
       // markers: true,
