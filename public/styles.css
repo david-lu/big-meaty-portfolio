@@ -297,6 +297,7 @@ body>div {
     border-radius: 55%;
     background-color: black;
     transform-origin: 50% 50%;
+    transition: 100ms ease-out;
     will-change: transform;
 }
 

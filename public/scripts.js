@@ -8,6 +8,15 @@ const vh = (x) => window.innerHeight * (x / 100);
 const vw = (y) => window.innerWidth * (y / 100);
 const rem = (val) => parseFloat(getComputedStyle(document.documentElement).fontSize) * val;
 
+document.addEventListener('mousemove', (e) => {
+  const x = e.clientX / window.innerWidth;
+  const y = e.clientY / window.innerHeight;
+  const transformX = gsap.utils.clamp(-100, 100, (x - 0.6) * 200);
+  const transformY = gsap.utils.clamp(-100, 100, (y - 0.5) * 150);
+  gsap.set('#david-left-eye', { x: `${transformX}%`, y: `${transformY}%` });
+  gsap.set('#david-right-eye', { x: `${transformX}%`, y: `${transformY}%` });
+});
+
 // INTRO ANIMATION
 window.onload = () => {
   $('#title').classList.remove('hidden');
