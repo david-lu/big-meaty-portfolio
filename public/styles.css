@@ -154,6 +154,7 @@ body>div {
     min-height: 100%;
     position: absolute;
     bottom: 0;
+    user-select: none;
     will-change: transform;
 }
 
@@ -292,12 +293,13 @@ body>div {
 
 .david-eye {
     position: absolute;
-    width: 3%;
-    aspect-ratio: 1;
-    border-radius: 55%;
+    width: 2.7%;
+    aspect-ratio: 0.8;
+    border-radius: 55px;
     background-color: black;
     transform-origin: 50% 50%;
-    transition: translate 100ms ease-out;
+    transform: scaleY(1.3);
+    transition: transform 100ms linear;
     will-change: transform;
 }
 

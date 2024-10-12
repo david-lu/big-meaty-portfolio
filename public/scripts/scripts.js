@@ -7,12 +7,18 @@ const getAspectRatio = () => window.innerHeight / window.innerWidth;
 const vh = (x) => window.innerHeight * (x / 100);
 const vw = (y) => window.innerWidth * (y / 100);
 const rem = (val) => parseFloat(getComputedStyle(document.documentElement).fontSize) * val;
+const magnitude = (x, y) => Math.sqrt((x * x) + (y * y));
 
 document.addEventListener('mousemove', (e) => {
   const x = e.clientX / window.innerWidth;
   const y = e.clientY / window.innerHeight;
-  const transformX = gsap.utils.clamp(-100, 100, (x - 0.6) * 200);
-  const transformY = gsap.utils.clamp(-100, 100, (y - 0.5) * 150);
+  let cx = 2 * (x - 0.5);
+  let cy = 2 * (y - 0.5);
+  const r = 1 / Math.max(1, magnitude(cx, cy));
+  cx *= r;
+  cy *= r;
+  const transformX = cx * 100;
+  const transformY = cy * 100;
   gsap.set('#david-left-eye', { x: `${transformX}%`, y: `${transformY}%` });
   gsap.set('#david-right-eye', { x: `${transformX}%`, y: `${transformY}%` });
 });
@@ -262,7 +268,7 @@ const outroBgs = gsap.utils.toArray('#outro .parallax-bg').sort(
 outroBgs.forEach(
   (elem, i) => {
     gsap.fromTo(elem,
-      { y: `${-62 + (i * 10)}vh` },
+      { y: `${-5 - (i * 15)}vh` },
       {
         y: 2,
         ease: 'none',
@@ -278,15 +284,15 @@ outroBgs.forEach(
 );
 
 gsap.fromTo('#outro-sun',
-  { y: '12vh' },
+  { y: '-42vh' },
   {
     y: '1px',
-    ease: 'power2.out',
+    ease: 'none',
     scrollTrigger: {
       trigger: "#outro",
       start: "top bottom",
       end: "bottom bottom",
-      scrub: 0.8,
+      scrub: 0.4,
     },
   }
 );
