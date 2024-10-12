@@ -405,13 +405,13 @@ body>div {
 
 #map {
     overflow: clip visible;
-    height: 220vh;
+    height: max(220vh, 80rem);
     background: linear-gradient(180deg, var(--map-secondary-color), var(--map-color) 60%);
     padding: 0 var(--parallax-narrow-padding);
 }
 
 #map-path {
-    height: 140vh;
+    height: 64%;
     align-self: flex-start;
     will-change: transform;
 }
@@ -429,6 +429,7 @@ body>div {
 }
 
 #map-info {
+    height: 50%;
     padding: 0 3vw;
     text-align: justify;
     color: var(--map-color);
@@ -645,7 +646,7 @@ body>div {
     /* background: linear-gradient(90deg, var(--skills-bg-color) 50%, var(--skills-color) 50%, var(--skills-color) 100%); */
     background-color: var(--skills-bg-color);
     font-weight: bold;
-    padding: 0 var(--parallax-narrow-padding);
+    padding: 0 min(var(--parallax-narrow-padding), max(2vh, calc(100vh - 16rem)));
     text-rendering: optimizeSpeed;
 }
 
@@ -890,6 +891,14 @@ body>div {
 
     #subtitle {
         margin: 12vh 0 0 0;
+    }
+
+    .skill-section {
+        flex-direction: column;
+    }
+
+    .skill-header {
+        align-items: center;
     }
 
     #google .parallax-container {

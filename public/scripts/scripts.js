@@ -99,9 +99,9 @@ introBgs.forEach(
 // MAP
 gsap.fromTo(
   '#map-path',
-  { y: '-2vh' },
+  { y: '-2%' },
   {
-    y: '40vh',
+    y: '40%',
     ease: 'none',
     scrollTrigger: {
       trigger: '#map',
@@ -124,7 +124,7 @@ gsap.fromTo(
     scrollTrigger: {
       trigger: '#map',
       start: "-5% center",
-      end: "35% top",
+      end: "65% center",
       scrub: 0.5,
     },
   }
@@ -132,32 +132,32 @@ gsap.fromTo(
 
 ScrollTrigger.create({
   trigger: '#map',
-  start: "5% center",
-  end: "35% top",
+  start: "6% center",
+  end: "65% center",
   onEnter: (self) => $('#school-pin').classList.remove('inactive'),
   onLeaveBack: (self) => $('#school-pin').classList.add('inactive')
 });
 
 ScrollTrigger.create({
   trigger: '#map',
-  start: "17.5% center",
-  end: "35% top",
+  start: "20% center",
+  end: "65% center",
   onEnter: (self) => $('#samsung-pin').classList.remove('inactive'),
   onLeaveBack: (self) => $('#samsung-pin').classList.add('inactive')
 });
 
 ScrollTrigger.create({
   trigger: '#map',
-  start: "30% center",
-  end: "35% top",
+  start: "34% center",
+  end: "65% center",
   onEnter: (self) => $('#ads-pin').classList.remove('inactive'),
   onLeaveBack: (self) => $('#ads-pin').classList.add('inactive')
 });
 
 ScrollTrigger.create({
   trigger: '#map',
-  start: "53.4% center",
-  end: "35% top",
+  start: "60% center",
+  end: "65% center",
   onEnter: (self) => $('#google-pin').classList.remove('inactive'),
   onLeaveBack: (self) => $('#google-pin').classList.add('inactive')
 });
@@ -175,8 +175,8 @@ gsap.fromTo(
     ease: 'power2.in',
     scrollTrigger: {
       trigger: '#map',
-      start: "55% center",
-      end: "54% top",
+      start: "63% center",
+      end: "75% center",
       scrub: 0.3,
       // markers: true,
     }
@@ -185,9 +185,9 @@ gsap.fromTo(
 
 gsap.fromTo(
   '#map-info',
-  { y: '-15vh' },
+  { y: '-30%' },
   {
-    y: '50vh',
+    y: '30%',
     ease: 'none',
     scrollTrigger: {
       trigger: '#map',
