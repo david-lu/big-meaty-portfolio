@@ -101,7 +101,22 @@ gsap.fromTo(
   '#map-path',
   { y: '-2%' },
   {
-    y: '40%',
+    y: '37%',
+    ease: 'none',
+    scrollTrigger: {
+      trigger: '#map',
+      start: "top bottom",
+      end: "bottom top",
+      scrub: 0,
+    }
+  }
+);
+
+gsap.fromTo(
+  '#map-info',
+  { y: '6%' },
+  {
+    y: '62%',
     ease: 'none',
     scrollTrigger: {
       trigger: '#map',
@@ -179,21 +194,6 @@ gsap.fromTo(
       end: "75% center",
       scrub: 0.3,
       // markers: true,
-    }
-  }
-);
-
-gsap.fromTo(
-  '#map-info',
-  { y: '-30%' },
-  {
-    y: '30%',
-    ease: 'none',
-    scrollTrigger: {
-      trigger: '#map',
-      start: "top bottom",
-      end: "bottom top",
-      scrub: 0,
     }
   }
 );

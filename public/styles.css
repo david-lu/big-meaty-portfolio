@@ -1,6 +1,6 @@
 :root {
     --bg-intro-color: #7096C1;
-    --bg-outro-color: #ac3d71;
+    --bg-outro-color: #8a2d66;
     --map-color: rgb(23, 29, 46);
     --map-secondary-color: rgb(39, 50, 84);
     --parallax-padding: calc(max(7vw, 100vw - (100vh * 1.1)) / 2);
@@ -155,7 +155,7 @@ body>div {
     position: absolute;
     bottom: 0;
     user-select: none;
-    pointer-events: none; 
+    pointer-events: none;
     will-change: transform;
 }
 
@@ -430,9 +430,10 @@ body>div {
 }
 
 #map-info {
-    height: 50%;
+    height: 36%;
     padding: 0 3vw;
     text-align: justify;
+    justify-content: flex-start;
     color: var(--map-color);
     will-change: transform;
 }
@@ -715,7 +716,6 @@ body>div {
     transition: 150ms;
 }
 
-
 .skill-section.hidden .skill-list a span {
     transform: translateY(-100%);
 }
@@ -798,7 +798,7 @@ body>div {
 
 #outro-info {
     align-items: center;
-    flex: 3;
+    flex: 4;
     font-size: 1.2rem;
     margin: 0 8vw;
     text-align: justify;
@@ -830,8 +830,19 @@ body>div {
     cursor: pointer;
 }
 
-.outro-button span {
-    display: contents;
+.outro-label {
+    overflow: hidden;
+}
+
+.outro-label span {
+    display: grid;
+    transition: transform 250ms ease-out;
+    transform: translateY(0);
+}
+
+#outro-socials.hidden .outro-label span {
+    transform: translateY(-100%);
+    pointer-events: none;
 }
 
 .outro-button span::after {
@@ -839,7 +850,7 @@ body>div {
     content: '';
     position: relative;
     width: 100%;
-    height: 0.15em;
+    height: 0.12em;
     background-color: white;
     transform: scaleX(0);
     transition: opacity 300ms, transform 300ms;
@@ -859,6 +870,11 @@ body>div {
     transition: transform 300ms var(--backEaseOut);
 }
 
+#outro-socials.hidden .outro-icon {
+    transform: scale(0);
+    transition: transform 200ms var(--easeOut);
+}
+
 .outro-spacer-1 {
     flex: 6;
 }
@@ -867,29 +883,54 @@ body>div {
     flex: 1;
 }
 
-#outro-socials.hidden .outro-icon {
-    transform: scale(0);
-    transition: transform 200ms var(--easeOut);
-}
-
-#outro-instagram-button .outro-icon {
+#outro-instagram-button .outro-icon,
+#outro-instagram-button span {
     transition-delay: 0ms;
 }
 
-#outro-linkedin-button .outro-icon {
-    transition-delay: 60ms;
+#outro-linkedin-button .outro-icon,
+#outro-linkedin-button span {
+    transition-delay: 80ms;
 }
 
-#outro-github-button .outro-icon {
-    transition-delay: 120ms;
+#outro-github-button .outro-icon,
+#outro-github-button span {
+    transition-delay: 160ms;
 }
 
-#outro-cv-button .outro-icon {
-    transition-delay: 180ms;
-}
-
-#outro-art-button .outro-icon {
+#outro-cv-button .outro-icon,
+#outro-cv-button span {
     transition-delay: 240ms;
+}
+
+#outro-art-button .outro-icon,
+#outro-art-button span {
+    transition-delay: 320ms;
+}
+
+#outro-socials.hidden #outro-instagram-button .outro-icon,
+#outro-socials.hidden #outro-instagram-button span {
+    transition-delay: 320ms;
+}
+
+#outro-socials.hidden #outro-linkedin-button .outro-icon,
+#outro-socials.hidden #outro-linkedin-button span {
+    transition-delay: 240ms;
+}
+
+#outro-socials.hidden #outro-github-button .outro-icon,
+#outro-socials.hidden #outro-github-button span {
+    transition-delay: 160ms;
+}
+
+#outro-socials.hidden #outro-cv-button .outro-icon,
+#outro-socials.hidden #outro-cv-button span {
+    transition-delay: 80ms;
+}
+
+#outro-socials.hidden #outro-art-button .outro-icon,
+#outro-socials.hidden #outro-art-button span {
+    transition-delay: 0ms;
 }
 
 .outro-socials-break {
@@ -938,17 +979,22 @@ body>div {
     }
 
     #outro-info {
-        flex: 2;
+        flex: 3;
+        justify-content: flex-end;
     }
 
     #outro-socials {
-        z-index: 5;
+        /* z-index: 5; */
         flex-direction: column;
         gap: 0.5rem;
     }
 
     .outro-button {
         flex-direction: row;
+    }
+
+    #outro-socials.hidden .outro-label span {
+        transform: translateX(-100%);
     }
 
     .outro-icon {
@@ -960,7 +1006,7 @@ body>div {
     }
 
     .outro-spacer-1 {
-        flex: 0;
+        flex: 1;
     }
 
     .outro-spacer-2 {
