@@ -265,10 +265,10 @@ skillSections.forEach((skillSection, i) => {
 const outroBgs = gsap.utils.toArray('#outro .parallax-bg').sort(
   (a, b) => a.style.zIndex - b.style.zIndex
 );
-outroBgs.forEach(
+outroBgs.reverse().forEach(
   (elem, i) => {
     gsap.fromTo(elem,
-      { y: `${-5 - (i * 5)}vh` },
+      { y: `${-5 - (i * 7)}vh` },
       {
         y: 1,
         ease: 'none',
@@ -283,8 +283,22 @@ outroBgs.forEach(
   }
 );
 
+gsap.fromTo('#outro-info',
+  { y: '-14vh' },
+  {
+    y: '1px',
+    ease: 'none',
+    scrollTrigger: {
+      trigger: "#outro",
+      start: "top bottom",
+      end: "bottom bottom",
+      scrub: 0.1,
+    },
+  }
+);
+
 gsap.fromTo('#outro-sun',
-  { y: '-42vh' },
+  { y: '-55vh' },
   {
     y: '1px',
     ease: 'none',
