@@ -268,7 +268,7 @@ const outroBgs = gsap.utils.toArray('#outro .parallax-bg').sort(
 outroBgs.forEach(
   (elem, i) => {
     gsap.fromTo(elem,
-      { y: `${-5 - (i * 5)}vh` },
+      { y: `${-25 - (i * 5)}vh` },
       {
         y: 1,
         ease: 'none',
