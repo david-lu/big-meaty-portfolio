@@ -792,7 +792,7 @@ body>div {
 #outro {
     height: 100svh;
     justify-content: flex-end;
-    background: linear-gradient(180deg, rgb(222, 10, 77) 0%, rgb(233, 107, 23) 60%);
+    background: linear-gradient(180deg, #F39C26 0%, #E81C35 60%, #dd0937 80%);
 }
 
 #outro-info {
@@ -806,11 +806,11 @@ body>div {
 
 #outro-sun {
     position: absolute;
-    width: min(75vw, 50vh);
+    width: min(75vw, 66vh);
     aspect-ratio: 1;
-    top: 26vh;
+    bottom: 10vh;
     border-radius: 100%;
-    background: linear-gradient(0deg, rgba(247, 184, 11, 0) 0%, rgb(248, 204, 71) 100%);
+    background: linear-gradient(0deg, rgba(247, 184, 11, 0) 30%, rgb(255, 169, 57) 100%);
     z-index: 1;
     will-change: transform;
 }
