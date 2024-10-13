@@ -792,7 +792,7 @@ body>div {
 #outro {
     height: 100svh;
     justify-content: flex-end;
-    background: linear-gradient(180deg, #F39C26 0%, #E81C35 60%, #dd0937 80%);
+    background: linear-gradient(180deg, #F39C26 0%, #E81C35 40%, #dd0937 80%);
 }
 
 #outro-info {
