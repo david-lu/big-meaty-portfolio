@@ -268,9 +268,9 @@ const outroBgs = gsap.utils.toArray('#outro .parallax-bg').sort(
 outroBgs.forEach(
   (elem, i) => {
     gsap.fromTo(elem,
-      { y: `${-5 - (i * 15)}vh` },
+      { y: `${-5 - (i * 7)}vh` },
       {
-        y: 2,
+        y: 1,
         ease: 'none',
         scrollTrigger: {
           trigger: "#outro",
@@ -292,7 +292,7 @@ gsap.fromTo('#outro-sun',
       trigger: "#outro",
       start: "top bottom",
       end: "bottom bottom",
-      scrub: 0.4,
+      scrub: 0.1,
     },
   }
 );

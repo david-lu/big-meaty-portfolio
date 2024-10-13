@@ -822,7 +822,7 @@ body>div {
     text-align: center;
     width: 100%;
     gap: 3vw;
-    z-index: 7;
+    z-index: 25;
 }
 
 .outro-icon {
