@@ -39,7 +39,11 @@ $('#nav-hamburger').addEventListener('click', () => {
 // SCROLL BUTTONS
 $('#intro-scroll-button').addEventListener('click', () => {
   $('#intro-scroll-button').disabled = true;
-  gsap.to(window, { ease: 'sine.inOut', duration: 8, scrollTo: { y: '#google', offsetY: vh(95) } });
+  gsap.to(window, {
+    ease: 'sine.inOut',
+    duration: 8,
+    scrollTo: { y: '#google', offsetY: vh(95), autoKill: true }
+  });
 });
 ScrollTrigger.create({
   trigger: '#intro', start: "top bottom", end: "bottom top",
@@ -48,7 +52,13 @@ ScrollTrigger.create({
 
 $('#map-scroll-button').addEventListener('click', () => {
   $('#map-scroll-button').disabled = true;
-  gsap.to(window, { ease: 'sine.inOut', duration: 6, scrollTo: { y: '#skills', offsetY: vh(-5) } });
+  gsap.to(window, {
+    ease: 'sine.inOut', duration: 6, scrollTo: {
+      y: '#skills',
+      offsetY: vh(-5),
+      autoKill: true
+    }
+  });
 });
 ScrollTrigger.create({
   trigger: '#map', start: "top bottom", end: "bottom top",
@@ -57,7 +67,12 @@ ScrollTrigger.create({
 
 $('#skills-scroll-button').addEventListener('click', () => {
   $('#skills-scroll-button').disabled = true;
-  gsap.to(window, { ease: 'sine.inOut', duration: 4, scrollTo: 'max' });
+  gsap.to(window, {
+    ease: 'sine.inOut', duration: 4, scrollTo: {
+      y: 'max',
+      autoKill: true
+    }
+  });
 });
 ScrollTrigger.create({
   trigger: '#skills', start: "top bottom", end: "bottom top",
