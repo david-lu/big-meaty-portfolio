@@ -402,6 +402,7 @@ body>div {
 #map-header {
     background-color: var(--map-color);
     color: #9db2db;
+    z-index: 5;
 }
 
 #map {
@@ -430,6 +431,7 @@ body>div {
 }
 
 #map-info {
+    z-index: 5;
     height: 36%;
     padding: 0 3vw;
     text-align: justify;
@@ -571,6 +573,7 @@ body>div {
 }
 
 .google-section {
+    z-index: 6;
     height: min(20vh, 33vw);
     overflow: visible;
     flex-direction: row;
