@@ -229,7 +229,7 @@ body>div {
 #subtitle {
     width: 100%;
     aspect-ratio: 12;
-    max-height: 11vh;
+    max-height: 9.57vh;
     background-image: url('assets/subtitle.svg');
     background-position: top;
     background-size: 100% 100%;
@@ -633,11 +633,27 @@ body>div {
     color: black;
 }
 
+#nick {
+    flex-direction: row;
+    height: 130vh;
+    background: linear-gradient(180deg,rgba(255, 255, 255, 1) 0%, rgba(89, 40, 112, 1) 26%, rgba(158, 54, 151, 1) 100%);
+}
+
+#nick-logo {
+    width: 25vh;
+    aspect-ratio: 1;
+}
+
+#hedra {
+    flex-direction: row;
+    height: 130vh;
+    background: linear-gradient(180deg,rgba(158, 54, 151, 1) 0%, rgba(0, 0, 0, 1) 19%);
+}
+
 #skills-header {
     background-color: var(--skills-color);
     color: var(--skills-bg-color);
 }
-
 
 #skills {
     flex-direction: row;
