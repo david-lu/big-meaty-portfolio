@@ -180,7 +180,9 @@ body>div {
 
     #fg,
     #intro .parallax-bg,
-    #outro .parallax-bg {
+    #outro .parallax-bg,
+    #outro-info,
+    #outro-sun {
         animation: parallax-y auto linear both;
     }
 
@@ -202,7 +204,9 @@ body>div {
     #intro .parallax-bg:nth-of-type(3) { --parallax-to: 14%; }
     #intro .parallax-bg:nth-of-type(4) { --parallax-to: 7%; }
 
-    #outro .parallax-bg {
+    #outro .parallax-bg,
+    #outro-info,
+    #outro-sun {
         --parallax-to: 1px;
         animation-timeline: --outro-parallax;
         /* top bottom -> bottom bottom, including viewports taller than 100svh. */
@@ -214,6 +218,10 @@ body>div {
     #outro .parallax-bg:nth-of-type(3) { --parallax-from: -19vh; }
     #outro .parallax-bg:nth-of-type(4) { --parallax-from: -26vh; }
     #outro .parallax-bg:nth-of-type(5) { --parallax-from: -33vh; }
+
+    /* Keep the entire scene on one scroll clock, without a scrub catch-up tween. */
+    #outro-info { --parallax-from: -14vh; }
+    #outro-sun { --parallax-from: -55vh; }
 
     #skills .parallax-container.parallax-active {
         --parallax-from: -35vh;
@@ -883,6 +891,7 @@ body>div {
     margin: 0 8vw;
     text-align: justify;
     color: rgb(255, 232, 181);
+    will-change: transform;
 }
 
 #outro-sun {

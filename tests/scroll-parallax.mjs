@@ -24,9 +24,11 @@ const baselineRef = baselineOption?.slice(11);
 const compareHead = Boolean(baselineRef);
 const control = process.argv.includes('--control');
 const profileSkills = process.argv.includes('--profile-skills');
+const profileOutro = process.argv.includes('--profile-outro');
+const profileSection = profileOutro ? 'outro' : profileSkills ? 'skills' : undefined;
 const viewportOption = process.argv.find(arg => arg.startsWith('--viewport='));
 const viewports = viewportOption ? [viewportOption.slice(11).split('x').map(Number)]
-  : profileSkills ? [[1440, 900], [390, 844]]
+  : profileSection ? [[1440, 900], [390, 844]]
   : [[1440, 900], [390, 844], [844, 390], [768, 1024]];
 const baseline = compareHead ? Object.fromEntries(
   ['index.html', 'styles.css', 'scripts/scripts.js'].map(file => [file,
@@ -127,7 +129,7 @@ async function evaluate(session, expression) {
 }
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 const sessions = {};
-const variants = ['native', ...(!profileSkills ? ['fallback'] : []), ...(compareHead ? ['baseline'] : [])];
+const variants = ['native', ...(!profileSection ? ['fallback'] : []), ...(compareHead ? ['baseline'] : [])];
 const selector = '#fg, #intro .parallax-bg, #map-path, #map-info, #map-path svg, ' +
   '.pin, #google-pin-expand, .google-section, .skill-section, ' +
   '#outro .parallax-bg, #outro-info, #outro-sun, #outro-socials, .scroll-button';
@@ -168,9 +170,9 @@ function compare(actual, expected, label) {
   });
   checks++;
 }
-async function compareScreenshots(label) {
+async function compareScreenshots(label, reference = 'fallback') {
   const images = [];
-  for (const variant of ['native', 'fallback']) {
+  for (const variant of ['native', reference]) {
     await send('Page.bringToFront', {}, sessions[variant]);
     await evaluate(sessions[variant], 'ScrollTrigger.getAll().forEach(t => { const tween = t.getTween(); if (tween) tween.pause().progress(1); });');
     await evaluate(sessions[variant], 'new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
@@ -199,10 +201,10 @@ async function compareScreenshots(label) {
   const { difference } = visual;
   worstVisualDifference = Math.max(worstVisualDifference, difference);
   if (difference >= 0.005) {
-    for (const variant of ['native', 'fallback']) {
+    for (const variant of ['native', reference]) {
       console.log(variant, await evaluate(sessions[variant], `JSON.stringify({scroll:scrollY, map:document.getElementById('map-path').getBoundingClientRect().toJSON(), transform:getComputedStyle(document.getElementById('map-path')).transform, dash:getComputedStyle(document.querySelector('#map-path svg')).strokeDashoffset})`));
     }
-    for (const [index, variant] of ['native', 'fallback'].entries()) {
+    for (const [index, variant] of ['native', reference].entries()) {
       const file = path.join(os.tmpdir(), `portfolio-parallax-${variant}.png`);
       await writeFile(file, Buffer.from(images[index].data, 'base64'));
       console.log(`Mismatch screenshot: ${file}`);
@@ -212,12 +214,53 @@ async function compareScreenshots(label) {
   visualChecks++;
 }
 
-async function runSkillsProfile(session, variant, width, height) {
+async function checkOutroSynchronization(session, variant) {
+  await send('Page.bringToFront', {}, session);
+  // Screenshot comparison pauses scrub tweens; measure the live behavior here.
+  await evaluate(session, 'ScrollTrigger.getAll().forEach(trigger => trigger.getTween()?.play?.());');
+  const result = await evaluate(session, `(async () => {
+    const section = document.getElementById('outro');
+    const top = section.getBoundingClientRect().top + scrollY;
+    const height = section.getBoundingClientRect().height;
+    const layers = [...section.querySelectorAll('.parallax-bg')].map((element, i) =>
+      [element, (-5 - i * 7) * innerHeight / 100]);
+    layers.push([document.getElementById('outro-sun'), -0.55 * innerHeight],
+      [document.getElementById('outro-info'), -0.14 * innerHeight]);
+    let maxError = 0, maxDrift = 0;
+    const frame = () => new Promise(resolve => requestAnimationFrame(resolve));
+    const translations = () => layers.map(([element]) => {
+      const transform = getComputedStyle(element).transform;
+      return transform === 'none' ? 0 : new DOMMatrixReadOnly(transform).m42;
+    });
+    // Rapid jumps and reversals, without forcing ScrollTrigger.update() or
+    // completing scrub tweens: settled screenshots cannot detect catch-up lag.
+    for (const fraction of [0.15, 0.8, 0.3, 0.95, 0.4, 1, 0.2]) {
+      window.scrollTo({top: Math.round(top - innerHeight + fraction * height), behavior: 'instant'});
+      await frame(); await frame();
+      const progress = Math.max(0, Math.min(1, (scrollY - top + innerHeight) / height));
+      const immediate = translations();
+      layers.forEach(([, from], i) => {
+        maxError = Math.max(maxError, Math.abs(immediate[i] - (from + (1 - from) * progress)));
+      });
+      await new Promise(resolve => setTimeout(resolve, 160));
+      const settled = translations();
+      maxDrift = Math.max(maxDrift, ...settled.map((value, i) => Math.abs(value - immediate[i])));
+    }
+    return {maxError, maxDrift};
+  })()`);
+  if (variant !== 'baseline') {
+    assert.ok(result.maxError < 0.15, `${variant}: outro layers lag scroll by ${result.maxError}px`);
+    assert.ok(result.maxDrift < 0.15, `${variant}: outro layers drift ${result.maxDrift}px after scroll stops`);
+  }
+  console.log(`${variant}: outro synchronization ${JSON.stringify(result)}`);
+}
+
+async function runScrollProfile(session, variant, width, height) {
   // Other comparison tabs must not compete with the measured page's animations.
   for (const candidate of variants) {
     await evaluate(sessions[candidate], `(() => {
-      if (!document.getElementById('skills-profile-isolation')) {
-        const style = document.createElement('style'); style.id = 'skills-profile-isolation';
+      if (!document.getElementById('scroll-profile-isolation')) {
+        const style = document.createElement('style'); style.id = 'scroll-profile-isolation';
         style.textContent = '.profile-inactive *, .profile-inactive *::before, .profile-inactive *::after { animation-play-state: paused !important; transition: none !important; }';
         document.head.append(style);
       }
@@ -229,7 +272,7 @@ async function runSkillsProfile(session, variant, width, height) {
   await send('Performance.enable', {}, session);
   await send('LayerTree.enable', {}, session);
   await send('Emulation.setCPUThrottlingRate', { rate: 4 }, session);
-  await evaluate(session, `window.scrollTo({top: document.getElementById('skills').getBoundingClientRect().top + scrollY - innerHeight - 100, behavior: 'instant'});`);
+  await evaluate(session, `window.scrollTo({top: document.getElementById('${profileSection}').getBoundingClientRect().top + scrollY - innerHeight - 100, behavior: 'instant'});`);
   await delay(800);
   layerState = { session, maxLayers: 0 };
   const events = [];
@@ -242,17 +285,30 @@ async function runSkillsProfile(session, variant, width, height) {
   });
   const before = (await send('Performance.getMetrics', {}, session)).metrics;
   const frames = await evaluate(session, `new Promise(resolve => {
-    const el = document.getElementById('skills');
+    const el = document.getElementById('${profileSection}');
     const top = el.getBoundingClientRect().top + scrollY;
     const start = top - innerHeight - 100;
-    const end = top + el.offsetHeight + 100;
+    const end = Math.min(document.documentElement.scrollHeight - innerHeight, top + el.offsetHeight + 100);
     const intervals = [];
+    const lag = { sun: [], info: [], skyline: [] };
     let first, previous;
-    performance.mark('skills-profile-${variant}');
+    performance.mark('${profileSection}-profile-${variant}');
     function step(now) {
       first ??= now;
       if (previous !== undefined) intervals.push(now - previous);
       previous = now;
+      if ('${profileSection}' === 'outro' && scrollY > top - innerHeight && scrollY < top) {
+        const progress = Math.max(0, Math.min(1, (scrollY - top + innerHeight) / el.offsetHeight));
+        for (const [name, selector, from] of [
+          ['sun', '#outro-sun', -0.55 * innerHeight],
+          ['info', '#outro-info', -0.14 * innerHeight],
+          ['skyline', '#outro .parallax-bg', -0.05 * innerHeight],
+        ]) {
+          const transform = getComputedStyle(document.querySelector(selector)).transform;
+          const actual = transform === 'none' ? 0 : new DOMMatrixReadOnly(transform).m42;
+          lag[name].push(Math.abs(actual - (from + (1 - from) * progress)));
+        }
+      }
       const progress = Math.min(1, (now - first) / 6000);
       const position = progress < 0.5 ? progress * 2 : (1 - progress) * 2;
       window.scrollTo({top: start + (end - start) * position, behavior: 'instant'});
@@ -260,7 +316,11 @@ async function runSkillsProfile(session, variant, width, height) {
       else {
         intervals.sort((a,b) => a-b);
         resolve({frames:intervals.length, p95:intervals[Math.floor(intervals.length*.95)],
-          max:intervals.at(-1), over33ms:intervals.filter(n => n>33.4).length});
+          max:intervals.at(-1), over33ms:intervals.filter(n => n>33.4).length,
+          lagPixels: Object.fromEntries(Object.entries(lag).filter(([, values]) => values.length).map(([name, values]) => {
+            values.sort((a,b) => a-b);
+            return [name, {p95: +values[Math.floor(values.length*.95)].toFixed(3), max: +values.at(-1).toFixed(3)}];
+          }))});
       }
     }
     requestAnimationFrame(step);
@@ -268,7 +328,7 @@ async function runSkillsProfile(session, variant, width, height) {
   const after = (await send('Performance.getMetrics', {}, session)).metrics;
   await send('Tracing.end');
   await completion;
-  const marker = events.find(event => event.name === `skills-profile-${variant}`);
+  const marker = events.find(event => event.name === `${profileSection}-profile-${variant}`);
   assert.ok(marker, 'The trace must include the measured page.');
   const frameId = (await send('Page.getFrameTree', {}, session)).frameTree.frame.id;
   const main = events.filter(event => {
@@ -286,7 +346,7 @@ async function runSkillsProfile(session, variant, width, height) {
   for (const name of ['LayoutCount', 'RecalcStyleCount', 'LayoutDuration', 'RecalcStyleDuration', 'ScriptDuration', 'TaskDuration']) {
     delta[name] = +((after.find(metric => metric.name === name)?.value || 0) - (before.find(metric => metric.name === name)?.value || 0)).toFixed(4);
   }
-  const file = path.join(os.tmpdir(), `portfolio-skills-${variant}-${width}x${height}.json`);
+  const file = path.join(os.tmpdir(), `portfolio-${profileSection}-${variant}-${width}x${height}.json`);
   await writeFile(file, JSON.stringify({traceEvents:events}));
   console.log(JSON.stringify({variant, viewport:`${width}x${height}`, cpuThrottle:4,
     frames, metrics:delta, trace:totals, layers:{ maxLayers:layerState.maxLayers }, triggerCount:await evaluate(session, 'ScrollTrigger.getAll().length'), traceFile:file}));
@@ -319,20 +379,20 @@ try {
         return img.complete ? null : new Promise(resolve => { img.onload = resolve; img.onerror = resolve; });
       }))`);
       await evaluate(session, 'ScrollTrigger.refresh();');
-      if (!profileSkills) {
+      if (!profileSection) {
           await evaluate(session, `(() => { const style = document.createElement('style'); style.textContent = '*, *::before, *::after { transition: none !important; } #intro-scroll-button, #david-upper, #david-arm, #david-hand { animation-play-state: paused !important; }'; document.head.append(style); })()`);
           // Freeze unrelated looping character motion and button pulsing for visual comparisons.
           await evaluate(session, `document.getAnimations().filter(a => a.effect.getTiming().iterations === Infinity).forEach(a => { a.pause(); a.currentTime = 0; })`);
         }
       }));
       await delay(1600);
-      if (profileSkills) {
-        for (const variant of variants) await runSkillsProfile(sessions[variant], variant, width, height);
+      if (profileSection) {
+        for (const variant of variants) await runScrollProfile(sessions[variant], variant, width, height);
         continue;
       }
       const counts = await Promise.all(variants.map(v => evaluate(sessions[v], 'ScrollTrigger.getAll().length')));
       const skillsActivated = await evaluate(sessions.native, `document.querySelector('#skills .parallax-container').classList.contains('parallax-active')`);
-      assert.equal(counts[1] - counts[0], control ? 0 : 10 + Number(skillsActivated), 'CSS should replace imagery triggers and remove the skills activation trigger after entry.');
+      assert.equal(counts[1] - counts[0], control ? 0 : 12 + Number(skillsActivated), 'CSS should replace imagery triggers and remove the skills activation trigger after entry.');
       const positions = await evaluate(sessions.fallback, `(() => {
         const top = id => document.getElementById(id).getBoundingClientRect().top + scrollY;
         const height = id => document.getElementById(id).offsetHeight;
@@ -365,11 +425,15 @@ try {
           throw error;
         }
         if (compareHead) compare(snapshots[1], snapshots[2], `${label}, original`);
-        if (index < positions.length && index % 4 === 0) await compareScreenshots(label);
+        if (index < positions.length && index % 4 === 0) {
+          await compareScreenshots(label);
+          if (compareHead) await compareScreenshots(`${label}, baseline`, 'baseline');
+        }
       }
       console.log(`${width}x${height}: matched geometry, reveal states, and screenshots; ${counts[1]} -> ${counts[0]} ScrollTriggers.`);
+      for (const variant of variants) await checkOutroSynchronization(sessions[variant], variant);
     }
-    if (!profileSkills) {
+    if (!profileSection) {
     // Rotate an already loaded page. CSS units and GSAP's captured lengths can differ.
     await Promise.all(variants.map(v => send('Emulation.setDeviceMetricsOverride', {
       width: 1024, height: 768, deviceScaleFactor: 1, mobile: false,

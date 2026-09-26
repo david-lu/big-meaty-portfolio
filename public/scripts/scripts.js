@@ -328,35 +328,25 @@ if (!supportsCssParallax) {
       );
     }
   );
+
+  // Match the CSS timeline directly; a numeric scrub makes the sun and text
+  // lag behind the skyline, especially when changing scroll direction.
+  for (const [target, from] of [['#outro-info', '-14vh'], ['#outro-sun', '-55vh']]) {
+    gsap.fromTo(target,
+      { y: from },
+      {
+        y: '1px',
+        ease: 'none',
+        scrollTrigger: {
+          trigger: "#outro",
+          start: "top bottom",
+          end: "bottom bottom",
+          scrub: true,
+        },
+      }
+    );
+  }
 }
-
-gsap.fromTo('#outro-info',
-  { y: '-14vh' },
-  {
-    y: '1px',
-    ease: 'none',
-    scrollTrigger: {
-      trigger: "#outro",
-      start: "top bottom",
-      end: "bottom bottom",
-      scrub: 0.1,
-    },
-  }
-);
-
-gsap.fromTo('#outro-sun',
-  { y: '-55vh' },
-  {
-    y: '1px',
-    ease: 'none',
-    scrollTrigger: {
-      trigger: "#outro",
-      start: "top bottom",
-      end: "bottom bottom",
-      scrub: 0.1,
-    },
-  }
-);
 
 ScrollTrigger.create(
   {
