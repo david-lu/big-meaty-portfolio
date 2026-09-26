@@ -9,6 +9,13 @@ const vw = (y) => window.innerWidth * (y / 100);
 const rem = (val) => parseFloat(getComputedStyle(document.documentElement).fontSize) * val;
 const magnitude = (x, y) => Math.sqrt((x * x) + (y * y));
 
+// Keep the original tweens on browsers without the complete CSS timeline support.
+// This condition also gates the parallax rules in styles.css.
+const supportsCssParallax = CSS.supports(
+  '(animation-timeline: --parallax) and (view-timeline: --parallax block) and ' +
+  '(animation-range: entry-crossing 0% exit-crossing 100%)'
+);
+
 document.addEventListener('mousemove', (e) => {
   const x = e.clientX / window.innerWidth;
   const y = e.clientY / window.innerHeight;
@@ -47,6 +54,8 @@ $('#intro-scroll-button').addEventListener('click', () => {
 });
 ScrollTrigger.create({
   trigger: '#intro', start: "top bottom", end: "bottom top",
+  // The box-shadow pulse otherwise repaints even while the intro is off-screen.
+  onToggle: (self) => $('#intro-scroll-button').style.animationPlayState = self.isActive ? 'running' : 'paused',
   onEnterBack: (self) => $('#intro-scroll-button').disabled = false
 });
 
@@ -80,36 +89,38 @@ ScrollTrigger.create({
 });
 
 // INTRO
-gsap.to("#fg",
-  {
-    yPercent: 15,
-    scrollTrigger: {
-      trigger: "#intro",
-      start: "top top",
-      end: "bottom top",
-      scrub: 0,
-    },
-  }
-);
+if (!supportsCssParallax) {
+  gsap.to("#fg",
+    {
+      yPercent: 15,
+      scrollTrigger: {
+        trigger: "#intro",
+        start: "top top",
+        end: "bottom top",
+        scrub: 0,
+      },
+    }
+  );
 
-const introBgs = gsap.utils.toArray('#intro .parallax-bg').sort(
-  (a, b) => b.style.zIndex - a.style.zIndex
-);
-introBgs.forEach(
-  (elem, i) => {
-    gsap.to(elem,
-      {
-        yPercent: (i + 1) * 7,
-        scrollTrigger: {
-          trigger: "#intro",
-          start: "top top",
-          end: "bottom top",
-          scrub: 0,
-        },
-      }
-    );
-  }
-);
+  const introBgs = gsap.utils.toArray('#intro .parallax-bg').sort(
+    (a, b) => b.style.zIndex - a.style.zIndex
+  );
+  introBgs.forEach(
+    (elem, i) => {
+      gsap.to(elem,
+        {
+          yPercent: (i + 1) * 7,
+          scrollTrigger: {
+            trigger: "#intro",
+            start: "top top",
+            end: "bottom top",
+            scrub: 0,
+          },
+        }
+      );
+    }
+  );
+}
 
 // MAP
 gsap.fromTo(
@@ -246,12 +257,26 @@ googleSections.forEach((element, i) => {
 });
 
 // SKILLS
-const skillSections = gsap.utils.toArray('.skill-section');
-skillSections.forEach((skillSection, i) => {
-  const top = 110 - (17 * (i + 1));
-
+// All rows travel the same distance. Animate their shared container
+// while keeping each row's existing reveal threshold and staggered transitions.
+const skillsContainer = $('#skills .parallax-container');
+if (supportsCssParallax) {
+  ScrollTrigger.create({
+    trigger: '#skills',
+    start: "top bottom",
+    end: "bottom top",
+    onUpdate: (self) => {
+      // Preserve immediateRender:false: the original starts at y=0 until the
+      // first positive scroll progress, then retains its start value on return.
+      if (self.progress > 0) {
+        skillsContainer.classList.add('parallax-active');
+        self.kill();
+      }
+    }
+  });
+} else {
   gsap.fromTo(
-    skillSection,
+    skillsContainer,
     { y: '-35vh' },
     {
       y: '30vh',
@@ -265,6 +290,11 @@ skillSections.forEach((skillSection, i) => {
       }
     }
   );
+}
+
+const skillSections = gsap.utils.toArray('.skill-section');
+skillSections.forEach((skillSection, i) => {
+  const top = 110 - (17 * (i + 1));
 
   ScrollTrigger.create({
     trigger: "#skills",
@@ -277,26 +307,28 @@ skillSections.forEach((skillSection, i) => {
 });
 
 // OUTRO
-const outroBgs = gsap.utils.toArray('#outro .parallax-bg').sort(
-  (a, b) => a.style.zIndex - b.style.zIndex
-);
-outroBgs.reverse().forEach(
-  (elem, i) => {
-    gsap.fromTo(elem,
-      { y: `${-5 - (i * 7)}vh` },
-      {
-        y: 1,
-        ease: 'none',
-        scrollTrigger: {
-          trigger: "#outro",
-          start: "top bottom",
-          end: "bottom bottom",
-          scrub: 0,
-        },
-      }
-    );
-  }
-);
+if (!supportsCssParallax) {
+  const outroBgs = gsap.utils.toArray('#outro .parallax-bg').sort(
+    (a, b) => a.style.zIndex - b.style.zIndex
+  );
+  outroBgs.reverse().forEach(
+    (elem, i) => {
+      gsap.fromTo(elem,
+        { y: `${-5 - (i * 7)}vh` },
+        {
+          y: 1,
+          ease: 'none',
+          scrollTrigger: {
+            trigger: "#outro",
+            start: "top bottom",
+            end: "bottom bottom",
+            scrub: 0,
+          },
+        }
+      );
+    }
+  );
+}
 
 gsap.fromTo('#outro-info',
   { y: '-14vh' },
