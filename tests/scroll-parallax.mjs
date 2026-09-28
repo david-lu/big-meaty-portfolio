@@ -25,7 +25,8 @@ const compareHead = Boolean(baselineRef);
 const control = process.argv.includes('--control');
 const profileSkills = process.argv.includes('--profile-skills');
 const profileOutro = process.argv.includes('--profile-outro');
-const profileSection = profileOutro ? 'outro' : profileSkills ? 'skills' : undefined;
+const profileHalftone = process.argv.includes('--profile-halftone');
+const profileSection = profileHalftone ? 'nick' : profileOutro ? 'outro' : profileSkills ? 'skills' : undefined;
 const viewportOption = process.argv.find(arg => arg.startsWith('--viewport='));
 const viewports = viewportOption ? [viewportOption.slice(11).split('x').map(Number)]
   : profileSection ? [[1440, 900], [390, 844]]
@@ -140,8 +141,17 @@ const snapshot = `JSON.stringify({
     const rect = el.getBoundingClientRect();
     const style = getComputedStyle(el);
     const section = el.closest('.parallax-section').getBoundingClientRect();
+    // GSAP rounds timeline boundaries to whole pixels; CSS keeps fractions.
+    // Bound the sun's resulting position difference from those exact ranges.
+    const start = section.top + scrollY - innerHeight, end = start + section.height;
+    const clamp = value => Math.max(0, Math.min(1, value));
+    const rangeRounding = el.id === 'outro-sun' ? Math.abs(
+      clamp((scrollY - start) / (end - start)) -
+      clamp((scrollY - Math.round(start)) / (Math.round(end) - Math.round(start)))
+    ) * (0.55 * innerHeight + 1) : 0;
     return { id: el.id || el.getAttribute('src') || el.className,
       visibleSection: section.top < innerHeight && section.bottom > 0,
+      rangeRounding,
       x: rect.x, y: rect.y, width: rect.width, height: rect.height,
       opacity: style.opacity, visibility: style.visibility,
       dash: style.strokeDashoffset, classes: el.className, disabled: el.disabled };
@@ -160,8 +170,8 @@ function compare(actual, expected, label) {
     // whenever the containing section can be seen; always compare reveal states.
     for (const property of ['x', 'y', 'width', 'height']) {
       if (!element.visibleSection && !other.visibleSection) continue;
-      // ScrollTrigger rounds scroll ranges; allow less than a fifth of a CSS pixel.
-      assert.ok(Math.abs(element[property] - other[property]) < 0.15,
+      const rounding = property === 'y' ? Math.max(element.rangeRounding, other.rangeRounding) : 0;
+      assert.ok(Math.abs(element[property] - other[property]) < 0.15 + rounding,
         `${label}: ${element.id} ${property}: ${element[property]} vs ${other[property]}`);
     }
     for (const property of ['id', 'opacity', 'visibility', 'dash', 'classes', 'disabled']) {
@@ -170,13 +180,13 @@ function compare(actual, expected, label) {
   });
   checks++;
 }
-async function compareScreenshots(label, reference = 'fallback') {
+async function compareScreenshots(label, reference = 'fallback', fromSurface = false) {
   const images = [];
   for (const variant of ['native', reference]) {
     await send('Page.bringToFront', {}, sessions[variant]);
     await evaluate(sessions[variant], 'ScrollTrigger.getAll().forEach(t => { const tween = t.getTween(); if (tween) tween.pause().progress(1); });');
     await evaluate(sessions[variant], 'new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
-    images.push(await send('Page.captureScreenshot', { format: 'png', fromSurface: false }, sessions[variant]));
+    images.push(await send('Page.captureScreenshot', { format: 'png', fromSurface }, sessions[variant]));
   }
   await send('Page.bringToFront', {}, sessions.native);
   const visual = await evaluate(sessions.native, `(async () => {
@@ -214,6 +224,226 @@ async function compareScreenshots(label, reference = 'fallback') {
   visualChecks++;
 }
 
+async function checkHalftoneGrowth(session, variant) {
+  await send('Page.bringToFront', {}, session);
+  const sections = [];
+  // Keep each readback sequence within its own DevTools command timeout.
+  for (const sectionId of ['nick', 'hedra']) {
+    sections.push(...await evaluate(session, `(async () => {
+    const frame = () => new Promise(resolve => requestAnimationFrame(resolve));
+    const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+    const results = [];
+    for (const section of document.querySelectorAll('#${sectionId}.job-section')) {
+      const rect = section.getBoundingClientRect(), top = rect.top + scrollY;
+      const pitch = rect.height / 1.48 / 45, rowPitch = rect.height / 1.48 * 0.48 / 14, dpr = devicePixelRatio;
+      const canvas = section.querySelector('canvas.halftone-background');
+      const context = canvas.getContext('2d');
+      const count = Math.ceil(rect.width / pitch);
+      const channel = section.id === 'nick' ? 2 : 0;
+      const probeY = (innerHeight - 23.5 * rowPitch) * dpr;
+      const radii = [];
+      let draws = 0;
+      const originalFill = context.fill, originalFillRect = context.fillRect, originalArc = context.arc;
+      context.fill = function(...args) { draws++; return originalFill.apply(this, args); };
+      context.fillRect = function(...args) {
+        draws++;
+        if (args[0]===0&&args[1]===0&&args[2]===canvas.width&&args[3]===canvas.height) radii.fill(0);
+        return originalFillRect.apply(this, args);
+      };
+      context.arc = function(...args) {
+        if (Math.abs(args[1] - probeY) < 0.01) {
+          radii[Math.round(args[0] / (pitch * dpr) - 0.5)] = args[2] / dpr;
+        }
+        return originalArc.apply(this, args);
+      };
+      const read = () => {
+        // Read one isolated row of dots. Reading a large canvas every frame
+        // can stall Chrome's GPU and distort the timing being measured.
+        const firstY = Math.floor(probeY - rowPitch * dpr / 2);
+        const lastY = Math.ceil(probeY + rowPitch * dpr / 2);
+        const image = context.getImageData(0, firstY, canvas.width, lastY - firstY);
+        return Array.from({length:count}, (_, index) => {
+          const left = Math.round(index * pitch * dpr);
+          const right = Math.min(image.width, Math.round((index + 1) * pitch * dpr));
+          let ink = 0, cellInk = 0, xSum = 0, ySum = 0;
+          for (let y = 0; y < image.height; y++) {
+            for (let x = left; x < right; x++) {
+              const value = 255 - image.data[(y * image.width + x) * 4 + channel];
+              ink += value;
+              if (Math.abs(firstY + y + 0.5 - probeY) < rowPitch * dpr / 2) {
+                cellInk += value;
+                xSum += (x + 0.5) * value;
+                ySum += (firstY + y + 0.5) * value;
+              }
+            }
+          }
+          return {ink,cellInk,radius:radii[index],pixels:(right-left)*image.height,x:xSum/cellInk/dpr,y:ySum/cellInk/dpr};
+        });
+      };
+      const move = rows => {
+        scrollTo({top:Math.round(top - innerHeight + rows * rowPitch), behavior:'instant'});
+        ScrollTrigger.update();
+      };
+      const settledMove = async rows => {
+        move(rows); await frame(); return read();
+      };
+      const measure = rows => {
+        move(rows);
+        return {rows:(scrollY-top+innerHeight)/rowPitch,columns:read()};
+      };
+      const anchors = [];
+      let solidCapHasSeams = false;
+      for (const rows of [-5.15, 0.15, 25.35, 50.1, 50.3, 80.15, 79.8, 105.25]) {
+        scrollTo({top:Math.round(top - innerHeight + rows * rowPitch), behavior:'instant'});
+        anchors.push(canvas.getBoundingClientRect().top);
+        await frame(); anchors.push(canvas.getBoundingClientRect().top);
+        if (rows === 0.15) {
+          const line = context.getImageData(0, Math.round((innerHeight - 4 * rowPitch) * dpr), canvas.width, 1).data;
+          for (let x = 0; x < canvas.width; x++) {
+            solidCapHasSeams ||= line[x * 4 + channel] < 254;
+          }
+        }
+      }
+      const before = await settledMove(27.15), beforeRows = (scrollY-top+innerHeight)/rowPitch;
+      const content = document.createElement('button');
+      content.textContent = 'Background content probe';
+      content.style.cssText = 'position:absolute;left:30px;top:' + (-section.getBoundingClientRect().top + innerHeight * 0.3) + 'px';
+      section.append(content);
+      const buttonRect = content.getBoundingClientRect();
+      const contentInteractive = document.elementFromPoint(buttonRect.left + buttonRect.width/2, buttonRect.top + buttonRect.height/2) === content;
+      content.remove();
+      // Inspect each small scroll change immediately, before another frame.
+      const single = [{rows:beforeRows,columns:before}];
+      for (let step=1;step<=10;step++) {
+        single.push(measure(27.15+0.07*step));
+        await frame();
+      }
+      const settled = read(), settledDraws = draws;
+      await wait(200); await frame();
+      const stopped = read(), stoppedDraws = draws;
+      const reverse = [measure(27.15)], reversed = read();
+      const multiple = [measure(29.15)];
+      const returned = await settledMove(27.15);
+      // Rapid forward and backward changes cannot leave queued catch-up motion.
+      const direct = [27.3,28.2,27.65,29.15,27.15].map(measure);
+      // At the section's top, the lower half must already be the next color.
+      await settledMove(innerHeight / rowPitch);
+      const lowerHalf = context.getImageData(0, Math.ceil(innerHeight * 0.52 * dpr), canvas.width, 1).data;
+      let lowerHalfIsSolid = true;
+      for (let x = 0; x < canvas.width; x++) {
+        lowerHalfIsSolid &&= lowerHalf[x * 4 + channel] === 0;
+      }
+      // Exercise large, overlapping circles after staggered column updates.
+      // Their incremental repaint must match a complete redraw at the same scroll.
+      await settledMove(36.15);
+      await settledMove(36.85);
+      const incremental = context.getImageData(0, 0, canvas.width, canvas.height).data;
+      ScrollTrigger.refresh();
+      await frame();
+      const complete = context.getImageData(0, 0, canvas.width, canvas.height).data;
+      let overlapMismatches = 0;
+      for (let pixel = 0; pixel < incremental.length; pixel += 4) {
+        if (Math.abs(incremental[pixel + channel] - complete[pixel + channel]) > 3) overlapMismatches++;
+      }
+      const jump = measure(150.85).columns;
+      context.fill = originalFill;
+      context.fillRect = originalFillRect;
+      context.arc = originalArc;
+      results.push({id:section.id,pitch,rowPitch,height:rect.height,viewport:innerHeight,dpr,
+        width:rect.width,count,canvasWidth:canvas.width,canvasHeight:canvas.height,
+        canvasCount:section.querySelectorAll('canvas').length,
+        columnNodes:section.querySelectorAll('.halftone-column').length,
+        text:section.textContent.trim(),decorative:canvas.getAttribute('aria-hidden'),
+        pointerEvents:getComputedStyle(canvas).pointerEvents,
+        backgroundZIndex:getComputedStyle(canvas).zIndex,contentInteractive,
+        contentCount:[...section.children].filter(child=>child!==canvas).length,
+        anchors,solidCapHasSeams,before,beforeRows,single,settled,stopped,reverse,reversed,multiple,returned,direct,jump,overlapMismatches,lowerHalfIsSolid,
+        settledDraws,stoppedDraws});
+    }
+    return results;
+    })()`));
+  }
+  assert.equal(sections.length, 2, `${variant}: two job pages`);
+  for (const section of sections) {
+    const label = `${variant}: ${section.id}`;
+    assert.equal(section.canvasCount, 1, `${label}: one background canvas`);
+    assert.equal(section.columnNodes, 0, `${label}: no individual DOM columns`);
+    assert.equal(section.contentCount, 0, `${label}: no job content added`);
+    assert.equal(section.text, '', `${label}: no text added`);
+    assert.equal(section.decorative, 'true', `${label}: decorative background`);
+    assert.equal(section.pointerEvents, 'none', `${label}: background cannot intercept content interaction`);
+    assert.equal(section.backgroundZIndex, '-1', `${label}: canvas stays behind HTML content`);
+    assert.equal(section.contentInteractive, true, `${label}: normal HTML remains interactive`);
+    assert.equal(section.canvasWidth, Math.ceil(section.width * section.dpr), `${label}: sharp canvas width`);
+    assert.equal(section.canvasHeight, Math.ceil(section.viewport * section.dpr), `${label}: sharp canvas height`);
+    assert.ok(Math.abs(section.pitch-section.viewport/45)<0.02, `${label}: larger dot size`);
+    assert.ok(Math.abs(14*section.rowPitch-section.viewport*0.48)<0.02, `${label}: dot growth spans half a viewport`);
+    assert.ok(Math.abs(section.height-1.48*section.viewport)<0.02, `${label}: full solid viewport`);
+    assert.ok(section.anchors.every(top=>Math.abs(top)<0.01), `${label}: fixed viewport anchor`);
+    assert.equal(section.solidCapHasSeams, false, `${label}: no seams between background columns`);
+    assert.equal(section.stoppedDraws, section.settledDraws, `${label}: no idle drawing`);
+    assert.equal(section.overlapMismatches, 0, `${label}: overlapping circles repaint without cut edges or trails`);
+    assert.equal(section.lowerHalfIsSolid, true, `${label}: transition finishes in the upper half of the viewport`);
+    const maximumRadius = Math.hypot(section.pitch,section.rowPitch)/2;
+    const columnStep = maximumRadius/11*2/(section.count-1);
+    // A scroll offset remains visible at rest, including after reversing.
+    // Equal differences between adjacent radii rule out random phases.
+    for (const state of [section.before,section.settled,section.reversed,section.returned]) {
+      for (let i=1;i<section.count;i++) {
+        assert.ok(Math.abs(state[i-1].radius-state[i].radius-columnStep)<1e-9,
+          `${label}: linear left-to-right scroll offset remains after settling`);
+      }
+    }
+    for (let i=0;i<section.count;i++) {
+      const previous = section.before[i], column = section.settled[i];
+      assert.ok(column.radius>previous.radius, `${label}: incoming-color dots expand when scrolling forward`);
+      if (i<section.count-1) assert.ok(column.ink>previous.ink, `${label}: larger circles are visibly rendered`);
+      assert.equal(column.radius,section.single.at(-1).columns[i].radius,
+        `${label}: next frame cannot change the size without scrolling`);
+    }
+    // Every rendered size must already match the new scroll position when the
+    // scroll update returns. Waiting to catch up, even for one frame, fails.
+    for (const sample of [...section.single,...section.reverse,...section.multiple,...section.direct]) {
+      const radiusChange = (sample.rows-section.beforeRows)*maximumRadius/11;
+      for (let i=0;i<section.count;i++) {
+        assert.ok(Math.abs(sample.columns[i].radius-section.before[i].radius-radiusChange)<1e-9,
+          `${label}: dot size follows scroll immediately and linearly, column=${i}`);
+      }
+    }
+    assert.ok(new Set(section.single.map(sample=>sample.columns[0].radius)).size>=8,
+      `${label}: small scroll changes render fine intermediate circle sizes`);
+    for (const samples of [section.single,section.reverse]) {
+      for (const sample of samples) {
+        for (let i=1;i<section.count;i++) {
+          assert.ok(Math.abs(sample.columns[i-1].radius-sample.columns[i].radius-columnStep)<1e-9,
+            `${label}: scroll-relative stagger stays constant while moving in either direction`);
+        }
+      }
+    }
+    for (let i=0;i<section.count;i++) {
+      for (const samples of [section.single,section.multiple]) {
+        for (const sample of samples) {
+          const column = sample.columns[i];
+          // Inspect a small isolated dot's pixel centroid. Size may change,
+          // but the center must stay in its original viewport grid cell.
+          if (column.cellInk>50 && i<section.count-1) {
+            assert.ok(Math.abs(column.x-(i+0.5)*section.pitch)<0.8/section.dpr, `${label}: fixed horizontal dot centers`);
+            assert.ok(Math.abs(column.y-(section.viewport-23.5*section.rowPitch))<0.8/section.dpr, `${label}: fixed vertical dot centers`);
+          }
+        }
+      }
+      assert.equal(section.stopped[i].ink, section.settled[i].ink, `${label}: no continuing drift`);
+      // Readback can switch Chrome's canvas rasterizer; allow tiny differences
+      // in edge coverage while checking the same size and fixed dot centers.
+      const edgeTolerance = Math.max(32 * section.dpr * section.dpr, section.before[i].ink * 0.001);
+      assert.ok(Math.abs(section.reversed[i].ink-section.before[i].ink)<=edgeTolerance, `${label}: reversal restores the rendered sizes`);
+      assert.ok(Math.abs(section.returned[i].ink-section.before[i].ink)<=edgeTolerance, `${label}: multi-row reversal column=${i}, expected=${section.before[i].ink}, actual=${section.returned[i].ink}, tolerance=${edgeTolerance}`);
+      assert.equal(section.jump[i].ink, section.jump[i].pixels * 255, `${label}: fast jumps settle to the incoming color`);
+    }
+  }
+}
+
+
 async function checkOutroSynchronization(session, variant) {
   await send('Page.bringToFront', {}, session);
   // Screenshot comparison pauses scrub tweens; measure the live behavior here.
@@ -222,6 +452,9 @@ async function checkOutroSynchronization(session, variant) {
     const section = document.getElementById('outro');
     const top = section.getBoundingClientRect().top + scrollY;
     const height = section.getBoundingClientRect().height;
+    const css = getComputedStyle(document.getElementById('outro-sun')).animationTimeline === '--outro-parallax';
+    const start = css ? top - innerHeight : Math.round(top - innerHeight);
+    const end = css ? top + height - innerHeight : Math.round(top + height - innerHeight);
     const layers = [...section.querySelectorAll('.parallax-bg')].map((element, i) =>
       [element, (-5 - i * 7) * innerHeight / 100]);
     layers.push([document.getElementById('outro-sun'), -0.55 * innerHeight],
@@ -237,7 +470,7 @@ async function checkOutroSynchronization(session, variant) {
     for (const fraction of [0.15, 0.8, 0.3, 0.95, 0.4, 1, 0.2]) {
       window.scrollTo({top: Math.round(top - innerHeight + fraction * height), behavior: 'instant'});
       await frame(); await frame();
-      const progress = Math.max(0, Math.min(1, (scrollY - top + innerHeight) / height));
+      const progress = Math.max(0, Math.min(1, (scrollY - start) / (end - start)));
       const immediate = translations();
       layers.forEach(([, from], i) => {
         maxError = Math.max(maxError, Math.abs(immediate[i] - (from + (1 - from) * progress)));
@@ -288,7 +521,8 @@ async function runScrollProfile(session, variant, width, height) {
     const el = document.getElementById('${profileSection}');
     const top = el.getBoundingClientRect().top + scrollY;
     const start = top - innerHeight - 100;
-    const end = Math.min(document.documentElement.scrollHeight - innerHeight, top + el.offsetHeight + 100);
+    const last = ${profileHalftone} ? document.getElementById('hedra') : el;
+    const end = Math.min(document.documentElement.scrollHeight - innerHeight, last.getBoundingClientRect().top + scrollY + last.offsetHeight + 100);
     const intervals = [];
     const lag = { sun: [], info: [], skyline: [] };
     let first, previous;
@@ -362,6 +596,18 @@ try {
     sessions[variant] = sessionId;
     await send('Page.enable', {}, sessionId);
     await send('Runtime.enable', {}, sessionId);
+    if (!profileSection) {
+      // Pixel assertions read the canvas every frame. Keep those test canvases
+      // on the CPU so GPU readbacks cannot stall the animation being measured.
+      // Performance profiles use the production renderer without this override.
+      await send('Page.addScriptToEvaluateOnNewDocument', {source: `(() => {
+        const getContext = HTMLCanvasElement.prototype.getContext;
+        HTMLCanvasElement.prototype.getContext = function(type, options) {
+          return getContext.call(this, type, type === '2d'
+            ? {...options, willReadFrequently:true} : options);
+        };
+      })()`}, sessionId);
+    }
   }
   for (const [width, height] of viewports) {
     await Promise.all(variants.map(async variant => {
@@ -432,6 +678,14 @@ try {
       }
       console.log(`${width}x${height}: matched geometry, reveal states, and screenshots; ${counts[1]} -> ${counts[0]} ScrollTriggers.`);
       for (const variant of variants) await checkOutroSynchronization(sessions[variant], variant);
+      for (const variant of ['native', 'fallback']) await checkHalftoneGrowth(sessions[variant], variant);
+      for (const id of ['nick', 'hedra']) {
+        const y = await evaluate(sessions.native, `document.getElementById('${id}').getBoundingClientRect().top + scrollY`);
+        await Promise.all(['native', 'fallback'].map(v => evaluate(sessions[v], `scrollTo({top:${y}, behavior:'instant'});`)));
+        await delay(500);
+        await compareScreenshots(`${width}x${height}, ${id} halftone`, 'fallback', true);
+      }
+      console.log('Halftones: continuous linear growth and left-to-right scroll offsets passed; immediate response, fixed centers, reversals, and idle drawing matched.');
     }
     if (!profileSection) {
     // Rotate an already loaded page. CSS units and GSAP's captured lengths can differ.
@@ -454,6 +708,20 @@ try {
       await compareScreenshots(`resized, ${id}`);
     }
     console.log('Viewport rotation: geometry and screenshots matched.');
+    for (const variant of ['native', 'fallback']) await checkHalftoneGrowth(sessions[variant], `${variant}, rotated`);
+    console.log('Halftone growth and stagger remained correct after viewport rotation.');
+    await Promise.all(variants.map(v => send('Emulation.setDeviceMetricsOverride', {
+      width: 390, height: 844, deviceScaleFactor: 2, mobile: false,
+    }, sessions[v])));
+    await delay(400);
+    await Promise.all(variants.map(v => evaluate(sessions[v], 'ScrollTrigger.refresh();')));
+    for (const variant of ['native', 'fallback']) await checkHalftoneGrowth(sessions[variant], `${variant}, high DPI`);
+    console.log('Canvas sharpness, dot centers, and timing matched at 2x device pixel ratio.');
+    await Promise.all(variants.map(v => send('Emulation.setDeviceMetricsOverride', {
+      width: 1024, height: 768, deviceScaleFactor: 1, mobile: false,
+    }, sessions[v])));
+    await delay(400);
+    await Promise.all(variants.map(v => evaluate(sessions[v], 'ScrollTrigger.refresh();')));
     for (const [id, duration, target] of [
       ['intro-scroll-button', 8, '#google'],
       ['map-scroll-button', 6, '#skills'],

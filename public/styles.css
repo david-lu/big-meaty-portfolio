@@ -10,6 +10,7 @@
     --easeOut: cubic-bezier(0.32, 0, 0.67, 0);
     --skills-color: #ff9cb5;
     --skills-bg-color: rgb(222, 10, 77);
+    --job-orange: #ff7900;
 }
 
 @font-face {
@@ -711,21 +712,35 @@ body>div {
     color: black;
 }
 
-#nick {
-    flex-direction: row;
-    height: 130vh;
-    background: linear-gradient(180deg,rgba(255, 255, 255, 1) 0%, rgba(89, 40, 112, 1) 26%, rgba(158, 54, 151, 1) 100%);
+.job-section {
+    --job-transition-height: 48svh;
+    --job-scroll-distance: calc(100svh + var(--job-transition-height));
+    /* Leave a full viewport of solid color after the halftone transition. */
+    height: var(--job-scroll-distance);
+    background-color: var(--job-to);
+    isolation: isolate;
+    /* Clip viewport-anchored dots at the section boundaries. Overflow alone
+       does not clip descendants whose fixed containing block is the viewport. */
+    clip-path: inset(0);
 }
 
-#nick-logo {
-    width: 25vh;
-    aspect-ratio: 1;
+.halftone-background {
+    /* Only the decorative background is drawn; section content stays in HTML. */
+    position: fixed;
+    inset: 0 auto auto 0;
+    pointer-events: none;
+    user-select: none;
+    z-index: -1;
+}
+
+#nick {
+    --job-from: white;
+    --job-to: var(--job-orange);
 }
 
 #hedra {
-    flex-direction: row;
-    height: 130vh;
-    background: linear-gradient(180deg,rgba(158, 54, 151, 1) 0%, rgba(0, 0, 0, 1) 19%);
+    --job-from: var(--job-orange);
+    --job-to: black;
 }
 
 #skills-header {

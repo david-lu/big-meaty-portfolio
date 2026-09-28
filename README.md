@@ -17,6 +17,15 @@ checks the scroll buttons. Use `--baseline=<git revision>` to compare with the
 original page, or `--viewport=390x844` to check one viewport.
 The outro check also makes rapid scroll jumps and reversals, verifying that all
 seven scene layers follow scroll without continuing to drift after it stops.
+The halftone checks verify canvas backgrounds and expanding incoming-color dots
+on a stationary grid, continuous linear growth, left-to-right scroll offsets,
+immediate response to scrolling, reversals, fast jumps, half-screen gradients,
+sharp sizing, HTML interaction, and no drawing while scrolling is stopped.
+Pixel checks use CPU canvases to avoid GPU readback stalls; performance profiles
+use the site's normal rendering path.
+
+Use `node tests/scroll-parallax.mjs --profile-halftone` to profile both job
+backgrounds with 4× CPU throttling, including scripting, paint, and layer counts.
 
 Run `node tests/scroll-parallax.mjs --profile-skills` to profile a six-second
 scroll through skills in both directions with live reveal transitions and 4× CPU

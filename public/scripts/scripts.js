@@ -256,6 +256,112 @@ googleSections.forEach((element, i) => {
   element.innerHTML += `${text} ${text}`;
 });
 
+// HALFTONE JOB BACKGROUNDS
+// Incoming-color circles grow continuously on a fixed grid. Every column
+// is offset progressively toward the right in scroll distance, not time.
+const halftoneDotRows = 14;
+const halftoneMaxOffset = 2; // Dot rows of additional scrolling at the right edge.
+// Keep the entire diagonal transition inside the original half-screen band.
+const halftoneGrowthRows = halftoneDotRows - halftoneMaxOffset;
+document.querySelectorAll('.job-section').forEach(section => {
+  const canvas = document.createElement('canvas');
+  canvas.className = 'halftone-background';
+  canvas.setAttribute('aria-hidden', 'true');
+  section.prepend(canvas);
+  const context = canvas.getContext('2d', {alpha: false});
+  let top, height, pitch, rowPitch, viewport, dpr, background, incoming, maxRadius;
+  let columns = [], cacheKey;
+  const render = (column, row, force = false) => {
+    if (force || row !== column.row) {
+      column.row = row;
+      column.dirty = true;
+    }
+  };
+  const paint = () => {
+    if (!columns.some(column => column.dirty)) return;
+    // Repaint overlapping circles together so antialiased edges never accumulate.
+    context.fillStyle = background;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = incoming;
+    const solidTops = columns.map(column => Math.max(0,
+      (viewport + (halftoneGrowthRows - column.row) * rowPitch) * dpr));
+    columns.forEach((column, index) => {
+      column.dirty = false;
+      const solidTop = solidTops[index];
+      if (solidTop < canvas.height) {
+        const cellLeft = Math.floor(index * pitch * dpr);
+        context.fillRect(cellLeft, solidTop,
+          Math.ceil((index + 1) * pitch * dpr) - cellLeft, canvas.height - solidTop);
+      }
+    });
+    // Batch visible circles into one path; solid color already covers the rest.
+    const lastCell = Math.ceil(viewport / rowPitch + maxRadius / rowPitch + 0.5);
+    context.beginPath();
+    let circles = false;
+    columns.forEach((column, index) => {
+      const x = (index + 0.5) * pitch * dpr;
+      // A full-size circle reaches at most the two adjacent column cells.
+      const coveredTop = Math.max(solidTops[index],
+        solidTops[Math.max(0, index - 1)], solidTops[Math.min(columns.length - 1, index + 1)]);
+      for (let cell = 0; cell <= lastCell; cell++) {
+        const progress = Math.min(1, Math.max(0, (column.row - cell) / (halftoneGrowthRows - 1)));
+        const radius = maxRadius * progress * dpr;
+        const y = (viewport + (0.5 - cell) * rowPitch) * dpr;
+        if (radius > 0 && y + radius > 0 && y - radius < canvas.height && y - radius < coveredTop + 1) {
+          context.moveTo(x + radius, y);
+          context.arc(x, y, radius, 0, 2 * Math.PI);
+          circles = true;
+        }
+      }
+    });
+    if (circles) context.fill();
+  };
+  const update = (force = false) => {
+    const travel = gsap.utils.clamp(0, height, window.scrollY - top + window.innerHeight);
+    const row = travel / rowPitch;
+    // Draw the actual scroll position directly, without a time-based tween.
+    columns.forEach(column => render(column, row - column.offset, force));
+    paint();
+  };
+  const rebuild = width => {
+    canvas.width = Math.ceil(width * dpr);
+    canvas.height = Math.ceil(viewport * dpr);
+    canvas.style.width = width + 'px';
+    canvas.style.height = viewport + 'px';
+    maxRadius = Math.hypot(pitch, rowPitch) / 2;
+    const count = Math.ceil(width / pitch);
+    columns = Array.from({length: count}, (_, index) => ({
+      offset: count > 1 ? halftoneMaxOffset * index / (count - 1) : 0,
+      row: 0, dirty: true
+    }));
+  };
+  ScrollTrigger.create({
+    trigger: section,
+    start: 'top bottom',
+    end: 'bottom bottom',
+    onRefresh: () => {
+      const rect = section.getBoundingClientRect();
+      const style = getComputedStyle(section);
+      top = rect.top + window.scrollY;
+      height = rect.height;
+      pitch = height / 1.48 / 45;
+      rowPitch = height / 1.48 * 0.48 / halftoneDotRows;
+      viewport = window.innerHeight;
+      dpr = window.devicePixelRatio || 1;
+      background = style.getPropertyValue('--job-from').trim();
+      incoming = style.getPropertyValue('--job-to').trim();
+      const key = [rect.width, viewport, dpr, pitch, rowPitch, incoming, background].join(':');
+      if (key !== cacheKey) {
+        rebuild(rect.width);
+        cacheKey = key;
+      }
+      update(true);
+    },
+    onUpdate: () => { if (pitch) update(); }
+  });
+});
+
+
 // SKILLS
 // All rows travel the same distance. Animate their shared container
 // while keeping each row's existing reveal threshold and staggered transitions.
