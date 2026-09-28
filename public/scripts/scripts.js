@@ -30,11 +30,27 @@ window.onload = () => {
   $('#intro-scroll-button').disabled = false;
 };
 
-$('#nav-hamburger').addEventListener('click', () => {
-  $('#nav-github').disabled = !$('#nav-github').disabled;
-  $('#nav-linkedin').disabled = !$('#nav-linkedin').disabled;
-  $('#nav-instagram').disabled = !$('#nav-instagram').disabled;
-  $('#nav-resume').disabled = !$('#nav-resume').disabled;
+const navHamburger = $('#nav-hamburger');
+const navOptions = ['#nav-resume', '#nav-github', '#nav-linkedin', '#nav-instagram'].map(selector => $(selector));
+let navMenuOpen = false;
+
+const setNavMenuOpen = (open) => {
+  navMenuOpen = open;
+  navOptions.forEach(option => option.disabled = !open);
+  navHamburger.setAttribute('aria-expanded', String(open));
+};
+
+navHamburger.addEventListener('click', () => setNavMenuOpen(!navMenuOpen));
+
+document.addEventListener('click', (event) => {
+  if (navMenuOpen && !navHamburger.contains(event.target)) setNavMenuOpen(false);
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && navMenuOpen) {
+    setNavMenuOpen(false);
+    navHamburger.focus();
+  }
 });
 
 // SCROLL BUTTONS
