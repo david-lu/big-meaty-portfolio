@@ -247,7 +247,9 @@ ScrollTrigger.create(
   {
     trigger: "#google",
     start: "top bottom",
-    end: "bottom top",
+    // Keep the doodle motion on its original 130vh range while the longer
+    // section gives the orange transition room to finish.
+    end: "top -130%",
     scrub: 0.2,
     // markers: true,
     onUpdate: (self) => {
@@ -272,6 +274,132 @@ googleSections.forEach((element, i) => {
   const text = element.innerHTML;
   element.innerHTML += `${text} ${text}`;
 });
+
+// HALFTONE TRANSITIONS
+// Both color fields live in fixed canvases. Orange stays behind the black
+// transition, so the white section backgrounds never form a visible edge.
+const halftoneDotRows = 30;
+const halftoneColumnOffset = 4;
+// Both transitions travel 55vh; a 10vh growth span gives them the same dot band.
+const halftoneGrowthDistance = 0.1;
+const googleDotOrigin = 0.7;
+const createHalftone = (canvasSelector, sectionSelector, startRows = null) => {
+  const canvas = $(canvasSelector);
+  const context = canvas.getContext('2d');
+  const section = $(sectionSelector);
+  const skillsHeader = $('#skills-header');
+  const startViewportFraction = 0.8;
+  let anchorGap = startRows ? undefined : 0;
+  let size;
+  let lastProgress;
+
+  const measureAnchor = () => {
+    const rowBottom = Math.max(...startRows.map(row => row.getBoundingClientRect().bottom));
+    anchorGap = section.getBoundingClientRect().bottom - rowBottom;
+    return rowBottom;
+  };
+
+  const resize = () => {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const dpr = window.devicePixelRatio || 1;
+    if (size && width === size.width && height === size.height && dpr === size.dpr) return;
+
+    canvas.width = Math.ceil(width * dpr);
+    canvas.height = Math.ceil(height * dpr);
+    // 100% excludes the scrollbar in some browsers, scaling the bitmap.
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+    const color = getComputedStyle(canvas).color;
+    const rowPitch = height * 0.48 / halftoneDotRows;
+    // Adjacent rows shift by half a column. Equal horizontal and vertical
+    // legs between their centers make a square grid turned 45 degrees.
+    const pitch = 2 * rowPitch;
+    const columns = Math.ceil(width / pitch) + 2;
+    size = {
+      width, height, dpr, color, pitch, rowPitch,
+      // The rotated grid's covering radius is one row pitch. One device
+      // pixel of overlap closes raster gaps where four full dots meet.
+      radius: rowPitch + 1 / dpr,
+      offsets: Array.from({ length: columns }, (_, i) => columns > 1 ? halftoneColumnOffset * i / (columns - 1) : 0)
+    };
+    lastProgress = undefined;
+  };
+
+  const update = () => {
+    const height = window.innerHeight;
+    if (anchorGap === undefined) measureAnchor();
+    const anchorBottom = section.getBoundingClientRect().bottom - anchorGap;
+    const travel = (startViewportFraction - 0.25) * height;
+    const distance = startViewportFraction * height - anchorBottom;
+    const progress = gsap.utils.clamp(0, 1, distance / travel);
+    if (distance <= 0 || skillsHeader.getBoundingClientRect().top <= 0) {
+      if (canvas.style.visibility !== 'hidden') canvas.style.visibility = 'hidden';
+      lastProgress = undefined;
+      return;
+    }
+
+    resize();
+    const { dpr, color, pitch, rowPitch, radius, offsets } = size;
+    if (canvas.style.visibility !== 'visible') canvas.style.visibility = 'visible';
+    if (progress === lastProgress) return;
+    lastProgress = progress;
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = color;
+    if (progress >= 1) {
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      return;
+    }
+
+    // Every dot grows over the same scroll distance. Rows begin at the bottom
+    // one by one, including the rows below Google's doodles. Completed rows
+    // overlap to make the solid color without a separate fill edge.
+    const originY = height * (startRows ? googleDotOrigin : 1) - 0.5 * rowPitch;
+    const lowerRowSpan = startRows ? (height - googleDotOrigin * height) / rowPitch : 0;
+    // Google's grid needs one row below the viewport for complete coverage;
+    // its visible stagger still begins at the first row inside the viewport.
+    const lowerRows = Math.ceil(lowerRowSpan);
+    const delayBase = Math.floor(lowerRowSpan);
+    const lastCell = Math.ceil(originY / rowPitch + radius / rowPitch + 0.5);
+    const growthDistance = halftoneGrowthDistance * height;
+    const rowDelay = (travel - growthDistance) / (lastCell + delayBase + halftoneColumnOffset);
+    context.beginPath();
+    offsets.forEach((offset, i) => {
+      for (let cell = -lowerRows; cell <= lastCell; cell++) {
+        const x = ((i - 0.5) * pitch + (cell & 1) * rowPitch) * dpr;
+        const growth = gsap.utils.clamp(0, 1,
+          (distance - (cell + delayBase + offset) * rowDelay) / growthDistance);
+        const y = (originY + (0.5 - cell) * rowPitch) * dpr;
+        const dotRadius = radius * growth * dpr;
+        if (dotRadius > 0 && y + dotRadius > 0 && y - dotRadius < canvas.height) {
+          context.moveTo(x + dotRadius, y);
+          context.arc(x, y, dotRadius, 0, 2 * Math.PI);
+        }
+      }
+    });
+    context.fill();
+  };
+
+  ScrollTrigger.create({
+    trigger: section,
+    start: startRows
+      ? () => {
+        const rowBottom = measureAnchor();
+        return rowBottom + window.scrollY - startViewportFraction * window.innerHeight;
+      }
+      : 'bottom 80%',
+    end: () => skillsHeader.getBoundingClientRect().top + window.scrollY,
+    onUpdate: update,
+    onRefresh: update,
+    onEnter: update,
+    onEnterBack: update,
+    onLeave: update,
+    onLeaveBack: update
+  });
+};
+
+createHalftone('#google-halftone', '#google', googleSections);
+createHalftone('#nick-halftone', '#nick');
 
 // SKILLS
 // All rows travel the same distance. Animate their shared container

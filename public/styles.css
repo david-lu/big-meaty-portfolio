@@ -10,6 +10,7 @@
     --easeOut: cubic-bezier(0.32, 0, 0.67, 0);
     --skills-color: #ff9cb5;
     --skills-bg-color: rgb(222, 10, 77);
+    --job-orange: #ff7900;
 }
 
 @font-face {
@@ -663,12 +664,33 @@ body>div {
 
 #google {
     flex-direction: row;
-    height: 130vh;
+    height: 160vh;
+    align-items: flex-start;
+    padding-top: 15vh;
     background-color: white;
 }
 
+#google-halftone,
+#nick-halftone {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 7;
+    pointer-events: none;
+    visibility: hidden;
+}
+
+#google-halftone {
+    color: var(--job-orange);
+}
+
+#nick-halftone {
+    color: black;
+}
+
 #google .parallax-container {
-    gap: 3rem;
+    gap: min(3rem, 7vh);
     align-content: center;
     /* will-change: transform; */
 }
@@ -738,29 +760,23 @@ body>div {
     color: black;
 }
 
-#nick {
-    flex-direction: row;
-    height: 130vh;
-    background: linear-gradient(180deg,rgba(255, 255, 255, 1) 0%, rgba(89, 40, 112, 1) 26%, rgba(158, 54, 151, 1) 100%);
+.job-section {
+    height: 100svh;
 }
 
-#nick-logo {
-    width: 25vh;
-    aspect-ratio: 1;
-}
-
+#nick,
 #hedra {
-    flex-direction: row;
-    height: 130vh;
-    background: linear-gradient(180deg,rgba(158, 54, 151, 1) 0%, rgba(0, 0, 0, 1) 19%);
+    background-color: white;
 }
 
 #skills-header {
+    z-index: 7;
     background-color: var(--skills-color);
     color: var(--skills-bg-color);
 }
 
 #skills {
+    z-index: 7;
     flex-direction: row;
     height: 120vh;
     background-color: var(--skills-bg-color);
