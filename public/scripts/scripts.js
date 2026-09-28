@@ -34,6 +34,7 @@ $('#nav-hamburger').addEventListener('click', () => {
   $('#nav-github').disabled = !$('#nav-github').disabled;
   $('#nav-linkedin').disabled = !$('#nav-linkedin').disabled;
   $('#nav-instagram').disabled = !$('#nav-instagram').disabled;
+  $('#nav-resume').disabled = !$('#nav-resume').disabled;
 });
 
 // SCROLL BUTTONS
