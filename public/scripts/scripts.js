@@ -61,6 +61,24 @@ document.addEventListener('keydown', (event) => {
 });
 
 // SCROLL BUTTONS
+// Center a job description, including its parallax movement. If a following
+// section is supplied, stop before that section can enter the viewport.
+// The job settings live below; using them keeps the target aligned when changed.
+const centeredJobScrollY = (sectionSelector, followingSectionSelector) => {
+  const section = $(sectionSelector);
+  const content = section.querySelector('.job-content');
+  const { entryViewportFraction, speed } = experienceSettings.sections
+    .find(settings => settings.sectionSelector === sectionSelector).job;
+  const height = window.innerHeight;
+  const sectionTop = section.getBoundingClientRect().top + scrollY;
+  const centeredY = sectionTop - entryViewportFraction * height +
+    (height + content.getBoundingClientRect().height) / (2 * speed);
+  if (!followingSectionSelector) return centeredY;
+  const followingTop = $(followingSectionSelector).getBoundingClientRect().top + scrollY;
+  // Leave a small buffer so scroll rounding cannot reveal the next section.
+  return Math.min(centeredY, followingTop - height - 8);
+};
+
 $('#intro-scroll-button').addEventListener('click', () => {
   $('#intro-scroll-button').disabled = true;
   gsap.to(window, {
@@ -80,8 +98,7 @@ $('#map-scroll-button').addEventListener('click', () => {
   $('#map-scroll-button').disabled = true;
   gsap.to(window, {
     ease: 'sine.inOut', duration: 6, scrollTo: {
-      y: '#skills',
-      offsetY: vh(-5),
+      y: centeredJobScrollY('#nick'),
       autoKill: true
     }
   });
@@ -104,6 +121,22 @@ ScrollTrigger.create({
   trigger: '#skills', start: "top bottom", end: "bottom top",
   onEnterBack: (self) => $('#skills-scroll-button').disabled = false
 });
+
+const addJobScrollButton = (buttonSelector, target) => {
+  const button = $(buttonSelector);
+  button.addEventListener('click', () => {
+    button.disabled = true;
+    gsap.to(window, {
+      ease: 'sine.inOut',
+      duration: 3,
+      scrollTo: { y: typeof target === 'function' ? target() : target, autoKill: true },
+      onComplete: () => button.disabled = false,
+      onInterrupt: () => button.disabled = false
+    });
+  });
+};
+addJobScrollButton('#nick-scroll-button', () => centeredJobScrollY('#hedra', '#skills-header'));
+addJobScrollButton('#hedra-scroll-button', '#skills-header');
 
 // INTRO
 if (!supportsCssParallax) {
@@ -247,7 +280,8 @@ ScrollTrigger.create(
   {
     trigger: "#google",
     start: "top bottom",
-    end: "bottom top",
+    // Keep the doodles' horizontal motion on its original scroll range.
+    end: "top -130%",
     scrub: 0.2,
     // markers: true,
     onUpdate: (self) => {
@@ -272,6 +306,199 @@ googleSections.forEach((element, i) => {
   const text = element.innerHTML;
   element.innerHTML += `${text} ${text}`;
 });
+
+// EXPERIENCE SECTIONS
+// All positions below use the section named by sectionSelector as their anchor.
+// The canvas named by canvasSelector paints that section's background during entry.
+const experienceSettings = {
+  halftone: {
+    startTop: 1,       // Start when the new section's top reaches the viewport bottom.
+    endTop: 0,         // Finish when that top reaches the viewport top.
+    growthDistance: 0.25, // Each dot grows over this fraction of viewport-height scrolling.
+    dotRows: 30,       // Grid density: this many rows fit in 48% of the viewport height.
+    columnOffset: 4    // Rightmost dots start this many row delays after leftmost dots.
+  },
+  sections: [
+    {
+      sectionSelector: '#nick',
+      canvasSelector: '#nick-halftone',
+      job: { entryViewportFraction: 0.7, startCover: -0.15, endCover: 1, speed: 1 }
+    },
+    {
+      sectionSelector: '#hedra',
+      canvasSelector: '#hedra-halftone',
+      job: { entryViewportFraction: 0.7, startCover: -0.15, endCover: 1, speed: 1 }
+    }
+  ]
+};
+// Job controls, in each section's job object:
+// entryViewportFraction: where the section top is when the text first reaches
+// the viewport bottom (1 = viewport bottom; 0.7 = 70% down the viewport).
+// startCover/endCover: parallax range measured over the section crossing the
+// viewport (0 = top at bottom; 1 = bottom at top). -0.15 begins before entry.
+// speed: text scroll speed divided by page scroll speed (1 = normal; 0.8 = 80%).
+
+// JOB DESCRIPTIONS
+const createJobScroll = ({ sectionSelector, entryViewportFraction, startCover, endCover, speed }) => {
+  const section = $(sectionSelector);
+  const content = section.querySelector('.job-content');
+  let range;
+
+  content.style.setProperty('--job-cover-start', `${startCover * 100}%`);
+  content.style.setProperty('--job-cover-end', `${endCover * 100}%`);
+
+  const layout = () => {
+    const height = window.innerHeight;
+    const sectionHeight = section.getBoundingClientRect().height;
+    const coverDistance = height + sectionHeight;
+    const sectionScroll = section.getBoundingClientRect().top + scrollY;
+    const startSectionTop = height - startCover * coverDistance;
+    const endSectionTop = height - endCover * coverDistance;
+    const startScroll = sectionScroll - startSectionTop;
+    const endScroll = sectionScroll - endSectionTop;
+    const entrySectionTop = entryViewportFraction * height;
+    // Offset the starting position when speed changes so entry stays at the
+    // same viewport edge while the text moves more slowly or quickly afterward.
+    const entryCompensation = (1 - speed) * (startSectionTop - entrySectionTop);
+    content.style.top = `${height - entrySectionTop - entryCompensation}px`;
+    content.dataset.jobLayout = JSON.stringify({ height, sectionHeight, entryViewportFraction,
+      startCover, endCover, speed });
+    content.style.setProperty('--job-parallax-distance', `${(1 - speed) * (endScroll - startScroll)}px`);
+    range = { startScroll, endScroll };
+  };
+
+  layout();
+  if (supportsCssParallax) {
+    ScrollTrigger.addEventListener('refresh', layout);
+    return;
+  }
+
+  const update = () => {
+    const elapsed = gsap.utils.clamp(0, range.endScroll - range.startScroll, scrollY - range.startScroll);
+    const scrollStyle = `${(1 - speed) * elapsed}px`;
+    if (content.style.getPropertyValue('--job-scroll') !== scrollStyle) {
+      content.style.setProperty('--job-scroll', scrollStyle);
+    }
+  };
+  ScrollTrigger.create({
+    trigger: section,
+    start: () => { layout(); return range.startScroll; },
+    end: () => range.endScroll,
+    onUpdate: update,
+    onRefresh: update,
+    onEnter: update,
+    onEnterBack: update,
+    onLeave: update,
+    onLeaveBack: update
+  });
+  update();
+};
+
+experienceSettings.sections.forEach(({ sectionSelector, job }) => {
+  createJobScroll({ sectionSelector, ...job });
+});
+
+// HALFTONE TRANSITIONS
+// Each canvas is fixed so its dots can cover the previous section. Orange stays
+// under black; the DOM sections are white, so no hard color edge can show.
+const createHalftone = ({ canvasSelector, sectionSelector }) => {
+  const canvas = $(canvasSelector);
+  const context = canvas.getContext('2d');
+  const section = $(sectionSelector);
+  const { startTop, endTop, growthDistance, dotRows, columnOffset } = experienceSettings.halftone;
+  let size;
+  let lastProgress;
+
+  const resize = () => {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const dpr = window.devicePixelRatio || 1;
+    if (size && width === size.width && height === size.height && dpr === size.dpr) return;
+
+    canvas.width = Math.ceil(width * dpr);
+    canvas.height = Math.ceil(height * dpr);
+    // 100% excludes the scrollbar in some browsers, scaling the bitmap.
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+    const color = getComputedStyle(canvas).color;
+    const rowPitch = height * 0.48 / dotRows;
+    // Adjacent rows shift by half a column. Equal horizontal and vertical
+    // legs between their centers make a square grid turned 45 degrees.
+    const pitch = 2 * rowPitch;
+    const columns = Math.ceil(width / pitch) + 2;
+    size = {
+      width, height, dpr, color, pitch, rowPitch,
+      // The rotated grid's covering radius is one row pitch. One device
+      // pixel of overlap closes raster gaps where four full dots meet.
+      radius: rowPitch + 1 / dpr,
+      offsets: Array.from({ length: columns }, (_, i) => columns > 1 ? columnOffset * i / (columns - 1) : 0)
+    };
+    lastProgress = undefined;
+  };
+
+  const update = () => {
+    const height = window.innerHeight;
+    const bounds = section.getBoundingClientRect();
+    const travel = (startTop - endTop) * height;
+    const distance = startTop * height - bounds.top;
+    const progress = gsap.utils.clamp(0, 1, distance / travel);
+    // Stop at this section's bottom; the next background or header takes over.
+    if (distance <= 0 || bounds.bottom <= 0) {
+      if (canvas.style.visibility !== 'hidden') canvas.style.visibility = 'hidden';
+      lastProgress = undefined;
+      return;
+    }
+
+    resize();
+    const { dpr, color, pitch, rowPitch, radius, offsets } = size;
+    if (canvas.style.visibility !== 'visible') canvas.style.visibility = 'visible';
+    if (progress === lastProgress) return;
+    lastProgress = progress;
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = color;
+    if (progress >= 1) {
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      return;
+    }
+
+    // Every row grows at the same rate. Delay each row, including the ones
+    // nearest the bottom; completed dots overlap into a solid color.
+    const originY = height - 0.5 * rowPitch;
+    const lastCell = Math.ceil(originY / rowPitch + radius / rowPitch + 0.5);
+    const growthPixels = growthDistance * height;
+    const rowDelay = (travel - growthPixels) / (lastCell + columnOffset);
+    context.beginPath();
+    offsets.forEach((offset, i) => {
+      for (let cell = 0; cell <= lastCell; cell++) {
+        const x = ((i - 0.5) * pitch + (cell & 1) * rowPitch) * dpr;
+        const growth = gsap.utils.clamp(0, 1,
+          (distance - (cell + offset) * rowDelay) / growthPixels);
+        const y = (originY + (0.5 - cell) * rowPitch) * dpr;
+        const dotRadius = radius * growth * dpr;
+        if (dotRadius > 0 && y + dotRadius > 0 && y - dotRadius < canvas.height) {
+          context.moveTo(x + dotRadius, y);
+          context.arc(x, y, dotRadius, 0, 2 * Math.PI);
+        }
+      }
+    });
+    context.fill();
+  };
+
+  ScrollTrigger.create({
+    trigger: section,
+    start: () => section.getBoundingClientRect().top + scrollY - startTop * innerHeight,
+    end: () => section.getBoundingClientRect().bottom + scrollY,
+    onUpdate: update,
+    onRefresh: update,
+    onEnter: update,
+    onEnterBack: update,
+    onLeave: update,
+    onLeaveBack: update
+  });
+
+};
+
+experienceSettings.sections.forEach(createHalftone);
 
 // SKILLS
 // All rows travel the same distance. Animate their shared container

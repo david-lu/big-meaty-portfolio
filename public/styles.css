@@ -10,6 +10,7 @@
     --easeOut: cubic-bezier(0.32, 0, 0.67, 0);
     --skills-color: #ff9cb5;
     --skills-bg-color: rgb(222, 10, 77);
+    --job-orange: #ff7900;
 }
 
 @font-face {
@@ -205,6 +206,25 @@ body>div {
         view-timeline-inset: 0;
     }
 
+    #nick {
+        view-timeline: --nick-job block;
+        view-timeline-inset: 0;
+    }
+
+    #hedra {
+        view-timeline: --hedra-job block;
+        view-timeline-inset: 0;
+    }
+
+    #nick .job-content,
+    #hedra .job-content {
+        animation: job-parallax auto linear both;
+        animation-range: cover var(--job-cover-start) cover var(--job-cover-end);
+    }
+
+    #nick .job-content { animation-timeline: --nick-job; }
+    #hedra .job-content { animation-timeline: --hedra-job; }
+
     #fg,
     #intro .parallax-bg,
     #outro .parallax-bg,
@@ -262,6 +282,11 @@ body>div {
 @keyframes parallax-y {
     from { transform: translate3d(0, var(--parallax-from, 0px), 0); }
     to { transform: translate3d(0, var(--parallax-to), 0); }
+}
+
+@keyframes job-parallax {
+    from { transform: translate3d(-50%, 0, 0); }
+    to { transform: translate3d(-50%, var(--job-parallax-distance, 0px), 0); }
 }
 
 .scroll-button {
@@ -663,12 +688,36 @@ body>div {
 
 #google {
     flex-direction: row;
-    height: 130vh;
+    /* Short enough for the last doodles to meet Nick's entering halftone. */
+    height: 120vh;
+    align-items: flex-start;
+    padding-top: 15vh;
     background-color: white;
 }
 
+/* Each fixed canvas belongs to the section named in its ID. */
+#nick-halftone,
+#hedra-halftone {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 7;
+    pointer-events: none;
+    visibility: hidden;
+}
+
+#nick-halftone {
+    color: var(--job-orange);
+}
+
+#hedra-halftone {
+    color: black;
+    z-index: 9;
+}
+
 #google .parallax-container {
-    gap: 3rem;
+    gap: min(3rem, 7vh);
     align-content: center;
     /* will-change: transform; */
 }
@@ -738,29 +787,101 @@ body>div {
     color: black;
 }
 
-#nick {
-    flex-direction: row;
-    height: 130vh;
-    background: linear-gradient(180deg,rgba(255, 255, 255, 1) 0%, rgba(89, 40, 112, 1) 26%, rgba(158, 54, 151, 1) 100%);
+.job-section {
+    height: 100svh;
+    justify-content: center;
+    padding-inline: clamp(1.25rem, 5vw, 5rem);
+    overflow: visible;
 }
 
-#nick-logo {
-    width: 25vh;
-    aspect-ratio: 1;
-}
-
+#nick,
 #hedra {
-    flex-direction: row;
-    height: 130vh;
-    background: linear-gradient(180deg,rgba(158, 54, 151, 1) 0%, rgba(0, 0, 0, 1) 19%);
+    background-color: white;
+}
+
+.job-content {
+    position: absolute;
+    z-index: 12;
+    left: 50%;
+    top: 0;
+    width: min(36rem, calc(100% - 2.5rem));
+    height: auto;
+    align-items: center;
+    color: white;
+    text-align: center;
+    opacity: 1;
+    pointer-events: none;
+    transform: translate(-50%, var(--job-scroll, 0px));
+}
+
+#nick .job-content {
+    z-index: 8;
+}
+
+.job-scroll-button {
+    margin-top: clamp(1rem, 3svh, 2rem);
+    pointer-events: auto;
+}
+
+.job-logo {
+    display: block;
+    box-sizing: border-box;
+    width: clamp(3.25rem, 12svh, 6.75rem);
+    aspect-ratio: 1;
+    margin-bottom: clamp(0.5rem, 2svh, 1rem);
+    padding: clamp(0.4rem, 1svh, 0.7rem);
+    border-radius: 50%;
+    background: white;
+    object-fit: contain;
+}
+
+#nick .job-logo {
+    background-color: #8dc63f;
+}
+
+.job-content h2,
+.job-content p {
+    margin: 0;
+    font-size: 1rem;
+    line-height: 1.45;
+}
+
+.job-content h2 {
+    margin-bottom: 0.7rem;
+    font-weight: bold;
+}
+
+.job-content p {
+    width: 100%;
+    text-align: justify;
+}
+
+.job-content p + p {
+    margin-top: 0.7rem;
+}
+
+@media (max-height: 500px) {
+    .job-logo {
+        margin-bottom: 0.4rem;
+    }
+
+    .job-content h2 {
+        margin-bottom: 0.4rem;
+    }
+
+    .job-content p + p {
+        margin-top: 0.4rem;
+    }
 }
 
 #skills-header {
+    z-index: 13;
     background-color: var(--skills-color);
     color: var(--skills-bg-color);
 }
 
 #skills {
+    z-index: 13;
     flex-direction: row;
     height: 120vh;
     background-color: var(--skills-bg-color);
@@ -1089,6 +1210,11 @@ body>div {
 }
 
 @media (max-aspect-ratio: 0.6) {
+    /* Stacked doodle rows need less trailing space on narrow screens. */
+    #google {
+        height: 105vh;
+    }
+
     #intro-scroll-button {
         position: relative;
         bottom: inherit;
