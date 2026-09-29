@@ -1,3 +1,6 @@
+import { createHedraGpuRenderer } from './hedra-ambient-gl.js';
+import { createHalftoneGpuRenderer } from './halftone-transition-gl.js';
+
 gsap.registerPlugin(ScrollToPlugin, ScrollTrigger);
 SmoothScroll({});
 
@@ -318,6 +321,13 @@ const experienceSettings = {
     dotRows: 30,       // Grid density: this many rows fit in 48% of the viewport height.
     columnOffset: 4    // Rightmost dots start this many row delays after leftmost dots.
   },
+  ambient: {
+    maxDpr: 1.5,       // The soft background does not need a full high-density bitmap.
+    maxFps: 15,        // Redraw the ambient canvas at most this many times a second.
+    scrollPhase: 1.3,  // Scrolling advances the wave field by this many seconds.
+    timePhase: 0.001,  // Convert animation timestamps from milliseconds to seconds.
+    scrollEaseMs: 90   // Smooth wheel steps without delaying the section transition.
+  },
   sections: [
     {
       sectionSelector: '#nick',
@@ -401,18 +411,166 @@ experienceSettings.sections.forEach(({ sectionSelector, job }) => {
 // HALFTONE TRANSITIONS
 // Each canvas is fixed so its dots can cover the previous section. Orange stays
 // under black; the DOM sections are white, so no hard color edge can show.
+// The ambient dots use this same spacing so their lattice matches the transition.
+const halftoneRowPitch = (viewportHeight) =>
+  viewportHeight * 0.48 / experienceSettings.halftone.dotRows;
+
+const createHedraAmbient = (section) => {
+  const canvas = section.querySelector('#hedra-ambient');
+  if (!canvas) return null;
+  let gpu;
+  try {
+    gpu = createHedraGpuRenderer(canvas);
+  } catch (error) {
+    console.warn('Hedra WebGL renderer unavailable.', error);
+  }
+  if (!gpu) {
+    canvas.style.display = 'none';
+    return null;
+  }
+
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  const { maxDpr, maxFps, scrollPhase, timePhase, scrollEaseMs } = experienceSettings.ambient;
+  const frameInterval = 1000 / maxFps;
+  let width = 0, height = 0, dpr = 0, timer = 0, lastFrame = 0, lastDraw = -Infinity;
+  let active = false, sectionProgress = 0, targetProgress = 0;
+  let rowPitch = 0, maxRadius = 0;
+
+  const resize = () => {
+    const nextWidth = canvas.clientWidth;
+    const nextHeight = canvas.clientHeight;
+    const nextDpr = Math.min(devicePixelRatio || 1, maxDpr,
+      gpu.maxSize / Math.max(nextWidth, nextHeight));
+    const nextRowPitch = halftoneRowPitch(innerHeight);
+    if (width === nextWidth && height === nextHeight && dpr === nextDpr && rowPitch === nextRowPitch) return;
+    width = nextWidth;
+    height = nextHeight;
+    dpr = nextDpr;
+    canvas.width = Math.ceil(width * dpr);
+    canvas.height = Math.ceil(height * dpr);
+    rowPitch = nextRowPitch;
+    // The nearest neighbors in the rotated grid are rowPitch * sqrt(2) apart.
+    maxRadius = rowPitch * Math.SQRT2 * 0.45;
+    gpu.resize(width, height, rowPitch);
+  };
+
+  const render = (time) => {
+    resize();
+    if (!width || !height) return;
+    const waveTime = reducedMotion.matches ? 1.5 : time * timePhase + sectionProgress * scrollPhase;
+    gpu.render(waveTime, width, height, dpr, maxRadius);
+  };
+
+  // One timer owns all draws, including resize and reduced-motion updates.
+  // The interval is measured from the previous draw, capping the shader at 15 fps.
+  const schedule = () => {
+    if (timer || !gpu || !active || document.hidden) return;
+    const delay = Math.max(0, frameInterval - (performance.now() - lastDraw));
+    timer = setTimeout(tick, delay);
+  };
+
+  const tick = () => {
+    timer = 0;
+    if (!gpu || !active || document.hidden) return;
+    const time = performance.now();
+    if (time - lastDraw < frameInterval) {
+      schedule();
+      return;
+    }
+    const elapsed = Math.min(250, Math.max(0, time - lastFrame));
+    lastFrame = time;
+    if (!reducedMotion.matches) {
+      const scrollBlend = 1 - Math.exp(-elapsed / scrollEaseMs);
+      sectionProgress += (targetProgress - sectionProgress) * scrollBlend;
+    }
+    render(time);
+    lastDraw = performance.now();
+    if (!reducedMotion.matches) schedule();
+  };
+
+  const setState = (visible, progress) => {
+    targetProgress = progress;
+    if (visible === active) return;
+    active = visible;
+    if (active) {
+      sectionProgress = progress;
+      lastFrame = performance.now();
+      tick();
+    } else {
+      if (timer) clearTimeout(timer);
+      timer = 0;
+    }
+  };
+
+  canvas.addEventListener('webglcontextlost', (event) => {
+    event.preventDefault();
+    gpu = null;
+    canvas.style.display = 'none';
+    if (timer) clearTimeout(timer);
+    timer = 0;
+  });
+  canvas.addEventListener('webglcontextrestored', () => {
+    try {
+      gpu = createHedraGpuRenderer(canvas);
+    } catch (error) {
+      console.warn('Hedra WebGL renderer unavailable after context restoration.', error);
+    }
+    if (!gpu) return;
+    width = height = dpr = rowPitch = 0;
+    canvas.style.display = '';
+    if (active) schedule();
+  });
+
+  reducedMotion.addEventListener('change', () => {
+    if (timer) clearTimeout(timer);
+    timer = 0;
+    if (!active) return;
+    sectionProgress = targetProgress;
+    schedule();
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && timer) {
+      clearTimeout(timer);
+      timer = 0;
+    } else if (!document.hidden && active) {
+      schedule();
+    }
+  });
+  window.addEventListener('resize', () => {
+    if (active) schedule();
+  });
+  return { setState };
+};
+
 const createHalftone = ({ canvasSelector, sectionSelector }) => {
   const canvas = $(canvasSelector);
-  const context = canvas.getContext('2d');
   const section = $(sectionSelector);
-  const { startTop, endTop, growthDistance, dotRows, columnOffset } = experienceSettings.halftone;
+  const ambient = createHedraAmbient(section);
+  const { startTop, endTop, growthDistance, columnOffset } = experienceSettings.halftone;
   let size;
   let lastProgress;
+  let renderer;
+
+  const initialize = () => {
+    try {
+      renderer = createHalftoneGpuRenderer(canvas);
+    } catch (error) {
+      console.warn('Halftone WebGL renderer unavailable.', error);
+    }
+    // Keep the job text legible if WebGL2 cannot paint its section background.
+    canvas.style.display = renderer ? '' : 'none';
+    section.style.backgroundColor = renderer ? '' : getComputedStyle(canvas).color;
+    size = undefined;
+    lastProgress = undefined;
+  };
+  initialize();
 
   const resize = () => {
     const width = window.innerWidth;
     const height = window.innerHeight;
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = Math.min(window.devicePixelRatio || 1,
+      renderer.maxSize / Math.max(width, height));
     if (size && width === size.width && height === size.height && dpr === size.dpr) return;
 
     canvas.width = Math.ceil(width * dpr);
@@ -421,18 +579,22 @@ const createHalftone = ({ canvasSelector, sectionSelector }) => {
     canvas.style.width = `${width}px`;
     canvas.style.height = `${height}px`;
     const color = getComputedStyle(canvas).color;
-    const rowPitch = height * 0.48 / dotRows;
+    const rowPitch = halftoneRowPitch(height);
     // Adjacent rows shift by half a column. Equal horizontal and vertical
     // legs between their centers make a square grid turned 45 degrees.
     const pitch = 2 * rowPitch;
     const columns = Math.ceil(width / pitch) + 2;
+    const radius = rowPitch + 1 / dpr;
+    const originY = height - 0.5 * rowPitch;
+    const lastCell = Math.ceil(originY / rowPitch + radius / rowPitch + 0.5);
     size = {
-      width, height, dpr, color, pitch, rowPitch,
+      width, height, dpr, color: color.match(/\d+/g).slice(0, 3).map(value => Number(value) / 255),
+      rowPitch, columns, cells: lastCell + 1,
       // The rotated grid's covering radius is one row pitch. One device
       // pixel of overlap closes raster gaps where four full dots meet.
-      radius: rowPitch + 1 / dpr,
-      offsets: Array.from({ length: columns }, (_, i) => columns > 1 ? columnOffset * i / (columns - 1) : 0)
+      radius
     };
+    renderer.resize();
     lastProgress = undefined;
   };
 
@@ -442,6 +604,11 @@ const createHalftone = ({ canvasSelector, sectionSelector }) => {
     const travel = (startTop - endTop) * height;
     const distance = startTop * height - bounds.top;
     const progress = gsap.utils.clamp(0, 1, distance / travel);
+    // Paint as soon as Hedra enters view. CSS keeps the canvas visible and
+    // feathers its top edge; this only pauses work while the section is away.
+    ambient?.setState(bounds.top < height && bounds.bottom > 0,
+      gsap.utils.clamp(0, 1, (height - bounds.top) / (height + bounds.height)));
+    if (!renderer) return;
     // Stop at this section's bottom; the next background or header takes over.
     if (distance <= 0 || bounds.bottom <= 0) {
       if (canvas.style.visibility !== 'hidden') canvas.style.visibility = 'hidden';
@@ -450,39 +617,31 @@ const createHalftone = ({ canvasSelector, sectionSelector }) => {
     }
 
     resize();
-    const { dpr, color, pitch, rowPitch, radius, offsets } = size;
+    const { cells } = size;
     if (canvas.style.visibility !== 'visible') canvas.style.visibility = 'visible';
     if (progress === lastProgress) return;
     lastProgress = progress;
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    context.fillStyle = color;
-    if (progress >= 1) {
-      context.fillRect(0, 0, canvas.width, canvas.height);
-      return;
-    }
 
     // Every row grows at the same rate. Delay each row, including the ones
     // nearest the bottom; completed dots overlap into a solid color.
-    const originY = height - 0.5 * rowPitch;
-    const lastCell = Math.ceil(originY / rowPitch + radius / rowPitch + 0.5);
     const growthPixels = growthDistance * height;
-    const rowDelay = (travel - growthPixels) / (lastCell + columnOffset);
-    context.beginPath();
-    offsets.forEach((offset, i) => {
-      for (let cell = 0; cell <= lastCell; cell++) {
-        const x = ((i - 0.5) * pitch + (cell & 1) * rowPitch) * dpr;
-        const growth = gsap.utils.clamp(0, 1,
-          (distance - (cell + offset) * rowDelay) / growthPixels);
-        const y = (originY + (0.5 - cell) * rowPitch) * dpr;
-        const dotRadius = radius * growth * dpr;
-        if (dotRadius > 0 && y + dotRadius > 0 && y - dotRadius < canvas.height) {
-          context.moveTo(x + dotRadius, y);
-          context.arc(x, y, dotRadius, 0, 2 * Math.PI);
-        }
-      }
-    });
-    context.fill();
+    const rowDelay = (travel - growthPixels) / (cells - 1 + columnOffset);
+    renderer.render({ ...size, distance, growthPixels, rowDelay,
+      columnOffset, complete: progress >= 1 });
   };
+
+  if (renderer) {
+    canvas.addEventListener('webglcontextlost', (event) => {
+      event.preventDefault();
+      renderer = null;
+      canvas.style.display = 'none';
+      section.style.backgroundColor = getComputedStyle(canvas).color;
+    });
+    canvas.addEventListener('webglcontextrestored', () => {
+      initialize();
+      update();
+    });
+  }
 
   ScrollTrigger.create({
     trigger: section,

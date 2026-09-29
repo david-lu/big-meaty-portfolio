@@ -25,7 +25,9 @@ const compareHead = Boolean(baselineRef);
 const control = process.argv.includes('--control');
 const profileSkills = process.argv.includes('--profile-skills');
 const profileOutro = process.argv.includes('--profile-outro');
-const profileSection = profileOutro ? 'outro' : profileSkills ? 'skills' : undefined;
+const profileHedra = process.argv.includes('--profile-hedra');
+const forceNoWebgl = process.argv.includes('--force-no-webgl');
+const profileSection = profileHedra ? 'hedra' : profileOutro ? 'outro' : profileSkills ? 'skills' : undefined;
 const viewportOption = process.argv.find(arg => arg.startsWith('--viewport='));
 const viewports = viewportOption ? [viewportOption.slice(11).split('x').map(Number)]
   : profileSection ? [[1440, 900], [390, 844]]
@@ -46,6 +48,18 @@ const server = http.createServer(async (req, res) => {
     if (file === 'scripts/logging.js') body = ''; // Keep analytics out of local tests.
     if (file === 'index.html') {
       body = body.toString().replace(/<script async src="https:[^>]+><\/script>/, '');
+      if (forceNoWebgl) {
+        body = body.replace('<script defer type=\'module\' src="scripts/scripts.js"></script>',
+          `<script>const originalGetContext = HTMLCanvasElement.prototype.getContext;
+          HTMLCanvasElement.prototype.getContext = function(type, ...args) {
+            if (['nick-halftone', 'hedra-halftone', 'hedra-ambient'].includes(this.id)) {
+              if (type === 'webgl2') return null;
+              if (type === '2d') window.halftone2dRequests =
+                (window.halftone2dRequests || 0) + 1;
+            }
+            return originalGetContext.call(this, type, ...args);
+          };</script><script defer type='module' src="scripts/scripts.js"></script>`);
+      }
     }
     // Simulate a browser without CSS timelines, exercising the actual GSAP fallback.
     if ((variant === 'fallback' || control) && file === 'styles.css') {
@@ -248,14 +262,28 @@ async function checkJobSections(session, variant) {
     `${label}: orange section is one viewport tall`);
   assert.ok(Math.abs(result.edges[2].height - result.viewport) <= 1,
     `${label}: black section is one viewport tall`);
-  assert.equal(result.nickColor, 'rgb(255, 255, 255)', `${label}: orange field is painted by the canvas`);
-  assert.equal(result.hedraColor, 'rgb(255, 255, 255)', `${label}: black field is painted by the canvas`);
+  assert.equal(result.nickColor, forceNoWebgl ? 'rgb(255, 121, 0)' : 'rgb(255, 255, 255)',
+    `${label}: orange field has its expected background`);
+  assert.equal(result.hedraColor, forceNoWebgl ? 'rgb(0, 0, 0)' : 'rgb(255, 255, 255)',
+    `${label}: black field has its expected background`);
   assert.ok(result.nickCanvasOutside && result.hedraCanvasOutside,
     `${label}: viewport overlays are outside the clipped sections`);
 }
 
 async function checkAnchoredExperience(session, variant) {
   await send('Page.bringToFront', {}, session);
+  if (forceNoWebgl) {
+    const state = await evaluate(session, `(() => ({
+      displays:['nick-halftone', 'hedra-halftone']
+        .map(id => getComputedStyle(document.getElementById(id)).display),
+      fallbackRequests:window.halftone2dRequests || 0
+    }))()`);
+    assert.deepEqual(state.displays, ['none', 'none'],
+      `${variant}: transition canvases hide without WebGL2`);
+    assert.equal(state.fallbackRequests, 0,
+      `${variant}: transition canvases never request Canvas 2D`);
+    return;
+  }
   const result = await evaluate(session, `(async () => {
     const height = innerHeight;
     const sample = async (sectionId, canvasId) => {
@@ -263,40 +291,38 @@ async function checkAnchoredExperience(session, variant) {
       const canvas = document.getElementById(canvasId);
       const content = section.querySelector('.job-content');
       const entryFraction = JSON.parse(content.dataset.jobLayout).entryViewportFraction;
-      const context = canvas.getContext('2d');
+      const gl = canvas.getContext('webgl2');
+      if (!gl) throw new Error(canvasId + ' did not initialize WebGL2.');
       const absoluteTop = section.getBoundingClientRect().top + scrollY;
       const move = async topFraction => {
         scrollTo({top:Math.round(absoluteTop - topFraction * height), behavior:'instant'});
         ScrollTrigger.update();
         await new Promise(resolve => requestAnimationFrame(resolve));
-        const image = context.getImageData(0, 0, canvas.width, canvas.height).data;
+        const image = new Uint8Array(canvas.width * canvas.height * 4);
+        gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, image);
         let ink = 0;
-        for (let i = 3; i < image.length; i += 4) ink += image[i] > 0;
+        for (let i = 3; i < image.length; i += 64) ink += image[i] > 0;
         return {
           sectionTop:section.getBoundingClientRect().top,
           contentTop:content.getBoundingClientRect().top,
           visible:getComputedStyle(canvas).visibility === 'visible',
-          ink, color:[...context.getImageData(0, 0, 1, 1).data]
+          ink, color:[...image.slice(0, 4)]
         };
       };
       const before = await move(1 + 3 / height);
       const entered = await move(0.8);
-      const arcs = [];
-      const originalArc = context.arc;
-      context.arc = function(x, y, radius, ...rest) {
-        arcs.push({x, y, radius});
-        return originalArc.call(this, x, y, radius, ...rest);
-      };
       await move(0.49);
-      arcs.length = 0;
       const middle = await move(0.5);
-      context.arc = originalArc;
-      const fullRadius = Math.max(...arcs.map(arc => arc.radius));
-      const centerX = innerWidth * devicePixelRatio / 2;
-      const partialRows = new Set(arcs.filter(arc =>
-        Math.abs(arc.x - centerX) < fullRadius * 2 &&
-        arc.radius > 0.01 * fullRadius && arc.radius < 0.99 * fullRadius)
-        .map(arc => arc.y.toFixed(2))).size;
+      const program = gl.getParameter(gl.CURRENT_PROGRAM);
+      const uniform = name => gl.getUniform(program, gl.getUniformLocation(program, name));
+      const cells = uniform('u_cells');
+      const offset = uniform('u_column_offset') / 2;
+      const distance = uniform('u_distance');
+      const rowDelay = uniform('u_row_delay');
+      const growthPixels = uniform('u_growth_pixels');
+      const partialRows = Array.from({length:cells}, (_, cell) =>
+        (distance - (cell + offset) * rowDelay) / growthPixels)
+        .filter(growth => growth > 0.01 && growth < 0.99).length;
       const reverse = await move(0.8);
       const middleAgain = await move(0.5);
       const complete = await move(-3 / height);
@@ -320,8 +346,10 @@ async function checkAnchoredExperience(session, variant) {
     scrollTo({top:Math.round(hedraTop - 0.5 * height), behavior:'instant'});
     ScrollTrigger.update();
     const orange = document.getElementById('nick-halftone');
-    const orangeContext = orange.getContext('2d');
-    const orangeAtBlackEntry = [...orangeContext.getImageData(0, 0, 1, 1).data];
+    const orangeGl = orange.getContext('webgl2');
+    const orangePixel = new Uint8Array(4);
+    orangeGl.readPixels(0, 0, 1, 1, orangeGl.RGBA, orangeGl.UNSIGNED_BYTE, orangePixel);
+    const orangeAtBlackEntry = [...orangePixel];
     return {nick, hedra, orangeAtBlackEntry};
   })()`);
   for (const [id, expected] of [
@@ -358,19 +386,155 @@ async function checkAnchoredExperience(session, variant) {
     `${variant}: orange remains solid behind Hedra's black dots`);
 }
 
+async function checkHedraAmbient(session, variant) {
+  await send('Page.bringToFront', {}, session);
+  if (forceNoWebgl) {
+    const hidden = await evaluate(session, `(() => {
+      const section = document.getElementById('hedra');
+      const canvas = document.getElementById('hedra-ambient');
+      scrollTo({top:section.getBoundingClientRect().top + scrollY, behavior:'instant'});
+      ScrollTrigger.update();
+      return {
+        display:getComputedStyle(canvas).display,
+        jobDisplay:getComputedStyle(section.querySelector('.job-content')).display,
+        fallbackRequests:window.halftone2dRequests || 0
+      };
+    })()`);
+    assert.equal(hidden.display, 'none', `${variant}: ambient canvas hides without WebGL2`);
+    assert.equal(hidden.fallbackRequests, 0, `${variant}: ambient canvas never requests Canvas 2D`);
+    assert.notEqual(hidden.jobDisplay, 'none', `${variant}: Hedra job remains visible`);
+    return;
+  }
+  const result = await evaluate(session, `(async () => {
+    const section = document.getElementById('hedra');
+    const canvas = document.getElementById('hedra-ambient');
+    const gl = canvas.getContext('webgl2');
+    if (!gl) throw new Error('WebGL2 renderer did not initialize.');
+    const drawTimes = [];
+    const gpuFrames = [];
+    const summarize = pixels => {
+      const stride = Math.max(1, Math.floor(pixels.length / (4 * 20000)));
+      let hash = 2166136261, dots = 0, grayscale = true;
+      for (let i = 0; i < pixels.length; i += stride * 4) {
+        if (!pixels[i + 3]) continue;
+        dots++;
+        grayscale &&= pixels[i] === pixels[i + 1] && pixels[i + 1] === pixels[i + 2];
+        hash = Math.imul(hash ^ pixels[i + 3] ^ pixels[i], 16777619);
+      }
+      return {hash:hash >>> 0, dots, grayscale};
+    };
+    const drawInstanced = WebGL2RenderingContext.prototype.drawArraysInstanced;
+    WebGL2RenderingContext.prototype.drawArraysInstanced = function(...args) {
+      const result = drawInstanced.apply(this, args);
+      if (this.canvas === canvas) {
+        const side = Math.min(128, canvas.width, canvas.height);
+        const pixels = new Uint8Array(side * side * 4);
+        this.readPixels(Math.floor((canvas.width - side) / 2),
+          Math.floor((canvas.height - side) / 2), side, side,
+          this.RGBA, this.UNSIGNED_BYTE, pixels);
+        gpuFrames.push({...summarize(pixels), glError:this.getError()});
+        drawTimes.push(performance.now());
+      }
+      return result;
+    };
+    const sectionTop = section.getBoundingClientRect().top + scrollY;
+    const sample = () => {
+      const stats = gpuFrames.at(-1) || {hash:0, dots:0, grayscale:true};
+      return {...stats, width:canvas.width, height:canvas.height,
+        sectionTop:section.getBoundingClientRect().top,
+        canvasTop:canvas.getBoundingClientRect().top,
+        visibility:getComputedStyle(canvas).visibility};
+    };
+    const move = async topFraction => {
+      scrollTo({top:Math.round(sectionTop - topFraction * innerHeight), behavior:'instant'});
+      ScrollTrigger.update();
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      return sample();
+    };
+    const before = await move(1.05);
+    await move(0.8);
+    await new Promise(resolve => setTimeout(resolve, 100));
+    const entered = sample();
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const idle = sample();
+    const scrolled = await move(0.02);
+    await new Promise(resolve => setTimeout(resolve, 100));
+    const afterScroll = sample();
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const later = sample();
+    const style = getComputedStyle(canvas);
+    const clipStyle = getComputedStyle(document.getElementById('hedra-ambient-clip'));
+    scrollTo({top:Math.ceil(section.getBoundingClientRect().bottom + scrollY + 3), behavior:'instant'});
+    ScrollTrigger.update();
+    const drawsAtExit = drawTimes.length;
+    await new Promise(resolve => setTimeout(resolve, 150));
+    const stoppedAfterExit = drawTimes.length === drawsAtExit;
+    WebGL2RenderingContext.prototype.drawArraysInstanced = drawInstanced;
+    return {before, entered, idle, scrolled, afterScroll, later, drawTimes, stoppedAfterExit,
+      renderer:'webgl2',
+      reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches,
+      decorative:canvas.getAttribute('aria-hidden'), pointerEvents:style.pointerEvents,
+      opacity:Number(style.opacity), transitionDuration:style.transitionDuration,
+      clipOverflow:clipStyle.overflow, maskImage:clipStyle.maskImage,
+      canvasLayer:Number(clipStyle.zIndex),
+      contentLayer:Number(getComputedStyle(section.querySelector('.job-content')).zIndex),
+      transitionLayer:Number(getComputedStyle(document.getElementById('hedra-halftone')).zIndex)};
+  })()`);
+  const label = `${variant}: Hedra ambient halftone`;
+  assert.equal(result.before.visibility, 'visible', `${label}: canvas has no visibility gate`);
+  assert.equal(result.entered.visibility, 'visible', `${label}: remains visible on section entry`);
+  assert.equal(result.transitionDuration, '0s', `${label}: no opacity fade`);
+  assert.ok(result.opacity <= 0.15, `${label}: white dots never exceed 15% opacity`);
+  assert.equal(result.clipOverflow, 'hidden', `${label}: parallax dots remain clipped to Hedra`);
+  assert.ok(result.maskImage.includes('linear-gradient'), `${label}: dots feather at the top edge`);
+  assert.equal(result.renderer, 'webgl2', `${label}: ambient dots use WebGL2`);
+  if (variant.endsWith(', native')) {
+    const sectionTravel = result.scrolled.sectionTop - result.entered.sectionTop;
+    const canvasTravel = result.scrolled.canvasTop - result.entered.canvasTop;
+    assert.ok(Math.abs(canvasTravel / sectionTravel - 0.35) < 0.04,
+      `${label}: CSS canvas parallax moves at 35% of page scroll (${canvasTravel / sectionTravel})`);
+  }
+  assert.ok(result.entered.width > 0 && result.entered.height > 0 && result.entered.dots > 100,
+    `${label}: renders a visible dot field ${JSON.stringify(result.entered)}`);
+  assert.equal(result.entered.glError, 0, `${label}: WebGL draw has no errors`);
+  assert.equal(result.entered.grayscale, true, `${label}: dots use grayscale colors`);
+  if (result.reducedMotion) {
+    assert.equal(result.idle.hash, result.entered.hash, `${label}: reduced motion holds a static frame`);
+    assert.equal(result.afterScroll.hash, result.idle.hash, `${label}: reduced motion remains static on scroll`);
+    assert.equal(result.later.hash, result.afterScroll.hash, `${label}: reduced motion stays static`);
+  } else {
+    assert.notEqual(result.idle.hash, result.entered.hash, `${label}: dots move while scroll is still`);
+    assert.notEqual(result.afterScroll.hash, result.idle.hash, `${label}: dots respond to scrolling`);
+    assert.notEqual(result.later.hash, result.afterScroll.hash, `${label}: waves continue without mouse input`);
+    assert.ok(result.drawTimes.length >= 2, `${label}: animation continues while visible`);
+    for (let i = 1; i < result.drawTimes.length; i++) {
+      assert.ok(result.drawTimes[i] - result.drawTimes[i - 1] >= 60,
+        `${label}: canvas redraws no faster than 15 fps`);
+    }
+  }
+  assert.equal(result.decorative, 'true', `${label}: decoration is hidden from assistive technology`);
+  assert.equal(result.pointerEvents, 'none', `${label}: buttons remain clickable`);
+  assert.ok(result.transitionLayer < result.canvasLayer && result.canvasLayer < result.contentLayer,
+    `${label}: dots sit over black and below the job description`);
+  assert.equal(result.stoppedAfterExit, true, `${label}: motion stops after Hedra leaves`);
+}
+
 async function checkGoogleDoodleLayering(session, variant) {
+  if (forceNoWebgl) return;
   await send('Page.bringToFront', {}, session);
   const candidates = await evaluate(session, `(async () => {
     const google = document.getElementById('google');
     const canvas = document.getElementById('nick-halftone');
-    const context = canvas.getContext('2d');
+    const gl = canvas.getContext('webgl2');
+    if (!gl) throw new Error('Nick halftone did not initialize WebGL2.');
     const doodleEnd = Math.max(...[...google.querySelectorAll('.doodle-img')]
       .map(image => image.getBoundingClientRect().bottom + scrollY));
     const dpr = devicePixelRatio;
     let stats;
     const collect = () => {
       stats = {inside:0, opaque:0, hitImage:0, overlap:0};
-      const rgba = context.getImageData(0, 0, canvas.width, canvas.height).data;
+      const rgba = new Uint8Array(canvas.width * canvas.height * 4);
+      gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, rgba);
       const points = [];
       for (const image of document.querySelectorAll('#google .doodle-img')) {
         const rect = image.getBoundingClientRect();
@@ -381,7 +545,8 @@ async function checkGoogleDoodleLayering(session, variant) {
           Math.floor(google.getBoundingClientRect().bottom - 2));
         for (let y = top; y < bottom; y += 6) {
           for (let x = left; x < right; x += 6) {
-            const index = (Math.round(y * dpr) * canvas.width + Math.round(x * dpr)) * 4 + 3;
+            const index = ((canvas.height - 1 - Math.round(y * dpr)) * canvas.width
+              + Math.round(x * dpr)) * 4 + 3;
             const opaque = rgba[index] >= 253;
             const hitImage = document.elementFromPoint(x, y) === image;
             stats.inside++;
@@ -678,6 +843,7 @@ try {
         const label = `${width}x${height}, ${variant}`;
         await checkJobSections(sessions[variant], label);
         await checkAnchoredExperience(sessions[variant], label);
+        await checkHedraAmbient(sessions[variant], label);
         await checkGoogleDoodleLayering(sessions[variant], label);
       }
       console.log(`${width}x${height}: section-anchored halftones, job motion, and doodle overlap passed.`);
