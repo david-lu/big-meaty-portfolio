@@ -1,3 +1,5 @@
+import { createHedraGpuRenderer } from './hedra-ambient-gl.js';
+
 gsap.registerPlugin(ScrollToPlugin, ScrollTrigger);
 SmoothScroll({});
 
@@ -319,14 +321,11 @@ const experienceSettings = {
     columnOffset: 4    // Rightmost dots start this many row delays after leftmost dots.
   },
   ambient: {
-    startProgress: 0.72, // Begin Hedra's waves after most black transition dots have grown.
     maxDpr: 1.5,       // The soft background does not need a full high-density bitmap.
+    maxFps: 15,        // Redraw the ambient canvas at most this many times a second.
     scrollPhase: 1.3,  // Scrolling advances the wave field by this many seconds.
     timePhase: 0.001,  // Convert animation timestamps from milliseconds to seconds.
-    scrollEaseMs: 90,  // Smooth wheel steps without delaying the section transition.
-    pointerEaseMs: 85, // Time for the dot field to follow and release the cursor.
-    pointerRadius: 0.28, // Cursor ripple radius relative to the section's shorter side.
-    pointerGain: 0.48  // Maximum extra dot intensity at the cursor.
+    scrollEaseMs: 90   // Smooth wheel steps without delaying the section transition.
   },
   sections: [
     {
@@ -418,21 +417,29 @@ const halftoneRowPitch = (viewportHeight) =>
 const createHedraAmbient = (section) => {
   const canvas = section.querySelector('#hedra-ambient');
   if (!canvas) return null;
-  const context = canvas.getContext('2d');
+  let gpu;
+  try {
+    gpu = createHedraGpuRenderer(canvas);
+  } catch (error) {
+    console.warn('Hedra WebGL renderer unavailable.', error);
+  }
+  if (!gpu) {
+    canvas.style.display = 'none';
+    return null;
+  }
+
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
-  const { maxDpr, scrollPhase, timePhase, scrollEaseMs, pointerEaseMs,
-    pointerRadius, pointerGain } = experienceSettings.ambient;
-  let width = 0, height = 0, dpr = 0, frame = 0, lastFrame = 0;
+  const { maxDpr, maxFps, scrollPhase, timePhase, scrollEaseMs } = experienceSettings.ambient;
+  const frameInterval = 1000 / maxFps;
+  let width = 0, height = 0, dpr = 0, timer = 0, lastFrame = 0, lastDraw = -Infinity;
   let active = false, sectionProgress = 0, targetProgress = 0;
-  let pointerClientX = NaN, pointerClientY = NaN;
-  const pointer = { x: 0, y: 0, targetX: 0, targetY: 0, strength: 0, targetStrength: 0 };
-  let rowPitch = 0, maxRadius = 0, dots = [];
-  const tones = ['#929292', '#a4a4a4', '#b6b6b6', '#c8c8c8', '#dadada', '#ececec', '#fff'];
+  let rowPitch = 0, maxRadius = 0;
 
   const resize = () => {
-    const nextWidth = section.clientWidth;
-    const nextHeight = section.clientHeight;
-    const nextDpr = Math.min(devicePixelRatio || 1, maxDpr);
+    const nextWidth = canvas.clientWidth;
+    const nextHeight = canvas.clientHeight;
+    const nextDpr = Math.min(devicePixelRatio || 1, maxDpr,
+      gpu.maxSize / Math.max(nextWidth, nextHeight));
     const nextRowPitch = halftoneRowPitch(innerHeight);
     if (width === nextWidth && height === nextHeight && dpr === nextDpr && rowPitch === nextRowPitch) return;
     width = nextWidth;
@@ -440,141 +447,97 @@ const createHedraAmbient = (section) => {
     dpr = nextDpr;
     canvas.width = Math.ceil(width * dpr);
     canvas.height = Math.ceil(height * dpr);
-    context.setTransform(dpr, 0, 0, dpr, 0, 0);
     rowPitch = nextRowPitch;
     // The nearest neighbors in the rotated grid are rowPitch * sqrt(2) apart.
     maxRadius = rowPitch * Math.SQRT2 * 0.45;
-    dots = [];
-    if (!width || !height) return;
-
-    // TinkerFX's travelling diagonal wave and center ripple are sampled at every dot.
-    // https://tinkerfx.com/effects/halftone-waves
-    // Their spatial phases change only when the canvas dimensions change.
-    for (let row = 0, y = 0; y < height + rowPitch; row++, y += rowPitch) {
-      for (let x = (row & 1) * rowPitch; x < width + rowPitch; x += rowPitch * 2) {
-        dots.push({ x, y,
-          diagonal: x * 0.018 + y * 0.012,
-          ripple: Math.hypot(x - width / 2, y - height / 2) * 0.03 });
-      }
-    }
+    gpu.resize(width, height, rowPitch);
   };
 
   const render = (time) => {
     resize();
-    context.clearRect(0, 0, width, height);
     if (!width || !height) return;
     const waveTime = reducedMotion.matches ? 1.5 : time * timePhase + sectionProgress * scrollPhase;
-    const diagonalPhase = waveTime * 2, ripplePhase = waveTime * 2.4;
-    const paths = tones.map(() => new Path2D());
-    const cursorRadius = Math.min(width, height) * pointerRadius;
-    const cursorActive = pointer.strength > 0.001 && cursorRadius > 0;
-
-    // Like the reference, the wave field controls dot radius across the entire
-    // canvas. Keep our existing 45-degree lattice and grayscale palette.
-    for (const dot of dots) {
-      let intensity = (Math.sin(dot.diagonal - diagonalPhase)
-        + Math.sin(dot.ripple - ripplePhase) + 2) * 0.25;
-      if (cursorActive) {
-        const dx = (dot.x - pointer.x) / cursorRadius;
-        const dy = (dot.y - pointer.y) / cursorRadius;
-        const distanceSquared = dx * dx + dy * dy;
-        if (distanceSquared < 1) {
-          const falloff = (1 - distanceSquared) ** 2;
-          intensity += pointer.strength * pointerGain * falloff
-            * (0.7 + 0.3 * Math.sin(Math.sqrt(distanceSquared) * cursorRadius * 0.05 - waveTime * 3));
-        }
-      }
-      intensity = Math.min(1, intensity);
-      const radius = maxRadius * intensity;
-      if (radius < 0.4) continue;
-      const path = paths[Math.min(tones.length - 1, Math.floor(intensity * tones.length))];
-      path.moveTo(dot.x + radius, dot.y);
-      path.arc(dot.x, dot.y, radius, 0, 2 * Math.PI);
-    }
-    tones.forEach((color, index) => {
-      context.fillStyle = color;
-      context.fill(paths[index]);
-    });
+    gpu.render(waveTime, width, height, dpr, maxRadius);
   };
 
-  const tick = (time) => {
-    frame = 0;
-    if (!active || document.hidden || reducedMotion.matches) return;
-    const elapsed = Math.min(64, Math.max(0, time - lastFrame));
+  // One timer owns all draws, including resize and reduced-motion updates.
+  // The interval is measured from the previous draw, capping the shader at 15 fps.
+  const schedule = () => {
+    if (timer || !gpu || !active || document.hidden) return;
+    const delay = Math.max(0, frameInterval - (performance.now() - lastDraw));
+    timer = setTimeout(tick, delay);
+  };
+
+  const tick = () => {
+    timer = 0;
+    if (!gpu || !active || document.hidden) return;
+    const time = performance.now();
+    if (time - lastDraw < frameInterval) {
+      schedule();
+      return;
+    }
+    const elapsed = Math.min(250, Math.max(0, time - lastFrame));
     lastFrame = time;
-    const scrollBlend = 1 - Math.exp(-elapsed / scrollEaseMs);
-    const pointerBlend = 1 - Math.exp(-elapsed / pointerEaseMs);
-    sectionProgress += (targetProgress - sectionProgress) * scrollBlend;
-    pointer.x += (pointer.targetX - pointer.x) * pointerBlend;
-    pointer.y += (pointer.targetY - pointer.y) * pointerBlend;
-    pointer.strength += (pointer.targetStrength - pointer.strength) * pointerBlend;
-    render(time);
-    frame = requestAnimationFrame(tick);
-  };
-
-  const updatePointer = (bounds) => {
-    const inside = pointerClientX >= bounds.left && pointerClientX <= bounds.right
-      && pointerClientY >= bounds.top && pointerClientY <= bounds.bottom;
-    pointer.targetStrength = inside ? 1 : 0;
-    if (!inside) return;
-    pointer.targetX = pointerClientX - bounds.left;
-    pointer.targetY = pointerClientY - bounds.top;
-    if (pointer.strength < 0.001) {
-      pointer.x = pointer.targetX;
-      pointer.y = pointer.targetY;
+    if (!reducedMotion.matches) {
+      const scrollBlend = 1 - Math.exp(-elapsed / scrollEaseMs);
+      sectionProgress += (targetProgress - sectionProgress) * scrollBlend;
     }
+    render(time);
+    lastDraw = performance.now();
+    if (!reducedMotion.matches) schedule();
   };
 
-  const setState = (visible, progress, bounds) => {
+  const setState = (visible, progress) => {
     targetProgress = progress;
-    if (visible && !reducedMotion.matches) updatePointer(bounds);
     if (visible === active) return;
     active = visible;
-    section.classList.toggle('ambient-active', active);
     if (active) {
       sectionProgress = progress;
-      render(performance.now());
       lastFrame = performance.now();
-      if (!reducedMotion.matches && !document.hidden) frame = requestAnimationFrame(tick);
+      tick();
     } else {
-      pointer.strength = pointer.targetStrength = 0;
-      if (frame) cancelAnimationFrame(frame);
-      frame = 0;
+      if (timer) clearTimeout(timer);
+      timer = 0;
     }
   };
 
-  window.addEventListener('pointermove', (event) => {
-    if (!active || reducedMotion.matches || event.pointerType === 'touch') return;
-    pointerClientX = event.clientX;
-    pointerClientY = event.clientY;
-    updatePointer(section.getBoundingClientRect());
-  }, { passive: true });
-  section.addEventListener('pointerleave', () => { pointer.targetStrength = 0; });
-  window.addEventListener('blur', () => {
-    pointerClientX = pointerClientY = NaN;
-    pointer.targetStrength = 0;
+  canvas.addEventListener('webglcontextlost', (event) => {
+    event.preventDefault();
+    gpu = null;
+    canvas.style.display = 'none';
+    if (timer) clearTimeout(timer);
+    timer = 0;
   });
+  canvas.addEventListener('webglcontextrestored', () => {
+    try {
+      gpu = createHedraGpuRenderer(canvas);
+    } catch (error) {
+      console.warn('Hedra WebGL renderer unavailable after context restoration.', error);
+    }
+    if (!gpu) return;
+    width = height = dpr = rowPitch = 0;
+    canvas.style.display = '';
+    if (active) schedule();
+  });
+
   reducedMotion.addEventListener('change', () => {
-    pointer.strength = pointer.targetStrength = 0;
-    if (frame) cancelAnimationFrame(frame);
-    frame = 0;
+    if (timer) clearTimeout(timer);
+    timer = 0;
     if (!active) return;
     sectionProgress = targetProgress;
-    render(performance.now());
-    lastFrame = performance.now();
-    if (!reducedMotion.matches && !document.hidden) frame = requestAnimationFrame(tick);
+    schedule();
   });
 
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden && frame) {
-      cancelAnimationFrame(frame);
-      frame = 0;
-    } else if (!document.hidden && active && !reducedMotion.matches && !frame) {
-      frame = requestAnimationFrame(tick);
+    if (document.hidden && timer) {
+      clearTimeout(timer);
+      timer = 0;
+    } else if (!document.hidden && active) {
+      schedule();
     }
   });
   window.addEventListener('resize', () => {
-    if (active) render(performance.now());
+    if (active) schedule();
   });
   return { setState };
 };
@@ -621,9 +584,10 @@ const createHalftone = ({ canvasSelector, sectionSelector }) => {
     const travel = (startTop - endTop) * height;
     const distance = startTop * height - bounds.top;
     const progress = gsap.utils.clamp(0, 1, distance / travel);
-    // The ambient canvas runs only while Hedra is visible and mostly black.
-    ambient?.setState(progress >= experienceSettings.ambient.startProgress && bounds.bottom > 0,
-      gsap.utils.clamp(0, 1, (height - bounds.top) / (height + bounds.height)), bounds);
+    // Paint as soon as Hedra enters view. CSS keeps the canvas visible and
+    // feathers its top edge; this only pauses work while the section is away.
+    ambient?.setState(bounds.top < height && bounds.bottom > 0,
+      gsap.utils.clamp(0, 1, (height - bounds.top) / (height + bounds.height)));
     // Stop at this section's bottom; the next background or header takes over.
     if (distance <= 0 || bounds.bottom <= 0) {
       if (canvas.style.visibility !== 'hidden') canvas.style.visibility = 'hidden';
