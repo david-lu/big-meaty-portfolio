@@ -61,18 +61,22 @@ document.addEventListener('keydown', (event) => {
 });
 
 // SCROLL BUTTONS
-// Find the scroll position where a job description, including its parallax
-// movement, sits in the middle of the viewport. The settings live below with
-// the job sections; using them keeps arrow targets aligned when they change.
-const centeredJobScrollY = (sectionSelector) => {
+// Center a job description, including its parallax movement. If a following
+// section is supplied, stop before that section can enter the viewport.
+// The job settings live below; using them keeps the target aligned when changed.
+const centeredJobScrollY = (sectionSelector, followingSectionSelector) => {
   const section = $(sectionSelector);
   const content = section.querySelector('.job-content');
   const { entryViewportFraction, speed } = experienceSettings.sections
     .find(settings => settings.sectionSelector === sectionSelector).job;
   const height = window.innerHeight;
   const sectionTop = section.getBoundingClientRect().top + scrollY;
-  return sectionTop - entryViewportFraction * height +
+  const centeredY = sectionTop - entryViewportFraction * height +
     (height + content.getBoundingClientRect().height) / (2 * speed);
+  if (!followingSectionSelector) return centeredY;
+  const followingTop = $(followingSectionSelector).getBoundingClientRect().top + scrollY;
+  // Leave a small buffer so scroll rounding cannot reveal the next section.
+  return Math.min(centeredY, followingTop - height - 8);
 };
 
 $('#intro-scroll-button').addEventListener('click', () => {
@@ -124,14 +128,14 @@ const addJobScrollButton = (buttonSelector, target) => {
     button.disabled = true;
     gsap.to(window, {
       ease: 'sine.inOut',
-      duration: 2,
+      duration: 3,
       scrollTo: { y: typeof target === 'function' ? target() : target, autoKill: true },
       onComplete: () => button.disabled = false,
       onInterrupt: () => button.disabled = false
     });
   });
 };
-addJobScrollButton('#nick-scroll-button', () => centeredJobScrollY('#hedra'));
+addJobScrollButton('#nick-scroll-button', () => centeredJobScrollY('#hedra', '#skills-header'));
 addJobScrollButton('#hedra-scroll-button', '#skills-header');
 
 // INTRO

@@ -707,8 +707,8 @@ try {
       ['intro-scroll-button', 8, '#google'],
       ['map-scroll-button', 6, '#nick .job-content', 'map-info'],
       ['skills-scroll-button', 4, 'max'],
-      ['nick-scroll-button', 2, '#hedra .job-content', 'nick'],
-      ['hedra-scroll-button', 2, '#skills-header', 'hedra'],
+      ['nick-scroll-button', 3, '#hedra .job-content', 'nick'],
+      ['hedra-scroll-button', 3, '#skills-header', 'hedra'],
     ]) {
       const destinations = [];
       for (const variant of variants) {
@@ -748,14 +748,24 @@ try {
           const description = descriptionSelector ? document.querySelector(descriptionSelector) : null;
           const center = description ? description.getBoundingClientRect().top +
             description.getBoundingClientRect().height / 2 : null;
-          return { ...config, scroll, center, viewportCenter:innerHeight / 2 };
+          const skillsTop = document.getElementById('skills-header').getBoundingClientRect().top;
+          return { ...config, scroll, center, viewportCenter:innerHeight / 2,
+            viewportHeight:innerHeight, skillsTop };
         })()`);
         assert.equal(result.disabled, true, `${id}: disabled on click`);
         assert.equal(result.duration, duration, `${id}: duration`);
         if (target.endsWith('.job-content')) {
           assert.equal(typeof result.target, 'number', `${id}: calculated destination`);
-          assert.ok(Math.abs(result.center - result.viewportCenter) <= 2,
-            `${id}: job description centered (${result.center} vs ${result.viewportCenter})`);
+          if (id === 'nick-scroll-button') {
+            assert.ok(result.skillsTop >= result.viewportHeight + 6,
+              `${id}: Skills remains below the viewport (${result.skillsTop} vs ${result.viewportHeight})`);
+            assert.ok(Math.abs(result.center - result.viewportCenter) <= 2 ||
+              Math.abs(result.skillsTop - (result.viewportHeight + 8)) <= 2,
+            `${id}: description is centered or stopped by Skills boundary`);
+          } else {
+            assert.ok(Math.abs(result.center - result.viewportCenter) <= 2,
+              `${id}: job description centered (${result.center} vs ${result.viewportCenter})`);
+          }
         } else {
           assert.equal(result.target, target, `${id}: destination`);
         }
