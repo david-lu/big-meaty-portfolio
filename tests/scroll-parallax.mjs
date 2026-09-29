@@ -25,7 +25,8 @@ const compareHead = Boolean(baselineRef);
 const control = process.argv.includes('--control');
 const profileSkills = process.argv.includes('--profile-skills');
 const profileOutro = process.argv.includes('--profile-outro');
-const profileSection = profileOutro ? 'outro' : profileSkills ? 'skills' : undefined;
+const profileHedra = process.argv.includes('--profile-hedra');
+const profileSection = profileHedra ? 'hedra' : profileOutro ? 'outro' : profileSkills ? 'skills' : undefined;
 const viewportOption = process.argv.find(arg => arg.startsWith('--viewport='));
 const viewports = viewportOption ? [viewportOption.slice(11).split('x').map(Number)]
   : profileSection ? [[1440, 900], [390, 844]]
@@ -358,6 +359,95 @@ async function checkAnchoredExperience(session, variant) {
     `${variant}: orange remains solid behind Hedra's black dots`);
 }
 
+async function checkHedraAmbient(session, variant) {
+  await send('Page.bringToFront', {}, session);
+  const result = await evaluate(session, `(async () => {
+    const section = document.getElementById('hedra');
+    const canvas = document.getElementById('hedra-ambient');
+    const context = canvas.getContext('2d');
+    const sectionTop = section.getBoundingClientRect().top + scrollY;
+    const sample = () => {
+      const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+      const stride = Math.max(1, Math.floor(pixels.length / (4 * 20000)));
+      let hash = 2166136261, dots = 0, grayscale = true;
+      for (let i = 0; i < pixels.length; i += stride * 4) {
+        if (!pixels[i + 3]) continue;
+        dots++;
+        grayscale &&= pixels[i] === pixels[i + 1] && pixels[i + 1] === pixels[i + 2];
+        hash = Math.imul(hash ^ pixels[i + 3] ^ pixels[i], 16777619);
+      }
+      return {active:section.classList.contains('ambient-active'), dots, grayscale,
+        hash:hash >>> 0, width:canvas.width, height:canvas.height};
+    };
+    const move = async topFraction => {
+      scrollTo({top:Math.round(sectionTop - topFraction * innerHeight), behavior:'instant'});
+      ScrollTrigger.update();
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      return sample();
+    };
+    const before = await move(0.4);
+    const entered = await move(0.15);
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const idle = sample();
+    const scrolled = await move(0.02);
+    await new Promise(resolve => setTimeout(resolve, 100));
+    const afterScroll = sample();
+    const cursorX = innerWidth / 2, cursorY = innerHeight / 2;
+    const densityAtCursor = () => {
+      const bounds = canvas.getBoundingClientRect();
+      const scale = canvas.width / bounds.width;
+      const size = Math.round(100 * scale);
+      const x = Math.round((cursorX - bounds.left) * scale - size / 2);
+      const y = Math.round((cursorY - bounds.top) * scale - size / 2);
+      const pixels = context.getImageData(x, y, size, size).data;
+      let alpha = 0;
+      for (let i = 3; i < pixels.length; i += 4) alpha += pixels[i];
+      return alpha / (pixels.length / 4 * 255);
+    };
+    const beforePointer = densityAtCursor();
+    window.dispatchEvent(new PointerEvent('pointermove',
+      {clientX:cursorX, clientY:cursorY, pointerType:'mouse'}));
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const withPointer = densityAtCursor();
+    window.dispatchEvent(new PointerEvent('pointermove',
+      {clientX:-10, clientY:-10, pointerType:'mouse'}));
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const style = getComputedStyle(canvas);
+    return {before, entered, idle, scrolled, afterScroll,
+      beforePointer, withPointer,
+      reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches,
+      decorative:canvas.getAttribute('aria-hidden'), pointerEvents:style.pointerEvents,
+      canvasLayer:Number(style.zIndex), contentLayer:Number(getComputedStyle(section.querySelector('.job-content')).zIndex),
+      transitionLayer:Number(getComputedStyle(document.getElementById('hedra-halftone')).zIndex)};
+  })()`);
+  const label = `${variant}: Hedra ambient halftone`;
+  assert.equal(result.before.active, false, `${label}: waits for the black transition`);
+  assert.equal(result.entered.active, true, `${label}: starts after most black dots appear`);
+  assert.ok(result.entered.width > 0 && result.entered.height > 0 && result.entered.dots > 100,
+    `${label}: renders a visible dot field`);
+  assert.equal(result.entered.grayscale, true, `${label}: dots use grayscale colors`);
+  if (result.reducedMotion) {
+    assert.equal(result.idle.hash, result.entered.hash, `${label}: reduced motion holds a static frame`);
+    assert.equal(result.afterScroll.hash, result.idle.hash, `${label}: reduced motion remains static on scroll`);
+  } else {
+    assert.notEqual(result.idle.hash, result.entered.hash, `${label}: dots move while scroll is still`);
+    assert.notEqual(result.afterScroll.hash, result.idle.hash, `${label}: dots respond to scrolling`);
+    assert.ok(result.withPointer > result.beforePointer + 0.015,
+      `${label}: cursor smoothly swells nearby dots`);
+  }
+  assert.equal(result.decorative, 'true', `${label}: decoration is hidden from assistive technology`);
+  assert.equal(result.pointerEvents, 'none', `${label}: buttons remain clickable`);
+  assert.ok(result.transitionLayer < result.canvasLayer && result.canvasLayer < result.contentLayer,
+    `${label}: dots sit over black and below the job description`);
+  await evaluate(session, `(() => {
+    const section = document.getElementById('hedra');
+    scrollTo({top:Math.ceil(section.getBoundingClientRect().bottom + scrollY + 3), behavior:'instant'});
+    ScrollTrigger.update();
+  })()`);
+  assert.equal(await evaluate(session, `document.getElementById('hedra').classList.contains('ambient-active')`),
+    false, `${label}: motion stops after Hedra leaves`);
+}
+
 async function checkGoogleDoodleLayering(session, variant) {
   await send('Page.bringToFront', {}, session);
   const candidates = await evaluate(session, `(async () => {
@@ -678,6 +768,7 @@ try {
         const label = `${width}x${height}, ${variant}`;
         await checkJobSections(sessions[variant], label);
         await checkAnchoredExperience(sessions[variant], label);
+        await checkHedraAmbient(sessions[variant], label);
         await checkGoogleDoodleLayering(sessions[variant], label);
       }
       console.log(`${width}x${height}: section-anchored halftones, job motion, and doodle overlap passed.`);

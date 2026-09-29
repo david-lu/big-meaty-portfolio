@@ -17,5 +17,5 @@ outro timing, screenshots, and the scroll buttons. Use `--viewport=390x844` to
 check one size. Use `--baseline=<git revision>` only when that revision has the
 same page content, so visual comparisons measure the scrolling implementation.
 
-Run with `--profile-skills` or `--profile-outro` to collect Chrome performance
+Run with `--profile-skills`, `--profile-outro`, or `--profile-hedra` to collect Chrome performance
 traces with 4x CPU throttling. The trace paths are printed after each run.
