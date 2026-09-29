@@ -258,10 +258,11 @@ async function checkAnchoredExperience(session, variant) {
   await send('Page.bringToFront', {}, session);
   const result = await evaluate(session, `(async () => {
     const height = innerHeight;
-    const sample = async (sectionId, canvasId, entryFraction) => {
+    const sample = async (sectionId, canvasId) => {
       const section = document.getElementById(sectionId);
       const canvas = document.getElementById(canvasId);
       const content = section.querySelector('.job-content');
+      const entryFraction = JSON.parse(content.dataset.jobLayout).entryViewportFraction;
       const context = canvas.getContext('2d');
       const absoluteTop = section.getBoundingClientRect().top + scrollY;
       const move = async topFraction => {
@@ -303,6 +304,7 @@ async function checkAnchoredExperience(session, variant) {
       const jobLater = await move(entryFraction - 0.15);
       const past = await move(-section.getBoundingClientRect().height / height - 3 / height);
       return {before, entered, middle, partialRows, reverse, middleAgain, complete, jobEntry, jobLater,
+        entryFraction,
         past, viewportHeight:height, canvasPosition:getComputedStyle(canvas).position,
         canvasPointerEvents:getComputedStyle(canvas).pointerEvents,
         canvasWidth:canvas.width, canvasHeight:canvas.height,
@@ -311,8 +313,8 @@ async function checkAnchoredExperience(session, variant) {
         opacity:getComputedStyle(content).opacity,
         logoColor:getComputedStyle(section.querySelector('.job-logo')).backgroundColor};
     };
-    const nick = await sample('nick', 'nick-halftone', 1.15);
-    const hedra = await sample('hedra', 'hedra-halftone', 0.7);
+    const nick = await sample('nick', 'nick-halftone');
+    const hedra = await sample('hedra', 'hedra-halftone');
     // At Hedra's midpoint, orange must still be solid behind black dots.
     const hedraTop = document.getElementById('hedra').getBoundingClientRect().top + scrollY;
     scrollTo({top:Math.round(hedraTop - 0.5 * height), behavior:'instant'});
@@ -322,8 +324,8 @@ async function checkAnchoredExperience(session, variant) {
     const orangeAtBlackEntry = [...orangeContext.getImageData(0, 0, 1, 1).data];
     return {nick, hedra, orangeAtBlackEntry};
   })()`);
-  for (const [id, expected, entry] of [
-    ['nick', [255, 121, 0, 255], 1.15], ['hedra', [0, 0, 0, 255], 0.7]
+  for (const [id, expected] of [
+    ['nick', [255, 121, 0, 255]], ['hedra', [0, 0, 0, 255]]
   ]) {
     const state = result[id];
     const label = `${variant}: ${id} section anchor`;
@@ -344,7 +346,7 @@ async function checkAnchoredExperience(session, variant) {
     assert.deepEqual(state.complete.color, expected, `${label}: solid background color`);
     assert.equal(state.past.visible, false, `${label}: retires when section bottom leaves`);
     assert.ok(Math.abs(state.jobEntry.contentTop - state.viewportHeight) <= 2,
-      `${label}: job enters at viewport bottom when section top is ${entry} viewport heights`);
+      `${label}: job enters at viewport bottom when section top is ${state.entryFraction} viewport heights`);
     const scrollDistance = state.jobEntry.sectionTop - state.jobLater.sectionTop;
     const contentDistance = state.jobEntry.contentTop - state.jobLater.contentTop;
     assert.ok(Math.abs(contentDistance - scrollDistance) <= 2,
@@ -703,9 +705,9 @@ try {
     console.log('Viewport rotation: geometry and screenshots matched.');
     for (const [id, duration, target, source] of [
       ['intro-scroll-button', 8, '#google'],
-      ['map-scroll-button', 6, '#nick', 'map-info'],
+      ['map-scroll-button', 6, '#nick .job-content', 'map-info'],
       ['skills-scroll-button', 4, 'max'],
-      ['nick-scroll-button', 2, '#hedra', 'nick'],
+      ['nick-scroll-button', 2, '#hedra .job-content', 'nick'],
       ['hedra-scroll-button', 2, '#skills-header', 'hedra'],
     ]) {
       const destinations = [];
@@ -732,19 +734,31 @@ try {
         } else {
           await evaluate(session, `document.getElementById('${id}').click()`);
         }
-        const result = await evaluate(session, `(() => {
+        const result = await evaluate(session, `(async () => {
           const button = document.getElementById('${id}');
           const tween = gsap.getTweensOf(window).find(t => t.vars.scrollTo);
           tween.pause();
           const config = { disabled: button.disabled, duration: tween.duration(),
             target: tween.vars.scrollTo.y, autoKill: tween.vars.scrollTo.autoKill, ease: tween.vars.ease };
           tween.progress(1);
+          ScrollTrigger.update();
+          await new Promise(resolve => requestAnimationFrame(resolve));
           const scroll = scrollY; tween.kill();
-          return { ...config, scroll };
+          const descriptionSelector = ${JSON.stringify(target.endsWith('.job-content') ? target : null)};
+          const description = descriptionSelector ? document.querySelector(descriptionSelector) : null;
+          const center = description ? description.getBoundingClientRect().top +
+            description.getBoundingClientRect().height / 2 : null;
+          return { ...config, scroll, center, viewportCenter:innerHeight / 2 };
         })()`);
         assert.equal(result.disabled, true, `${id}: disabled on click`);
         assert.equal(result.duration, duration, `${id}: duration`);
-        assert.equal(result.target, target, `${id}: destination`);
+        if (target.endsWith('.job-content')) {
+          assert.equal(typeof result.target, 'number', `${id}: calculated destination`);
+          assert.ok(Math.abs(result.center - result.viewportCenter) <= 2,
+            `${id}: job description centered (${result.center} vs ${result.viewportCenter})`);
+        } else {
+          assert.equal(result.target, target, `${id}: destination`);
+        }
         assert.equal(result.autoKill, true, `${id}: user interruption`);
         assert.equal(result.ease, 'sine.inOut', `${id}: easing`);
         destinations.push(result.scroll);

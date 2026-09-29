@@ -851,6 +851,11 @@ body>div {
     font-weight: bold;
 }
 
+.job-content p {
+    width: 100%;
+    text-align: justify;
+}
+
 .job-content p + p {
     margin-top: 0.7rem;
 }

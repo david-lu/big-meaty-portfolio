@@ -357,7 +357,8 @@ const createJobScroll = ({ sectionSelector, entryViewportFraction, startCover, e
     // same viewport edge while the text moves more slowly or quickly afterward.
     const entryCompensation = (1 - speed) * (startSectionTop - entrySectionTop);
     content.style.top = `${height - entrySectionTop - entryCompensation}px`;
-    content.dataset.jobLayout = JSON.stringify({ height, sectionHeight, startCover, endCover, speed });
+    content.dataset.jobLayout = JSON.stringify({ height, sectionHeight, entryViewportFraction,
+      startCover, endCover, speed });
     content.style.setProperty('--job-parallax-distance', `${(1 - speed) * (endScroll - startScroll)}px`);
     range = { startScroll, endScroll };
   };
