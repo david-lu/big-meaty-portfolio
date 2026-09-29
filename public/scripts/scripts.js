@@ -1,4 +1,5 @@
 import { createHedraGpuRenderer } from './hedra-ambient-gl.js';
+import { createHalftoneGpuRenderer } from './halftone-transition-gl.js';
 
 gsap.registerPlugin(ScrollToPlugin, ScrollTrigger);
 SmoothScroll({});
@@ -544,17 +545,32 @@ const createHedraAmbient = (section) => {
 
 const createHalftone = ({ canvasSelector, sectionSelector }) => {
   const canvas = $(canvasSelector);
-  const context = canvas.getContext('2d');
   const section = $(sectionSelector);
   const ambient = createHedraAmbient(section);
   const { startTop, endTop, growthDistance, columnOffset } = experienceSettings.halftone;
   let size;
   let lastProgress;
+  let renderer;
+
+  const initialize = () => {
+    try {
+      renderer = createHalftoneGpuRenderer(canvas);
+    } catch (error) {
+      console.warn('Halftone WebGL renderer unavailable.', error);
+    }
+    // Keep the job text legible if WebGL2 cannot paint its section background.
+    canvas.style.display = renderer ? '' : 'none';
+    section.style.backgroundColor = renderer ? '' : getComputedStyle(canvas).color;
+    size = undefined;
+    lastProgress = undefined;
+  };
+  initialize();
 
   const resize = () => {
     const width = window.innerWidth;
     const height = window.innerHeight;
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = Math.min(window.devicePixelRatio || 1,
+      renderer.maxSize / Math.max(width, height));
     if (size && width === size.width && height === size.height && dpr === size.dpr) return;
 
     canvas.width = Math.ceil(width * dpr);
@@ -568,13 +584,17 @@ const createHalftone = ({ canvasSelector, sectionSelector }) => {
     // legs between their centers make a square grid turned 45 degrees.
     const pitch = 2 * rowPitch;
     const columns = Math.ceil(width / pitch) + 2;
+    const radius = rowPitch + 1 / dpr;
+    const originY = height - 0.5 * rowPitch;
+    const lastCell = Math.ceil(originY / rowPitch + radius / rowPitch + 0.5);
     size = {
-      width, height, dpr, color, pitch, rowPitch,
+      width, height, dpr, color: color.match(/\d+/g).slice(0, 3).map(value => Number(value) / 255),
+      rowPitch, columns, cells: lastCell + 1,
       // The rotated grid's covering radius is one row pitch. One device
       // pixel of overlap closes raster gaps where four full dots meet.
-      radius: rowPitch + 1 / dpr,
-      offsets: Array.from({ length: columns }, (_, i) => columns > 1 ? columnOffset * i / (columns - 1) : 0)
+      radius
     };
+    renderer.resize();
     lastProgress = undefined;
   };
 
@@ -588,6 +608,7 @@ const createHalftone = ({ canvasSelector, sectionSelector }) => {
     // feathers its top edge; this only pauses work while the section is away.
     ambient?.setState(bounds.top < height && bounds.bottom > 0,
       gsap.utils.clamp(0, 1, (height - bounds.top) / (height + bounds.height)));
+    if (!renderer) return;
     // Stop at this section's bottom; the next background or header takes over.
     if (distance <= 0 || bounds.bottom <= 0) {
       if (canvas.style.visibility !== 'hidden') canvas.style.visibility = 'hidden';
@@ -596,39 +617,31 @@ const createHalftone = ({ canvasSelector, sectionSelector }) => {
     }
 
     resize();
-    const { dpr, color, pitch, rowPitch, radius, offsets } = size;
+    const { cells } = size;
     if (canvas.style.visibility !== 'visible') canvas.style.visibility = 'visible';
     if (progress === lastProgress) return;
     lastProgress = progress;
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    context.fillStyle = color;
-    if (progress >= 1) {
-      context.fillRect(0, 0, canvas.width, canvas.height);
-      return;
-    }
 
     // Every row grows at the same rate. Delay each row, including the ones
     // nearest the bottom; completed dots overlap into a solid color.
-    const originY = height - 0.5 * rowPitch;
-    const lastCell = Math.ceil(originY / rowPitch + radius / rowPitch + 0.5);
     const growthPixels = growthDistance * height;
-    const rowDelay = (travel - growthPixels) / (lastCell + columnOffset);
-    context.beginPath();
-    offsets.forEach((offset, i) => {
-      for (let cell = 0; cell <= lastCell; cell++) {
-        const x = ((i - 0.5) * pitch + (cell & 1) * rowPitch) * dpr;
-        const growth = gsap.utils.clamp(0, 1,
-          (distance - (cell + offset) * rowDelay) / growthPixels);
-        const y = (originY + (0.5 - cell) * rowPitch) * dpr;
-        const dotRadius = radius * growth * dpr;
-        if (dotRadius > 0 && y + dotRadius > 0 && y - dotRadius < canvas.height) {
-          context.moveTo(x + dotRadius, y);
-          context.arc(x, y, dotRadius, 0, 2 * Math.PI);
-        }
-      }
-    });
-    context.fill();
+    const rowDelay = (travel - growthPixels) / (cells - 1 + columnOffset);
+    renderer.render({ ...size, distance, growthPixels, rowDelay,
+      columnOffset, complete: progress >= 1 });
   };
+
+  if (renderer) {
+    canvas.addEventListener('webglcontextlost', (event) => {
+      event.preventDefault();
+      renderer = null;
+      canvas.style.display = 'none';
+      section.style.backgroundColor = getComputedStyle(canvas).color;
+    });
+    canvas.addEventListener('webglcontextrestored', () => {
+      initialize();
+      update();
+    });
+  }
 
   ScrollTrigger.create({
     trigger: section,

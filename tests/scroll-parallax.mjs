@@ -52,10 +52,10 @@ const server = http.createServer(async (req, res) => {
         body = body.replace('<script defer type=\'module\' src="scripts/scripts.js"></script>',
           `<script>const originalGetContext = HTMLCanvasElement.prototype.getContext;
           HTMLCanvasElement.prototype.getContext = function(type, ...args) {
-            if (this.id === 'hedra-ambient') {
+            if (['nick-halftone', 'hedra-halftone', 'hedra-ambient'].includes(this.id)) {
               if (type === 'webgl2') return null;
-              if (type === '2d') window.hedraAmbient2dRequests =
-                (window.hedraAmbient2dRequests || 0) + 1;
+              if (type === '2d') window.halftone2dRequests =
+                (window.halftone2dRequests || 0) + 1;
             }
             return originalGetContext.call(this, type, ...args);
           };</script><script defer type='module' src="scripts/scripts.js"></script>`);
@@ -262,14 +262,28 @@ async function checkJobSections(session, variant) {
     `${label}: orange section is one viewport tall`);
   assert.ok(Math.abs(result.edges[2].height - result.viewport) <= 1,
     `${label}: black section is one viewport tall`);
-  assert.equal(result.nickColor, 'rgb(255, 255, 255)', `${label}: orange field is painted by the canvas`);
-  assert.equal(result.hedraColor, 'rgb(255, 255, 255)', `${label}: black field is painted by the canvas`);
+  assert.equal(result.nickColor, forceNoWebgl ? 'rgb(255, 121, 0)' : 'rgb(255, 255, 255)',
+    `${label}: orange field has its expected background`);
+  assert.equal(result.hedraColor, forceNoWebgl ? 'rgb(0, 0, 0)' : 'rgb(255, 255, 255)',
+    `${label}: black field has its expected background`);
   assert.ok(result.nickCanvasOutside && result.hedraCanvasOutside,
     `${label}: viewport overlays are outside the clipped sections`);
 }
 
 async function checkAnchoredExperience(session, variant) {
   await send('Page.bringToFront', {}, session);
+  if (forceNoWebgl) {
+    const state = await evaluate(session, `(() => ({
+      displays:['nick-halftone', 'hedra-halftone']
+        .map(id => getComputedStyle(document.getElementById(id)).display),
+      fallbackRequests:window.halftone2dRequests || 0
+    }))()`);
+    assert.deepEqual(state.displays, ['none', 'none'],
+      `${variant}: transition canvases hide without WebGL2`);
+    assert.equal(state.fallbackRequests, 0,
+      `${variant}: transition canvases never request Canvas 2D`);
+    return;
+  }
   const result = await evaluate(session, `(async () => {
     const height = innerHeight;
     const sample = async (sectionId, canvasId) => {
@@ -277,40 +291,38 @@ async function checkAnchoredExperience(session, variant) {
       const canvas = document.getElementById(canvasId);
       const content = section.querySelector('.job-content');
       const entryFraction = JSON.parse(content.dataset.jobLayout).entryViewportFraction;
-      const context = canvas.getContext('2d');
+      const gl = canvas.getContext('webgl2');
+      if (!gl) throw new Error(canvasId + ' did not initialize WebGL2.');
       const absoluteTop = section.getBoundingClientRect().top + scrollY;
       const move = async topFraction => {
         scrollTo({top:Math.round(absoluteTop - topFraction * height), behavior:'instant'});
         ScrollTrigger.update();
         await new Promise(resolve => requestAnimationFrame(resolve));
-        const image = context.getImageData(0, 0, canvas.width, canvas.height).data;
+        const image = new Uint8Array(canvas.width * canvas.height * 4);
+        gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, image);
         let ink = 0;
-        for (let i = 3; i < image.length; i += 4) ink += image[i] > 0;
+        for (let i = 3; i < image.length; i += 64) ink += image[i] > 0;
         return {
           sectionTop:section.getBoundingClientRect().top,
           contentTop:content.getBoundingClientRect().top,
           visible:getComputedStyle(canvas).visibility === 'visible',
-          ink, color:[...context.getImageData(0, 0, 1, 1).data]
+          ink, color:[...image.slice(0, 4)]
         };
       };
       const before = await move(1 + 3 / height);
       const entered = await move(0.8);
-      const arcs = [];
-      const originalArc = context.arc;
-      context.arc = function(x, y, radius, ...rest) {
-        arcs.push({x, y, radius});
-        return originalArc.call(this, x, y, radius, ...rest);
-      };
       await move(0.49);
-      arcs.length = 0;
       const middle = await move(0.5);
-      context.arc = originalArc;
-      const fullRadius = Math.max(...arcs.map(arc => arc.radius));
-      const centerX = innerWidth * devicePixelRatio / 2;
-      const partialRows = new Set(arcs.filter(arc =>
-        Math.abs(arc.x - centerX) < fullRadius * 2 &&
-        arc.radius > 0.01 * fullRadius && arc.radius < 0.99 * fullRadius)
-        .map(arc => arc.y.toFixed(2))).size;
+      const program = gl.getParameter(gl.CURRENT_PROGRAM);
+      const uniform = name => gl.getUniform(program, gl.getUniformLocation(program, name));
+      const cells = uniform('u_cells');
+      const offset = uniform('u_column_offset') / 2;
+      const distance = uniform('u_distance');
+      const rowDelay = uniform('u_row_delay');
+      const growthPixels = uniform('u_growth_pixels');
+      const partialRows = Array.from({length:cells}, (_, cell) =>
+        (distance - (cell + offset) * rowDelay) / growthPixels)
+        .filter(growth => growth > 0.01 && growth < 0.99).length;
       const reverse = await move(0.8);
       const middleAgain = await move(0.5);
       const complete = await move(-3 / height);
@@ -334,8 +346,10 @@ async function checkAnchoredExperience(session, variant) {
     scrollTo({top:Math.round(hedraTop - 0.5 * height), behavior:'instant'});
     ScrollTrigger.update();
     const orange = document.getElementById('nick-halftone');
-    const orangeContext = orange.getContext('2d');
-    const orangeAtBlackEntry = [...orangeContext.getImageData(0, 0, 1, 1).data];
+    const orangeGl = orange.getContext('webgl2');
+    const orangePixel = new Uint8Array(4);
+    orangeGl.readPixels(0, 0, 1, 1, orangeGl.RGBA, orangeGl.UNSIGNED_BYTE, orangePixel);
+    const orangeAtBlackEntry = [...orangePixel];
     return {nick, hedra, orangeAtBlackEntry};
   })()`);
   for (const [id, expected] of [
@@ -383,7 +397,7 @@ async function checkHedraAmbient(session, variant) {
       return {
         display:getComputedStyle(canvas).display,
         jobDisplay:getComputedStyle(section.querySelector('.job-content')).display,
-        fallbackRequests:window.hedraAmbient2dRequests || 0
+        fallbackRequests:window.halftone2dRequests || 0
       };
     })()`);
     assert.equal(hidden.display, 'none', `${variant}: ambient canvas hides without WebGL2`);
@@ -506,18 +520,21 @@ async function checkHedraAmbient(session, variant) {
 }
 
 async function checkGoogleDoodleLayering(session, variant) {
+  if (forceNoWebgl) return;
   await send('Page.bringToFront', {}, session);
   const candidates = await evaluate(session, `(async () => {
     const google = document.getElementById('google');
     const canvas = document.getElementById('nick-halftone');
-    const context = canvas.getContext('2d');
+    const gl = canvas.getContext('webgl2');
+    if (!gl) throw new Error('Nick halftone did not initialize WebGL2.');
     const doodleEnd = Math.max(...[...google.querySelectorAll('.doodle-img')]
       .map(image => image.getBoundingClientRect().bottom + scrollY));
     const dpr = devicePixelRatio;
     let stats;
     const collect = () => {
       stats = {inside:0, opaque:0, hitImage:0, overlap:0};
-      const rgba = context.getImageData(0, 0, canvas.width, canvas.height).data;
+      const rgba = new Uint8Array(canvas.width * canvas.height * 4);
+      gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, rgba);
       const points = [];
       for (const image of document.querySelectorAll('#google .doodle-img')) {
         const rect = image.getBoundingClientRect();
@@ -528,7 +545,8 @@ async function checkGoogleDoodleLayering(session, variant) {
           Math.floor(google.getBoundingClientRect().bottom - 2));
         for (let y = top; y < bottom; y += 6) {
           for (let x = left; x < right; x += 6) {
-            const index = (Math.round(y * dpr) * canvas.width + Math.round(x * dpr)) * 4 + 3;
+            const index = ((canvas.height - 1 - Math.round(y * dpr)) * canvas.width
+              + Math.round(x * dpr)) * 4 + 3;
             const opaque = rgba[index] >= 253;
             const hitImage = document.elementFromPoint(x, y) === image;
             stats.inside++;

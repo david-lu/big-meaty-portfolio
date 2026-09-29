@@ -1,3 +1,5 @@
+import { createWebgl2Program } from './webgl2.js';
+
 const vertexSource = `#version 300 es
 precision highp float;
 
@@ -52,39 +54,9 @@ void main() {
 `;
 
 export const createHedraGpuRenderer = (canvas) => {
-  const gl = canvas.getContext('webgl2', {
-    alpha: true, antialias: false, depth: false, stencil: false,
-    preserveDrawingBuffer: false
-  });
-  if (!gl) return null;
-
-  const compile = (type, source) => {
-    const shader = gl.createShader(type);
-    if (!shader) throw new Error('Could not create a Hedra shader.');
-    gl.shaderSource(shader, source);
-    gl.compileShader(shader);
-    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-      const message = gl.getShaderInfoLog(shader);
-      gl.deleteShader(shader);
-      throw new Error(`Hedra shader compilation failed: ${message}`);
-    }
-    return shader;
-  };
-
-  const vertex = compile(gl.VERTEX_SHADER, vertexSource);
-  const fragment = compile(gl.FRAGMENT_SHADER, fragmentSource);
-  const program = gl.createProgram();
-  if (!program) throw new Error('Could not create the Hedra shader program.');
-  gl.attachShader(program, vertex);
-  gl.attachShader(program, fragment);
-  gl.linkProgram(program);
-  gl.deleteShader(vertex);
-  gl.deleteShader(fragment);
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    const message = gl.getProgramInfoLog(program);
-    gl.deleteProgram(program);
-    throw new Error(`Hedra shader linking failed: ${message}`);
-  }
+  const setup = createWebgl2Program(canvas, vertexSource, fragmentSource);
+  if (!setup) return null;
+  const { gl, program, maxSize, locations } = setup;
 
   const buffer = gl.createBuffer();
   const array = gl.createVertexArray();
@@ -96,18 +68,13 @@ export const createHedraGpuRenderer = (canvas) => {
   gl.vertexAttribDivisor(0, 1);
   gl.bindVertexArray(null);
 
-  const sizeLocation = gl.getUniformLocation(program, 'u_size');
-  const waveLocation = gl.getUniformLocation(program, 'u_wave');
-  const radiusLocation = gl.getUniformLocation(program, 'u_radius');
-  const dprLocation = gl.getUniformLocation(program, 'u_dpr');
+  const { size, wave, radius, dpr: pixelRatio } = locations(['size', 'wave', 'radius', 'dpr']);
   gl.clearColor(0, 0, 0, 0);
-  gl.enable(gl.BLEND);
-  gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
   let dotCount = 0;
 
   return {
     gl,
-    maxSize: gl.getParameter(gl.MAX_RENDERBUFFER_SIZE),
+    maxSize,
     resize(width, height, rowPitch) {
       const centers = [];
       for (let row = 0, y = 0; y < height + rowPitch; row++, y += rowPitch) {
@@ -124,10 +91,10 @@ export const createHedraGpuRenderer = (canvas) => {
       if (gl.isContextLost()) return;
       gl.useProgram(program);
       gl.bindVertexArray(array);
-      gl.uniform2f(sizeLocation, width, height);
-      gl.uniform1f(waveLocation, waveTime);
-      gl.uniform1f(radiusLocation, maxRadius);
-      gl.uniform1f(dprLocation, dpr);
+      gl.uniform2f(size, width, height);
+      gl.uniform1f(wave, waveTime);
+      gl.uniform1f(radius, maxRadius);
+      gl.uniform1f(pixelRatio, dpr);
       gl.clear(gl.COLOR_BUFFER_BIT);
       gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, dotCount);
     }
