@@ -428,16 +428,19 @@ async function checkSectionHalftoneComposite(session, variant, sectionId, canvas
   const original = await evaluate(session, `(() => {
     const section = document.getElementById(${JSON.stringify(sectionId)});
     const content = section.querySelector('.parallax-container');
+    const jobContent = [...document.querySelectorAll('.job-content')];
     const canvas = document.getElementById(${JSON.stringify(canvasId)});
     const startsAtDoodles = section.id === 'google';
     const startEnd = startsAtDoodles
       ? Math.max(...[...section.querySelectorAll('.google-section .doodle-img')]
         .map(image => image.getBoundingClientRect().bottom + scrollY))
       : section.getBoundingClientRect().bottom + scrollY;
-    const original = {content:content?.style.visibility, canvas:canvas.style.visibility,
+    const original = {content:content?.style.visibility,
+      jobContent:jobContent.map(item => item.style.visibility), canvas:canvas.style.visibility,
       color:getComputedStyle(canvas).color};
     // Hide moving section content so the screenshot measures the background layer.
     if (content) content.style.visibility = 'hidden';
+    jobContent.forEach(item => item.style.visibility = 'hidden');
     scrollTo({top:Math.round(startEnd - innerHeight * 0.95), behavior:'instant'});
     ScrollTrigger.update();
     return original;
@@ -577,6 +580,9 @@ async function checkSectionHalftoneComposite(session, variant, sectionId, canvas
     await evaluate(session, `(() => {
       const content = document.getElementById(${JSON.stringify(sectionId)}).querySelector('.parallax-container');
       if (content) content.style.visibility = ${JSON.stringify(original.content)};
+      const jobContentVisibility = ${JSON.stringify(original.jobContent)};
+      [...document.querySelectorAll('.job-content')].forEach((item, index) =>
+        item.style.visibility = jobContentVisibility[index]);
       document.getElementById(${JSON.stringify(canvasId)}).style.visibility = ${JSON.stringify(original.canvas)};
     })()`);
   }
@@ -937,14 +943,109 @@ async function checkJobSections(session, variant) {
     assert.ok(Math.abs(result.edges[i].bottom - result.edges[i + 1].top) < 1,
       `${label}: ${result.ids[i]} joins ${result.ids[i + 1]} without a gap`);
   }
-  assert.ok(Math.abs(result.edges[1].height - result.viewport) <= 1,
-    `${label}: orange section is one viewport tall`);
+  assert.ok(Math.abs(result.edges[1].height - result.viewport * 0.7) <= 1,
+    `${label}: orange section is 70% of the viewport tall`);
   assert.ok(Math.abs(result.edges[2].height - result.viewport) <= 1,
     `${label}: black section is one viewport tall`);
   assert.equal(result.nickColor, 'rgb(255, 255, 255)', `${label}: orange field is painted by the canvas`);
   assert.equal(result.hedraColor, 'rgb(255, 255, 255)', `${label}: black field is painted by the canvas`);
   assert.ok(result.googleCanvasOutside && result.nickCanvasOutside,
     `${label}: viewport overlays are outside the clipped sections`);
+}
+
+async function checkJobMotion(session, variant) {
+  await send('Page.bringToFront', {}, session);
+  const result = await evaluate(session, `(async () => {
+    const sample = async (id, bottomFraction) => {
+      const section = document.getElementById(id);
+      const content = section.querySelector('.job-content');
+      scrollTo({ top: section.getBoundingClientRect().bottom + scrollY - bottomFraction * innerHeight,
+        behavior: 'instant' });
+      ScrollTrigger.update();
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      const button = section.querySelector('.job-scroll-button');
+      const rect = button.getBoundingClientRect();
+      const style = getComputedStyle(content);
+      return { scroll: scrollY, top: content.getBoundingClientRect().top,
+        sectionTop: section.getBoundingClientRect().top, sectionHeight: section.getBoundingClientRect().height,
+        cssTop: style.top, transform: style.transform, animationRange: style.animationRange,
+        jobLayout: content.dataset.jobLayout,
+        opacity: Number(style.opacity), position: style.position,
+        buttonHit: document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)?.id };
+    };
+    const entry = {};
+    for (const id of ['nick', 'hedra']) {
+      const section = document.getElementById(id);
+      const entryTop = id === 'nick' ? innerHeight : innerHeight * 0.8;
+      entry[id] = await sample(id, (entryTop + section.getBoundingClientRect().height) / innerHeight);
+    }
+    const nick = [await sample('nick', 1), await sample('nick', 0.8), await sample('nick', 0.55)];
+    const hedra = [await sample('hedra', 1), await sample('hedra', 0.8), await sample('hedra', 0.3)];
+    const google = document.getElementById('google');
+    const googleRowsBottom = Math.max(...[...google.querySelectorAll('.google-section')]
+      .map(row => row.getBoundingClientRect().bottom + scrollY));
+    scrollTo({ top: googleRowsBottom - innerHeight * 0.5, behavior: 'instant' });
+    ScrollTrigger.update();
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const nickEarlyOpacity = Number(getComputedStyle(document.querySelector('#nick .job-content')).opacity);
+    const nickSection = document.getElementById('nick');
+    scrollTo({ top: nickSection.getBoundingClientRect().bottom + scrollY - innerHeight * 0.5,
+      behavior: 'instant' });
+    ScrollTrigger.update();
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const blackCanvas = document.getElementById('nick-halftone');
+    const nickContent = document.querySelector('#nick .job-content');
+    const hedraContent = document.querySelector('#hedra .job-content');
+    const originalPointerEvents = [blackCanvas, nickContent, hedraContent]
+      .map(element => element.style.pointerEvents);
+    let layering;
+    try {
+      // Let the hit test observe paint order through the normally click-through canvas.
+      [blackCanvas, nickContent, hedraContent].forEach(element => element.style.pointerEvents = 'auto');
+      const centerHit = selector => {
+        const rect = document.querySelector(selector).getBoundingClientRect();
+        return document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+      };
+      layering = { nick: centerHit('#nick .job-logo')?.id,
+        hedra: hedraContent.contains(centerHit('#hedra .job-logo')) };
+    } finally {
+      [blackCanvas, nickContent, hedraContent].forEach((element, index) =>
+        element.style.pointerEvents = originalPointerEvents[index]);
+    }
+    return {
+      entry, nick, hedra, viewport: innerHeight,
+      layering,
+      nickEarlyOpacity,
+      hedraEarlyOpacity: Number(getComputedStyle(document.querySelector('#hedra .job-content')).opacity),
+      nickLogoColor: getComputedStyle(document.querySelector('#nick .job-logo')).backgroundColor,
+      jobLayer: Number(getComputedStyle(document.querySelector('#hedra .job-content')).zIndex),
+      skillsLayer: Number(getComputedStyle(document.getElementById('skills-header')).zIndex),
+      skillsBodyLayer: Number(getComputedStyle(document.getElementById('skills')).zIndex)
+    };
+  })()`);
+  for (const [id, samples] of [['nick', result.nick], ['hedra', result.hedra]]) {
+    assert.ok(samples.every(sample => sample.position === 'absolute'), `${variant}: ${id} moves with its section`);
+    const rate = (samples[0].top - samples[1].top) / (samples[1].scroll - samples[0].scroll);
+    assert.ok(rate > 0.75 && rate < 0.85, `${variant}: ${id} scrolls at about 80% page speed (${rate}) ${JSON.stringify(samples)}`);
+    assert.equal(samples[0].buttonHit, `${id}-scroll-button`, `${variant}: ${id} arrow receives pointer clicks`);
+  }
+  for (const id of ['nick', 'hedra']) {
+    assert.ok(Math.abs(result.entry[id].top - result.viewport) < 25,
+      `${variant}: ${id} enters from the bottom edge ${JSON.stringify(result.entry[id])}`);
+  }
+  assert.ok(result.nick[1].top > result.viewport * 0.2 && result.nick[1].top < result.viewport * 0.4,
+    `${variant}: Nickelodeon reaches the upper-middle before black dots appear`);
+  assert.ok(result.hedra[0].top > result.viewport * 0.3 && result.hedra[0].top < result.viewport * 0.4,
+    `${variant}: Hedra reaches the upper-middle as Skills arrives`);
+  assert.equal(result.nickEarlyOpacity, 1, `${variant}: Nickelodeon enters without a fade`);
+  assert.equal(result.nick[2].opacity, 1, `${variant}: Nickelodeon exits without a fade`);
+  assert.equal(result.hedraEarlyOpacity, 1, `${variant}: Hedra enters without a fade`);
+  assert.equal(result.nickLogoColor, 'rgb(141, 198, 63)', `${variant}: Nickelodeon badge is green`);
+  assert.equal(result.layering.nick, 'nick-halftone', `${variant}: black dots paint over Nickelodeon`);
+  assert.equal(result.layering.hedra, true, `${variant}: Hedra paints over black dots`);
+  assert.equal(result.hedra[2].opacity, 1, `${variant}: Hedra remains visible near Skills`);
+  assert.ok(result.skillsLayer > result.jobLayer && result.skillsBodyLayer > result.jobLayer,
+    `${variant}: Skills covers the Hedra content`);
 }
 
 async function checkGoogleDoodleLayering(session, variant) {
@@ -1221,7 +1322,7 @@ try {
     }
       const counts = await Promise.all(variants.map(v => evaluate(sessions[v], 'ScrollTrigger.getAll().length')));
       const skillsActivated = await evaluate(sessions.native, `document.querySelector('#skills .parallax-container').classList.contains('parallax-active')`);
-      assert.equal(counts[1] - counts[0], control ? 0 : 12 + Number(skillsActivated), 'CSS should replace imagery triggers and remove the skills activation trigger after entry.');
+      assert.equal(counts[1] - counts[0], control ? 0 : 14 + Number(skillsActivated), 'CSS should replace imagery and job triggers and remove the skills activation trigger after entry.');
       const positions = await evaluate(sessions.fallback, `(() => {
         const top = id => document.getElementById(id).getBoundingClientRect().top + scrollY;
         const height = id => document.getElementById(id).offsetHeight;
@@ -1264,6 +1365,7 @@ try {
       for (const variant of ['native', 'fallback']) {
         const label = `${width}x${height}, ${variant}`;
         await checkJobSections(sessions[variant], label);
+        await checkJobMotion(sessions[variant], label);
         await checkSectionHalftone(sessions[variant], label, 'google', 'google-halftone', [255, 121, 0]);
         await checkSectionHalftoneComposite(sessions[variant], label, 'google', 'google-halftone',
           [255, 255, 255], [255, 121, 0]);
@@ -1300,19 +1402,39 @@ try {
       await compareScreenshots(`resized, ${id}`);
     }
     console.log('Viewport rotation: geometry and screenshots matched.');
-    for (const [id, duration, target] of [
+    for (const [id, duration, target, source] of [
       ['intro-scroll-button', 8, '#google'],
-      ['map-scroll-button', 6, '#skills'],
+      ['map-scroll-button', 6, '#nick', 'map-info'],
       ['skills-scroll-button', 4, 'max'],
+      ['nick-scroll-button', 2, '#hedra', 'nick'],
+      ['hedra-scroll-button', 2, '#skills-header', 'hedra'],
     ]) {
       const destinations = [];
       for (const variant of variants) {
         const session = sessions[variant];
         await send('Page.bringToFront', {}, session);
-        const result = await evaluate(session, `(() => {
+        const hit = await evaluate(session, `(async () => {
           gsap.killTweensOf(window);
-          window.scrollTo({ top: 0, behavior: 'instant' }); ScrollTrigger.update();
-          const button = document.getElementById('${id}'); button.disabled = false; button.click();
+          const source = ${JSON.stringify(source ?? null)};
+          const start = source ? document.getElementById(source).getBoundingClientRect().top + scrollY : 0;
+          window.scrollTo({ top: start, behavior: 'instant' }); ScrollTrigger.update();
+          await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+          const button = document.getElementById('${id}'); button.disabled = false;
+          const rect = button.getBoundingClientRect();
+          const x = rect.left + rect.width / 2, y = rect.top + rect.height / 2;
+          return { x, y, target: document.elementFromPoint(x, y)?.id, rect: rect.toJSON() };
+        })()`);
+        if (source) {
+          assert.equal(hit.target, id, `${id}: pointer reaches the visible arrow ${JSON.stringify(hit)}`);
+          await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: hit.x, y: hit.y,
+            button: 'left', clickCount: 1 }, session);
+          await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: hit.x, y: hit.y,
+            button: 'left', clickCount: 1 }, session);
+        } else {
+          await evaluate(session, `document.getElementById('${id}').click()`);
+        }
+        const result = await evaluate(session, `(() => {
+          const button = document.getElementById('${id}');
           const tween = gsap.getTweensOf(window).find(t => t.vars.scrollTo);
           tween.pause();
           const config = { disabled: button.disabled, duration: tween.duration(),

@@ -80,8 +80,8 @@ $('#map-scroll-button').addEventListener('click', () => {
   $('#map-scroll-button').disabled = true;
   gsap.to(window, {
     ease: 'sine.inOut', duration: 6, scrollTo: {
-      y: '#skills',
-      offsetY: vh(-5),
+      y: '#nick',
+      offsetY: vh(20),
       autoKill: true
     }
   });
@@ -104,6 +104,22 @@ ScrollTrigger.create({
   trigger: '#skills', start: "top bottom", end: "bottom top",
   onEnterBack: (self) => $('#skills-scroll-button').disabled = false
 });
+
+const addJobScrollButton = (buttonSelector, target) => {
+  const button = $(buttonSelector);
+  button.addEventListener('click', () => {
+    button.disabled = true;
+    gsap.to(window, {
+      ease: 'sine.inOut',
+      duration: 2,
+      scrollTo: { y: target, autoKill: true },
+      onComplete: () => button.disabled = false,
+      onInterrupt: () => button.disabled = false
+    });
+  });
+};
+addJobScrollButton('#nick-scroll-button', '#hedra');
+addJobScrollButton('#hedra-scroll-button', '#skills-header');
 
 // INTRO
 if (!supportsCssParallax) {
@@ -275,6 +291,75 @@ googleSections.forEach((element, i) => {
   element.innerHTML += `${text} ${text}`;
 });
 
+// JOB DESCRIPTIONS
+// Cover 0 is section top at viewport bottom; cover 1 is section bottom at viewport top.
+const createJobScroll = ({ sectionSelector, entryViewportFraction, startCover, endCover, speed }) => {
+  const section = $(sectionSelector);
+  const content = section.querySelector('.job-content');
+  let range;
+
+  content.style.setProperty('--job-cover-start', `${startCover * 100}%`);
+  content.style.setProperty('--job-cover-end', `${endCover * 100}%`);
+
+  const layout = () => {
+    const height = window.innerHeight;
+    const sectionHeight = section.getBoundingClientRect().height;
+    const coverDistance = height + sectionHeight;
+    const sectionScroll = section.getBoundingClientRect().top + scrollY;
+    const startSectionTop = height - startCover * coverDistance;
+    const endSectionTop = height - endCover * coverDistance;
+    const startScroll = sectionScroll - startSectionTop;
+    const endScroll = sectionScroll - endSectionTop;
+    const entrySectionTop = entryViewportFraction * height;
+    const entryCompensation = (1 - speed) * (startSectionTop - entrySectionTop);
+    content.style.top = `${height - entrySectionTop - entryCompensation}px`;
+    content.dataset.jobLayout = JSON.stringify({ height, sectionHeight, startCover, endCover, speed });
+    content.style.setProperty('--job-parallax-distance', `${(1 - speed) * (endScroll - startScroll)}px`);
+    range = { startScroll, endScroll };
+  };
+
+  layout();
+  if (supportsCssParallax) {
+    ScrollTrigger.addEventListener('refresh', layout);
+    return;
+  }
+
+  const update = () => {
+    const elapsed = gsap.utils.clamp(0, range.endScroll - range.startScroll, scrollY - range.startScroll);
+    const scrollStyle = `${(1 - speed) * elapsed}px`;
+    if (content.style.getPropertyValue('--job-scroll') !== scrollStyle) {
+      content.style.setProperty('--job-scroll', scrollStyle);
+    }
+  };
+  ScrollTrigger.create({
+    trigger: section,
+    start: () => { layout(); return range.startScroll; },
+    end: () => range.endScroll,
+    onUpdate: update,
+    onRefresh: update,
+    onEnter: update,
+    onEnterBack: update,
+    onLeave: update,
+    onLeaveBack: update
+  });
+  update();
+};
+
+createJobScroll({
+  sectionSelector: '#nick',
+  entryViewportFraction: 1.15, // Text enters at the viewport bottom when Nick's top reaches it.
+  startCover: -0.15,
+  endCover: 1,
+  speed: 1
+});
+createJobScroll({
+  sectionSelector: '#hedra',
+  entryViewportFraction: 0.7, // Text enters at the viewport bottom when black dots begin.
+  startCover: -0.15,
+  endCover: 1,
+  speed: 1
+});
+
 // HALFTONE TRANSITIONS
 // Both color fields live in fixed canvases. Orange stays behind the black
 // transition, so the white section backgrounds never form a visible edge.
@@ -333,7 +418,9 @@ const createHalftone = (canvasSelector, sectionSelector, startRows = null) => {
     const travel = (startViewportFraction - 0.25) * height;
     const distance = startViewportFraction * height - anchorBottom;
     const progress = gsap.utils.clamp(0, 1, distance / travel);
-    if (distance <= 0 || skillsHeader.getBoundingClientRect().top <= 0) {
+    const skillsTop = skillsHeader.getBoundingClientRect().top;
+    const pastSkills = skillsTop <= 0;
+    if (distance <= 0 || pastSkills) {
       if (canvas.style.visibility !== 'hidden') canvas.style.visibility = 'hidden';
       lastProgress = undefined;
       return;
@@ -396,6 +483,7 @@ const createHalftone = (canvasSelector, sectionSelector, startRows = null) => {
     onLeave: update,
     onLeaveBack: update
   });
+
 };
 
 createHalftone('#google-halftone', '#google', googleSections);
