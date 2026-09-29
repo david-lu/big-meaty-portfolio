@@ -61,6 +61,20 @@ document.addEventListener('keydown', (event) => {
 });
 
 // SCROLL BUTTONS
+// Find the scroll position where a job description, including its parallax
+// movement, sits in the middle of the viewport. The settings live below with
+// the job sections; using them keeps arrow targets aligned when they change.
+const centeredJobScrollY = (sectionSelector) => {
+  const section = $(sectionSelector);
+  const content = section.querySelector('.job-content');
+  const { entryViewportFraction, speed } = experienceSettings.sections
+    .find(settings => settings.sectionSelector === sectionSelector).job;
+  const height = window.innerHeight;
+  const sectionTop = section.getBoundingClientRect().top + scrollY;
+  return sectionTop - entryViewportFraction * height +
+    (height + content.getBoundingClientRect().height) / (2 * speed);
+};
+
 $('#intro-scroll-button').addEventListener('click', () => {
   $('#intro-scroll-button').disabled = true;
   gsap.to(window, {
@@ -80,8 +94,7 @@ $('#map-scroll-button').addEventListener('click', () => {
   $('#map-scroll-button').disabled = true;
   gsap.to(window, {
     ease: 'sine.inOut', duration: 6, scrollTo: {
-      y: '#nick',
-      offsetY: vh(20),
+      y: centeredJobScrollY('#nick'),
       autoKill: true
     }
   });
@@ -112,13 +125,13 @@ const addJobScrollButton = (buttonSelector, target) => {
     gsap.to(window, {
       ease: 'sine.inOut',
       duration: 2,
-      scrollTo: { y: target, autoKill: true },
+      scrollTo: { y: typeof target === 'function' ? target() : target, autoKill: true },
       onComplete: () => button.disabled = false,
       onInterrupt: () => button.disabled = false
     });
   });
 };
-addJobScrollButton('#nick-scroll-button', '#hedra');
+addJobScrollButton('#nick-scroll-button', () => centeredJobScrollY('#hedra'));
 addJobScrollButton('#hedra-scroll-button', '#skills-header');
 
 // INTRO
@@ -297,7 +310,7 @@ const experienceSettings = {
   halftone: {
     startTop: 1,       // Start when the new section's top reaches the viewport bottom.
     endTop: 0,         // Finish when that top reaches the viewport top.
-    growthDistance: 0.2, // Each dot grows over this fraction of viewport-height scrolling.
+    growthDistance: 0.25, // Each dot grows over this fraction of viewport-height scrolling.
     dotRows: 30,       // Grid density: this many rows fit in 48% of the viewport height.
     columnOffset: 4    // Rightmost dots start this many row delays after leftmost dots.
   },
@@ -305,7 +318,7 @@ const experienceSettings = {
     {
       sectionSelector: '#nick',
       canvasSelector: '#nick-halftone',
-      job: { entryViewportFraction: 1.15, startCover: -0.15, endCover: 1, speed: 1 }
+      job: { entryViewportFraction: 0.7, startCover: -0.15, endCover: 1, speed: 1 }
     },
     {
       sectionSelector: '#hedra',
