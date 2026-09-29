@@ -688,14 +688,16 @@ body>div {
 
 #google {
     flex-direction: row;
-    height: 160vh;
+    /* Short enough for the last doodles to meet Nick's entering halftone. */
+    height: 120vh;
     align-items: flex-start;
     padding-top: 15vh;
     background-color: white;
 }
 
-#google-halftone,
-#nick-halftone {
+/* Each fixed canvas belongs to the section named in its ID. */
+#nick-halftone,
+#hedra-halftone {
     position: fixed;
     inset: 0;
     width: 100%;
@@ -705,11 +707,11 @@ body>div {
     visibility: hidden;
 }
 
-#google-halftone {
+#nick-halftone {
     color: var(--job-orange);
 }
 
-#nick-halftone {
+#hedra-halftone {
     color: black;
     z-index: 9;
 }
@@ -795,10 +797,6 @@ body>div {
 #nick,
 #hedra {
     background-color: white;
-}
-
-#nick {
-    height: 70svh;
 }
 
 .job-content {
@@ -1207,6 +1205,11 @@ body>div {
 }
 
 @media (max-aspect-ratio: 0.6) {
+    /* Stacked doodle rows need less trailing space on narrow screens. */
+    #google {
+        height: 105vh;
+    }
+
     #intro-scroll-button {
         position: relative;
         bottom: inherit;
