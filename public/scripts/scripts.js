@@ -784,12 +784,12 @@ const createHalftone = ({ canvasSelector, sectionSelector }) => {
     const growthPixels = growthDistance * height;
     const rowDelay = (travel - growthPixels) / (cells - 1 + columnOffset);
     if (decorationLayer) {
-      // Wait until the slowest column and the next row have grown fully before
-      // revealing outlines. This keeps their wipe behind the solid orange dots.
+      // Follow the slowest column's fully grown row, with a small upward lead.
       const fullRow = (distance - growthPixels) / rowDelay - columnOffset;
-      const solidOrangeTop = progress >= 1 ? 0 :
-        gsap.utils.clamp(0, height, height - (fullRow - 1) * size.rowPitch);
-      setDecorationWipe(solidOrangeTop, bounds.top);
+      const wipeLeadPixels = 200; // Increase to reveal characters earlier/higher.
+      const wipeViewportTop = progress >= 1 ? 0 :
+        gsap.utils.clamp(0, height, height - (fullRow - 1) * size.rowPitch - wipeLeadPixels);
+      setDecorationWipe(wipeViewportTop, bounds.top);
     }
     // The clip still tracks the section after its canvas reaches full color.
     if (progress === lastProgress) return;
