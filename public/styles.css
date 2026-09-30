@@ -225,6 +225,12 @@ body>div {
     #nick .job-content { animation-timeline: --nick-job; }
     #hedra .job-content { animation-timeline: --hedra-job; }
 
+    #nick .nick-decoration {
+        animation: nick-decoration-parallax auto linear both;
+        animation-timeline: --nick-job;
+        animation-range: cover 0% cover 100%;
+    }
+
     #hedra-ambient {
         animation: hedra-ambient-parallax auto linear both;
         animation-timeline: --hedra-job;
@@ -293,6 +299,11 @@ body>div {
 @keyframes job-parallax {
     from { transform: translate3d(-50%, 0, 0); }
     to { transform: translate3d(-50%, var(--job-parallax-distance, 0px), 0); }
+}
+
+@keyframes nick-decoration-parallax {
+    from { transform: translate3d(0, calc(-1 * var(--nick-parallax-half-travel, 0px)), 0) rotate(var(--nick-angle)); }
+    to { transform: translate3d(0, var(--nick-parallax-half-travel, 0px), 0) rotate(var(--nick-angle)); }
 }
 
 /* Over Hedra's cover range, 65% of page travel is cancelled by the canvas.
@@ -702,7 +713,7 @@ body>div {
 #google {
     flex-direction: row;
     /* Short enough for the last doodles to meet Nick's entering halftone. */
-    height: 120vh;
+    height: 125vh;
     align-items: flex-start;
     padding-top: 15vh;
     background-color: white;
@@ -726,7 +737,7 @@ body>div {
 
 #hedra-halftone {
     color: black;
-    z-index: 9;
+    z-index: 10;
 }
 
 #google .parallax-container {
@@ -812,11 +823,39 @@ body>div {
     background-color: white;
 }
 
+/* The bleed margin keeps figures visible beyond Nick's edges without creating a scrollbar. */
+.nick-decorations {
+    position: absolute;
+    inset: 0;
+    z-index: 8;
+    overflow: clip;
+    overflow-clip-margin: 100svh;
+    /* JS moves this clip with the fully orange edge of Nick's halftone. */
+    clip-path: inset(var(--nick-wipe-top, 200svh) -100svh -100svh -100svh);
+    pointer-events: none;
+}
+
+.nick-decoration {
+    position: absolute;
+    display: block;
+    left: 0;
+    top: 0;
+    width: auto;
+    height: var(--size);
+    object-fit: contain;
+    opacity: 0.45;
+    transform: translate3d(0, var(--nick-decoration-scroll, 0px), 0) rotate(var(--nick-angle));
+    user-select: none;
+}
+
+/* --size ranges from 10svh to 18svh; larger outlines get higher --nick-speed. */
+/* --nick-speed controls 30-40% scroll travel; --nick-angle adds a fixed per-figure tilt. */
+
 /* Clip the oversized parallax canvas to Hedra so no dots cross section edges. */
 #hedra-ambient-clip {
     position: absolute;
     inset: 0;
-    z-index: 10;
+    z-index: 11;
     overflow: hidden;
     pointer-events: none;
     -webkit-mask-image: linear-gradient(to bottom, transparent, #000 22svh);
@@ -851,7 +890,7 @@ body>div {
 }
 
 #nick .job-content {
-    z-index: 8;
+    z-index: 9;
 }
 
 #hedra .job-content h2,

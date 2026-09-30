@@ -145,7 +145,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 const sessions = {};
 const variants = ['native', ...(!profileSection ? ['fallback'] : []), ...(compareHead ? ['baseline'] : [])];
 const selector = '#fg, #intro .parallax-bg, #map-path, #map-info, #map-path svg, ' +
-  '.pin, #google-pin-expand, .google-section, .skill-section, ' +
+  '.pin, #google-pin-expand, .google-section, .skill-section, .nick-decoration, ' +
   '#outro .parallax-bg, #outro-info, #outro-sun, #outro-socials, .scroll-button';
 const snapshot = `JSON.stringify({
   scroll: scrollY, height: document.documentElement.scrollHeight,
@@ -174,11 +174,12 @@ function compare(actual, expected, label) {
     // whenever the containing section can be seen; always compare reveal states.
     for (const property of ['x', 'y', 'width', 'height']) {
       if (!element.visibleSection && !other.visibleSection) continue;
-      // ScrollTrigger rounds scroll ranges; outro art can differ by up to a
-      // third CSS pixel at a newly sampled section entry.
-      const outroY = property === 'y' &&
-        (element.id === 'outro-sun' || element.id.startsWith('assets/outro-layer-'));
-      const tolerance = outroY ? 0.35 : 0.15;
+      // CSS timelines and ScrollTrigger can round moving art by a fraction
+      // of a pixel at a newly sampled section entry.
+      const parallaxImageY = property === 'y' &&
+        (element.id === 'outro-sun' || element.id.startsWith('assets/outro-layer-') ||
+          element.id.startsWith('nick-decoration '));
+      const tolerance = parallaxImageY ? 0.4 : 0.15;
       assert.ok(Math.abs(element[property] - other[property]) < tolerance,
         `${label}: ${element.id} ${property}: ${element[property]} vs ${other[property]}`);
     }
@@ -268,6 +269,144 @@ async function checkJobSections(session, variant) {
     `${label}: black field has its expected background`);
   assert.ok(result.nickCanvasOutside && result.hedraCanvasOutside,
     `${label}: viewport overlays are outside the clipped sections`);
+}
+
+async function checkNickDecorationParallax(session, label) {
+  await send('Page.bringToFront', {}, session);
+  const result = await evaluate(session, `(async () => {
+    const section = document.getElementById('nick');
+    const decorations = [...section.querySelectorAll('.nick-decoration')];
+    const sectionTop = section.getBoundingClientRect().top + scrollY;
+    const sample = async fraction => {
+      scrollTo({top:Math.round(sectionTop - fraction * innerHeight), behavior:'instant'});
+      ScrollTrigger.update();
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      const visible = decorations.flatMap((el, index) => {
+        if (getComputedStyle(el).visibility !== 'visible') return [];
+        return [{index, rect:el.getBoundingClientRect()}];
+      });
+      const collisions = [];
+      for (let i = 0; i < visible.length; i++) for (let j = i + 1; j < visible.length; j++) {
+        const a = visible[i].rect, b = visible[j].rect;
+        if (Math.min(a.right, b.right) - Math.max(a.left, b.left) > 0.5 &&
+            Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 0.5) {
+          collisions.push([visible[i].index, visible[j].index]);
+        }
+      }
+      const centered = visible.filter(({rect}) => {
+        const x = rect.left + rect.width / 2;
+        return x > innerWidth * 0.35 && x < innerWidth * 0.65;
+      }).map(({index}) => index);
+      const layer = section.querySelector('.nick-decorations');
+      return {scroll:scrollY, tops:decorations.map(el => el.getBoundingClientRect().top),
+        visibleCount:visible.length, collisions, centered,
+        layerOpacity:Number(getComputedStyle(layer).opacity),
+        layerClip:getComputedStyle(layer).clipPath,
+        wipeViewportY:parseFloat(layer.style.getPropertyValue('--nick-wipe-top')) +
+          layer.getBoundingClientRect().top,
+        documentWidth:document.documentElement.scrollWidth,
+        clientWidth:document.documentElement.clientWidth};
+    };
+    const before = await sample(0.5);
+    const after = await sample(0);
+    const samples = [before, after];
+    for (const fraction of [1, 0.75, 0.25, -0.25, -0.5, -0.75, -1]) {
+      samples.push(await sample(fraction));
+    }
+    return {before, after,
+      samples,
+      layerOverflow:getComputedStyle(section.querySelector('.nick-decorations')).overflow,
+      layerClipMargin:getComputedStyle(section.querySelector('.nick-decorations')).overflowClipMargin,
+      viewportWidth:innerWidth,
+      viewportHeight:innerHeight,
+      outlines:[...new Set(decorations.map(el => [...el.classList]
+        .find(name => name.startsWith('nick-outline--'))))],
+      outlineImages:decorations.map(el => ({src:el.currentSrc || el.src,
+        loaded:el.complete && el.naturalWidth > 0, tag:el.tagName})),
+      outlineCorners:[...new Set(decorations.map(el => el.currentSrc || el.src))].map(src => {
+        const image = decorations.find(el => (el.currentSrc || el.src) === src);
+        const canvas = document.createElement('canvas');
+        canvas.width = canvas.height = 1;
+        const context = canvas.getContext('2d');
+        context.drawImage(image, 0, 0);
+        return context.getImageData(0, 0, 1, 1).data[3];
+      }),
+      layoutCenters:decorations.map(el => ({side:el.dataset.side,
+        y:parseFloat(el.style.top) + el.offsetHeight / 2})),
+      heights:decorations.map(el => parseFloat(getComputedStyle(el).height)),
+      widths:decorations.map(el => parseFloat(getComputedStyle(el).width)),
+      angles:decorations.map(el => parseFloat(getComputedStyle(el).getPropertyValue('--nick-angle'))),
+      opacities:decorations.map(el => Number(getComputedStyle(el).opacity)),
+      speeds:decorations.map(el => Number(getComputedStyle(el).getPropertyValue('--nick-speed')))};
+  })()`);
+  assert.equal(result.speeds.length, 20, `${label}: all 20 Nick outlines are present`);
+  assert.equal(result.outlines.length, 7, `${label}: all seven character outlines are used`);
+  assert.ok(result.outlineImages.every(image => image.tag === 'IMG' && image.loaded &&
+    image.src.includes('assets/nick-outlines/') && image.src.includes('.png')),
+    `${label}: all outline PNGs load successfully`);
+  assert.ok(result.outlineCorners.every(alpha => alpha === 0),
+    `${label}: outline PNGs have transparent padding`);
+  for (const side of ['left', 'right']) {
+    const centers = result.layoutCenters.filter(item => item.side === side)
+      .map(item => item.y).sort((a, b) => a - b);
+    assert.equal(centers.length, 10, `${label}: ${side} side has ten figures`);
+    const gaps = centers.slice(1).map((center, index) => center - centers[index]);
+    assert.ok(Math.max(...gaps) < result.viewportHeight * 0.55,
+      `${label}: ${side} figures have no large vertical gap (${JSON.stringify(gaps)})`);
+  }
+  assert.equal(result.layerOverflow, 'clip', `${label}: outline layer clips only beyond its bleed margin`);
+  assert.ok(parseFloat(result.layerClipMargin) >= result.viewportHeight - 1,
+    `${label}: outline bleed margin covers the viewport around Nick`);
+  assert.ok(result.opacities.every(opacity => opacity === 0.45),
+    `${label}: Nick outlines have visible but subdued opacity`);
+  assert.equal(new Set(result.speeds).size, 20, `${label}: decoration speeds differ`);
+  assert.ok(new Set(result.angles).size >= 16, `${label}: outline tilts differ`);
+  assert.ok(Math.min(...result.angles) <= -20 && Math.max(...result.angles) >= 20,
+    `${label}: outline rotation varies in both directions`);
+  assert.ok(result.widths.every(width => width > 0), `${label}: outlines have width`);
+  const byHeight = result.heights.map((height, i) => ({height, speed:result.speeds[i]}))
+    .sort((a, b) => a.height - b.height);
+  assert.ok(Math.abs(byHeight[0].height - result.viewportHeight * 0.10) < 1,
+    `${label}: smallest outline is the base size`);
+  assert.ok(Math.abs(byHeight.at(-1).height - result.viewportHeight * 0.18) < 1,
+    `${label}: largest outline is 80% above the base size`);
+  assert.ok(byHeight.every((item, i) => !i || item.speed > byHeight[i - 1].speed),
+    `${label}: larger outlines move faster`);
+  assert.ok(result.samples.every(sample => sample.visibleCount === 20),
+    `${label}: all outlines stay enabled at every width`);
+  assert.ok(result.samples.every(sample => sample.documentWidth <= sample.clientWidth + 1),
+    `${label}: outlines create no horizontal scrollbar (${JSON.stringify(result.samples.map(sample => [sample.documentWidth, sample.clientWidth]))})`);
+  assert.ok(result.samples.every(sample => sample.layerOpacity === 1 &&
+    sample.layerClip.startsWith('inset(') && Number.isFinite(sample.wipeViewportY)),
+    `${label}: a spatial clip reveals the outlines without fading them`);
+  assert.ok(Math.abs(result.after.wipeViewportY) < 2 &&
+    result.samples.slice(5).every(sample => Math.abs(sample.wipeViewportY) < 2),
+    `${label}: the outline wipe clears when Nick fills the viewport`);
+  if (forceNoWebgl) {
+    assert.ok([[result.before, 0.5], [result.samples[2], 1],
+      [result.samples[3], 0.75], [result.samples[4], 0.25]].every(([sample, fraction]) =>
+      Math.abs(sample.wipeViewportY - result.viewportHeight * fraction) < 2),
+    `${label}: the wipe follows Nick's orange section edge without WebGL`);
+  } else {
+    assert.ok(result.samples[2].wipeViewportY >= result.viewportHeight - 2 &&
+      result.samples[3].wipeViewportY >= result.viewportHeight - 2 &&
+      result.before.wipeViewportY > result.viewportHeight * 0.5 &&
+      result.samples[4].wipeViewportY > result.viewportHeight * 0.2 &&
+      result.samples[4].wipeViewportY < result.viewportHeight * 0.6,
+    `${label}: the wipe starts below the viewport, reverses, and trails fully grown orange dots`);
+  }
+  assert.ok(result.samples.every(sample => sample.centered.length === 0),
+    `${label}: no visible outline is horizontally centered (${JSON.stringify(result.samples.map(sample => sample.centered))})`);
+  assert.ok(result.samples.every(sample => sample.collisions.length === 0),
+    `${label}: visible outlines do not overlap during the scroll (${JSON.stringify(result.samples.map(sample => sample.collisions))})`);
+  const pageTravel = result.after.scroll - result.before.scroll;
+  result.speeds.forEach((speed, i) => {
+    const screenSpeed = (result.before.tops[i] - result.after.tops[i]) / pageTravel;
+    assert.ok(speed >= 0.30 && speed <= 0.40,
+      `${label}: decoration ${i} speed stays in the requested range`);
+    assert.ok(Math.abs(screenSpeed - speed) < 0.015,
+      `${label}: decoration ${i} travels at ${speed}x page speed (${screenSpeed})`);
+  });
 }
 
 async function checkAnchoredExperience(session, variant) {
@@ -799,7 +938,7 @@ try {
     }
       const counts = await Promise.all(variants.map(v => evaluate(sessions[v], 'ScrollTrigger.getAll().length')));
       const skillsActivated = await evaluate(sessions.native, `document.querySelector('#skills .parallax-container').classList.contains('parallax-active')`);
-      assert.equal(counts[1] - counts[0], control ? 0 : 14 + Number(skillsActivated), 'CSS should replace imagery and job triggers and remove the skills activation trigger after entry.');
+      assert.equal(counts[1] - counts[0], control ? 0 : 15 + Number(skillsActivated), 'CSS should replace imagery, job, and Nick decoration triggers and remove the skills activation trigger after entry.');
       const positions = await evaluate(sessions.fallback, `(() => {
         const top = id => document.getElementById(id).getBoundingClientRect().top + scrollY;
         const height = id => document.getElementById(id).offsetHeight;
@@ -842,11 +981,12 @@ try {
       for (const variant of ['native', 'fallback']) {
         const label = `${width}x${height}, ${variant}`;
         await checkJobSections(sessions[variant], label);
+        await checkNickDecorationParallax(sessions[variant], label);
         await checkAnchoredExperience(sessions[variant], label);
         await checkHedraAmbient(sessions[variant], label);
         await checkGoogleDoodleLayering(sessions[variant], label);
       }
-      console.log(`${width}x${height}: section-anchored halftones, job motion, and doodle overlap passed.`);
+      console.log(`${width}x${height}: section-anchored halftones, job and decoration motion, and doodle overlap passed.`);
     }
     if (!profileSection) {
     // Rotate an already loaded page. CSS units and GSAP's captured lengths can differ.

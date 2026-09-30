@@ -408,6 +408,150 @@ experienceSettings.sections.forEach(({ sectionSelector, job }) => {
   createJobScroll({ sectionSelector, ...job });
 });
 
+// Nickelodeon decorations follow Nick's cover range. Their CSS speeds describe
+// screen travel relative to page travel: 0.30 moves 30px per 100px scrolled.
+const nickSection = $('#nick');
+const nickDecorations = [...nickSection.querySelectorAll('.nick-decoration')].map(element => ({
+  element,
+  speed: Number(getComputedStyle(element).getPropertyValue('--nick-speed')),
+  halfTravel: 0
+}));
+let nickDecorationRange;
+const layoutNickDecorations = () => {
+  const viewportHeight = innerHeight;
+  const sectionRect = nickSection.getBoundingClientRect();
+  const sectionTop = sectionRect.top + scrollY;
+  const travel = viewportHeight + sectionRect.height;
+  nickDecorationRange = { start: sectionTop - viewportHeight, travel };
+
+  // One jittered vertical slot per figure keeps each side covered without
+  // making rows look like a grid. Check rotated bounds over the full parallax
+  // travel so a pair cannot cross later in the scroll.
+  let seed = 48317;
+  const random = () => ((seed = (1664525 * seed + 1013904223) >>> 0) / 4294967296);
+  const shuffle = items => {
+    for (let index = items.length - 1; index > 0; index--) {
+      const swap = Math.floor(random() * (index + 1));
+      [items[index], items[swap]] = [items[swap], items[index]];
+    }
+    return items;
+  };
+  const figures = nickDecorations.map(decoration => {
+    const { element } = decoration;
+    const width = element.offsetWidth;
+    const height = element.offsetHeight;
+    const angle = parseFloat(getComputedStyle(element).getPropertyValue('--nick-angle')) * Math.PI / 180;
+    return { decoration, width, height,
+      boxWidth: Math.abs(width * Math.cos(angle)) + Math.abs(height * Math.sin(angle)),
+      boxHeight: Math.abs(height * Math.cos(angle)) + Math.abs(width * Math.sin(angle)),
+      side: element.dataset.side };
+  }).sort((a, b) => b.boxHeight - a.boxHeight);
+
+  nickDecorations.forEach(decoration => {
+    decoration.halfTravel = (1 - decoration.speed) * travel / 2;
+    decoration.element.style.setProperty('--nick-parallax-half-travel', `${decoration.halfTravel}px`);
+  });
+
+  const bySide = {
+    left: shuffle(figures.filter(figure => figure.side === 'left')),
+    right: shuffle(figures.filter(figure => figure.side === 'right'))
+  };
+  for (const side of ['left', 'right']) {
+    bySide[side].forEach((figure, slot) => { figure.slot = slot; });
+  }
+
+  const horizontalRange = ({ side, boxWidth }) => {
+    const width = sectionRect.width;
+    if (side === 'left') {
+      return [0, Math.max(0, Math.min(width * 0.32 - boxWidth / 2, width * 0.48 - boxWidth))];
+    }
+    const rightmost = Math.max(0, width - boxWidth);
+    return [Math.min(rightmost, Math.max(width * 0.68 - boxWidth / 2, width * 0.52)), rightmost];
+  };
+  const overlaps = (figure, x, centerY, other) =>
+    Math.min(x + figure.boxWidth, other.x + other.boxWidth) - Math.max(x, other.x) > -8 &&
+    Math.abs(centerY - other.centerY) <
+      (figure.boxHeight + other.boxHeight) / 2 +
+      Math.abs(figure.decoration.halfTravel - other.decoration.halfTravel) + 8;
+
+  let placed;
+  const extents = sectionRect.width >= 900
+    ? [0.22, 0.35, 0.5, 0.65, 0.85, 1.1]
+    : [0.3, 0.45, 0.65, 0.85, 1.1];
+  for (const extent of extents) {
+    const attemptPlacement = [];
+    for (const figure of figures) {
+      const [leftmost, rightmost] = horizontalRange(figure);
+      const slotHeight = (sectionRect.height + 2 * extent * viewportHeight) / bySide[figure.side].length;
+      const stagger = figure.side === 'right' ? 0.18 : -0.18;
+      const slotCenter = -extent * viewportHeight + (figure.slot + 0.5 + stagger) * slotHeight;
+      let candidate;
+      for (let attempt = 0; attempt < 600; attempt++) {
+        const x = leftmost + random() * (rightmost - leftmost);
+        const centerY = slotCenter + (random() - 0.5) * 0.6 * slotHeight;
+        if (!attemptPlacement.some(other => overlaps(figure, x, centerY, other))) {
+          candidate = { ...figure, x, centerY };
+          break;
+        }
+      }
+      if (!candidate) break;
+      attemptPlacement.push(candidate);
+    }
+    if (attemptPlacement.length === figures.length) {
+      placed = attemptPlacement;
+      break;
+    }
+  }
+  if (!placed) {
+    // Narrow or unusually shaped viewports still get a complete, spaced layout.
+    placed = [];
+    for (const figure of [...figures].sort((a, b) => a.slot - b.slot)) {
+      const [leftmost, rightmost] = horizontalRange(figure);
+      const x = figure.side === 'left' ? leftmost : rightmost;
+      let centerY = -viewportHeight + (figure.slot + 0.5) *
+        (sectionRect.height + 2 * viewportHeight) / bySide[figure.side].length;
+      for (const other of placed) {
+        if (Math.min(x + figure.boxWidth, other.x + other.boxWidth) - Math.max(x, other.x) > -8) {
+          centerY = Math.max(centerY, other.centerY +
+            (figure.boxHeight + other.boxHeight) / 2 +
+            Math.abs(figure.decoration.halfTravel - other.decoration.halfTravel) + 8);
+        }
+      }
+      placed.push({ ...figure, x, centerY });
+    }
+  }
+  placed.forEach(({ decoration, width, boxWidth, height, x, centerY }) => {
+    // Convert the rotated bounding box position back to the element's CSS origin.
+    decoration.element.style.left = `${x - (width - boxWidth) / 2}px`;
+    decoration.element.style.top = `${centerY - height / 2}px`;
+  });
+};
+layoutNickDecorations();
+if (supportsCssParallax) {
+  ScrollTrigger.addEventListener('refresh', layoutNickDecorations);
+} else {
+  const updateNickDecorations = () => {
+    const progress = gsap.utils.clamp(0, 1,
+      (scrollY - nickDecorationRange.start) / nickDecorationRange.travel);
+    nickDecorations.forEach(decoration => {
+      decoration.element.style.setProperty('--nick-decoration-scroll',
+        `${(2 * progress - 1) * decoration.halfTravel}px`);
+    });
+  };
+  ScrollTrigger.create({
+    trigger: nickSection,
+    start: () => { layoutNickDecorations(); return nickDecorationRange.start; },
+    end: () => nickDecorationRange.start + nickDecorationRange.travel,
+    onUpdate: updateNickDecorations,
+    onRefresh: updateNickDecorations,
+    onEnter: updateNickDecorations,
+    onEnterBack: updateNickDecorations,
+    onLeave: updateNickDecorations,
+    onLeaveBack: updateNickDecorations
+  });
+  updateNickDecorations();
+}
+
 // HALFTONE TRANSITIONS
 // Each canvas is fixed so its dots can cover the previous section. Orange stays
 // under black; the DOM sections are white, so no hard color edge can show.
@@ -546,6 +690,7 @@ const createHedraAmbient = (section) => {
 const createHalftone = ({ canvasSelector, sectionSelector }) => {
   const canvas = $(canvasSelector);
   const section = $(sectionSelector);
+  const decorationLayer = section.querySelector('.nick-decorations');
   const ambient = createHedraAmbient(section);
   const { startTop, endTop, growthDistance, columnOffset } = experienceSettings.halftone;
   let size;
@@ -598,6 +743,12 @@ const createHalftone = ({ canvasSelector, sectionSelector }) => {
     lastProgress = undefined;
   };
 
+  const setDecorationWipe = (viewportTop, sectionTop) => {
+    if (!decorationLayer) return;
+    // clip-path uses Nick's local coordinates; the halftone uses the viewport.
+    decorationLayer.style.setProperty('--nick-wipe-top', `${viewportTop - sectionTop}px`);
+  };
+
   const update = () => {
     const height = window.innerHeight;
     const bounds = section.getBoundingClientRect();
@@ -608,9 +759,18 @@ const createHalftone = ({ canvasSelector, sectionSelector }) => {
     // feathers its top edge; this only pauses work while the section is away.
     ambient?.setState(bounds.top < height && bounds.bottom > 0,
       gsap.utils.clamp(0, 1, (height - bounds.top) / (height + bounds.height)));
-    if (!renderer) return;
+    if (!renderer) {
+      // With no canvas, the solid orange section itself is the reveal edge.
+      setDecorationWipe(gsap.utils.clamp(0, height, bounds.top), bounds.top);
+      return;
+    }
     // Stop at this section's bottom; the next background or header takes over.
     if (distance <= 0 || bounds.bottom <= 0) {
+      if (decorationLayer) {
+        // The layer can bleed above Nick, so hide it completely before entry.
+        if (distance <= 0) decorationLayer.style.setProperty('--nick-wipe-top', `${2 * height}px`);
+        else setDecorationWipe(0, bounds.top);
+      }
       if (canvas.style.visibility !== 'hidden') canvas.style.visibility = 'hidden';
       lastProgress = undefined;
       return;
@@ -619,13 +779,21 @@ const createHalftone = ({ canvasSelector, sectionSelector }) => {
     resize();
     const { cells } = size;
     if (canvas.style.visibility !== 'visible') canvas.style.visibility = 'visible';
-    if (progress === lastProgress) return;
-    lastProgress = progress;
-
     // Every row grows at the same rate. Delay each row, including the ones
     // nearest the bottom; completed dots overlap into a solid color.
     const growthPixels = growthDistance * height;
     const rowDelay = (travel - growthPixels) / (cells - 1 + columnOffset);
+    if (decorationLayer) {
+      // Wait until the slowest column and the next row have grown fully before
+      // revealing outlines. This keeps their wipe behind the solid orange dots.
+      const fullRow = (distance - growthPixels) / rowDelay - columnOffset;
+      const solidOrangeTop = progress >= 1 ? 0 :
+        gsap.utils.clamp(0, height, height - (fullRow - 1) * size.rowPitch);
+      setDecorationWipe(solidOrangeTop, bounds.top);
+    }
+    // The clip still tracks the section after its canvas reaches full color.
+    if (progress === lastProgress) return;
+    lastProgress = progress;
     renderer.render({ ...size, distance, growthPixels, rowDelay,
       columnOffset, complete: progress >= 1 });
   };
@@ -636,6 +804,7 @@ const createHalftone = ({ canvasSelector, sectionSelector }) => {
       renderer = null;
       canvas.style.display = 'none';
       section.style.backgroundColor = getComputedStyle(canvas).color;
+      update();
     });
     canvas.addEventListener('webglcontextrestored', () => {
       initialize();
