@@ -830,22 +830,20 @@ body>div {
     z-index: 8;
     overflow: clip;
     overflow-clip-margin: 100svh;
-    /* JS moves this clip with the fully orange edge of Nick's halftone. */
+    /* JS moves this clip with Nick's halftone, applying its wipe lead. */
     clip-path: inset(var(--nick-wipe-top, 200svh) -100svh -100svh -100svh);
     pointer-events: none;
 }
 
 .nick-decoration {
     position: absolute;
-    display: block;
     left: 0;
     top: 0;
+    /* Override the HTML intrinsic-width hint; --size sets the rendered height. */
     width: auto;
     height: var(--size);
-    object-fit: contain;
     opacity: 0.45;
     transform: translate3d(0, var(--nick-decoration-scroll, 0px), 0) rotate(var(--nick-angle));
-    user-select: none;
 }
 
 /* --size ranges from 10svh to 18svh; larger outlines get higher --nick-speed. */

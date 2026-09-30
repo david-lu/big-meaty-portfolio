@@ -411,11 +411,16 @@ experienceSettings.sections.forEach(({ sectionSelector, job }) => {
 // Nickelodeon decorations follow Nick's cover range. Their CSS speeds describe
 // screen travel relative to page travel: 0.30 moves 30px per 100px scrolled.
 const nickSection = $('#nick');
-const nickDecorations = [...nickSection.querySelectorAll('.nick-decoration')].map(element => ({
-  element,
-  speed: Number(getComputedStyle(element).getPropertyValue('--nick-speed')),
-  halfTravel: 0
-}));
+const nickDecorations = [...nickSection.querySelectorAll('.nick-decoration')].map(element => {
+  const style = getComputedStyle(element);
+  return {
+    element,
+    speed: Number(style.getPropertyValue('--nick-speed')),
+    angle: parseFloat(style.getPropertyValue('--nick-angle')) * Math.PI / 180,
+    side: element.dataset.side,
+    halfTravel: 0
+  };
+});
 let nickDecorationRange;
 const layoutNickDecorations = () => {
   const viewportHeight = innerHeight;
@@ -437,14 +442,13 @@ const layoutNickDecorations = () => {
     return items;
   };
   const figures = nickDecorations.map(decoration => {
-    const { element } = decoration;
+    const { element, angle, side } = decoration;
     const width = element.offsetWidth;
     const height = element.offsetHeight;
-    const angle = parseFloat(getComputedStyle(element).getPropertyValue('--nick-angle')) * Math.PI / 180;
     return { decoration, width, height,
       boxWidth: Math.abs(width * Math.cos(angle)) + Math.abs(height * Math.sin(angle)),
       boxHeight: Math.abs(height * Math.cos(angle)) + Math.abs(width * Math.sin(angle)),
-      side: element.dataset.side };
+      side };
   }).sort((a, b) => b.boxHeight - a.boxHeight);
 
   nickDecorations.forEach(decoration => {
@@ -784,11 +788,11 @@ const createHalftone = ({ canvasSelector, sectionSelector }) => {
     const growthPixels = growthDistance * height;
     const rowDelay = (travel - growthPixels) / (cells - 1 + columnOffset);
     if (decorationLayer) {
-      // Follow the slowest column's fully grown row, with a small upward lead.
+      // Follow the slowest column's fully grown row, with an upward lead.
       const fullRow = (distance - growthPixels) / rowDelay - columnOffset;
       const wipeLeadPixels = 200; // Increase to reveal characters earlier/higher.
-      const wipeViewportTop = progress >= 1 ? 0 :
-        gsap.utils.clamp(0, height, height - (fullRow - 1) * size.rowPitch - wipeLeadPixels);
+      const wipeViewportTop = gsap.utils.clamp(0, height,
+        height - (fullRow - 1) * size.rowPitch - wipeLeadPixels);
       setDecorationWipe(wipeViewportTop, bounds.top);
     }
     // The clip still tracks the section after its canvas reaches full color.

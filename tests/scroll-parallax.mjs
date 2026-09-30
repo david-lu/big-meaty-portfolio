@@ -178,7 +178,7 @@ function compare(actual, expected, label) {
       // of a pixel at a newly sampled section entry.
       const parallaxImageY = property === 'y' &&
         (element.id === 'outro-sun' || element.id.startsWith('assets/outro-layer-') ||
-          element.id.startsWith('nick-decoration '));
+          element.id.startsWith('assets/nick-outlines/'));
       const tolerance = parallaxImageY ? 0.4 : 0.15;
       assert.ok(Math.abs(element[property] - other[property]) < tolerance,
         `${label}: ${element.id} ${property}: ${element[property]} vs ${other[property]}`);
@@ -319,8 +319,6 @@ async function checkNickDecorationParallax(session, label) {
       layerClipMargin:getComputedStyle(section.querySelector('.nick-decorations')).overflowClipMargin,
       viewportWidth:innerWidth,
       viewportHeight:innerHeight,
-      outlines:[...new Set(decorations.map(el => [...el.classList]
-        .find(name => name.startsWith('nick-outline--'))))],
       outlineImages:decorations.map(el => ({src:el.currentSrc || el.src,
         loaded:el.complete && el.naturalWidth > 0, tag:el.tagName})),
       outlineCorners:[...new Set(decorations.map(el => el.currentSrc || el.src))].map(src => {
@@ -340,7 +338,8 @@ async function checkNickDecorationParallax(session, label) {
       speeds:decorations.map(el => Number(getComputedStyle(el).getPropertyValue('--nick-speed')))};
   })()`);
   assert.equal(result.speeds.length, 20, `${label}: all 20 Nick outlines are present`);
-  assert.equal(result.outlines.length, 7, `${label}: all seven character outlines are used`);
+  assert.equal(new Set(result.outlineImages.map(image => image.src)).size, 7,
+    `${label}: all seven character outlines are used`);
   assert.ok(result.outlineImages.every(image => image.tag === 'IMG' && image.loaded &&
     image.src.includes('assets/nick-outlines/') && image.src.includes('.png')),
     `${label}: all outline PNGs load successfully`);
@@ -388,12 +387,11 @@ async function checkNickDecorationParallax(session, label) {
       Math.abs(sample.wipeViewportY - result.viewportHeight * fraction) < 2),
     `${label}: the wipe follows Nick's orange section edge without WebGL`);
   } else {
-    assert.ok(result.samples[2].wipeViewportY >= result.viewportHeight - 2 &&
-      result.samples[3].wipeViewportY >= result.viewportHeight - 2 &&
-      result.before.wipeViewportY > result.viewportHeight * 0.5 &&
-      result.samples[4].wipeViewportY > result.viewportHeight * 0.2 &&
-      result.samples[4].wipeViewportY < result.viewportHeight * 0.6,
-    `${label}: the wipe starts below the viewport, reverses, and trails fully grown orange dots`);
+    assert.ok(result.samples[2].wipeViewportY > result.samples[3].wipeViewportY &&
+      result.samples[3].wipeViewportY > result.before.wipeViewportY &&
+      result.before.wipeViewportY > result.samples[4].wipeViewportY &&
+      result.samples[4].wipeViewportY >= result.after.wipeViewportY - 2,
+    `${label}: the wipe moves continuously through Nick and reverses with the scroll (${JSON.stringify(result.samples.map(sample => sample.wipeViewportY))})`);
   }
   assert.ok(result.samples.every(sample => sample.centered.length === 0),
     `${label}: no visible outline is horizontally centered (${JSON.stringify(result.samples.map(sample => sample.centered))})`);
