@@ -393,8 +393,8 @@ html.intro-loading #intro::after {
     background-image: url('assets/title.svg');
     background-position: bottom;
     background-size: 100% 100%;
-    transition: transform 900ms, opacity 1000ms;
-    transition-delay: 600ms;
+    transition: transform 1100ms, opacity 1200ms;
+    transition-delay: 800ms;
 }
 
 #subtitle {
