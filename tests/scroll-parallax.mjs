@@ -583,6 +583,8 @@ async function checkHedraAmbient(session, variant) {
   const result = await evaluate(session, `(async () => {
     const section = document.getElementById('hedra');
     const canvas = document.getElementById('hedra-ambient');
+    const clip = document.getElementById('hedra-ambient-clip');
+    const content = section.querySelector('.job-content');
     const gl = canvas.getContext('webgl2');
     if (!gl) throw new Error('WebGL2 renderer did not initialize.');
     const drawTimes = [];
@@ -615,10 +617,16 @@ async function checkHedraAmbient(session, variant) {
     const sectionTop = section.getBoundingClientRect().top + scrollY;
     const sample = () => {
       const stats = gpuFrames.at(-1) || {hash:0, dots:0, grayscale:true};
+      const contentBounds = content.getBoundingClientRect();
       return {...stats, width:canvas.width, height:canvas.height,
+        viewportHeight:innerHeight,
         sectionTop:section.getBoundingClientRect().top,
         canvasTop:canvas.getBoundingClientRect().top,
-        visibility:getComputedStyle(canvas).visibility};
+        visibility:getComputedStyle(canvas).visibility,
+        maskImage:getComputedStyle(clip).maskImage,
+        fadeStart:parseFloat(clip.style.getPropertyValue('--hedra-fade-start')),
+        fadeEnd:parseFloat(clip.style.getPropertyValue('--hedra-fade-end')),
+        contentCenter:contentBounds.top + contentBounds.height / 2};
     };
     const move = async topFraction => {
       scrollTo({top:Math.round(sectionTop - topFraction * innerHeight), behavior:'instant'});
@@ -632,6 +640,13 @@ async function checkHedraAmbient(session, variant) {
     const entered = sample();
     await new Promise(resolve => setTimeout(resolve, 300));
     const idle = sample();
+    const midway = await move(0.5);
+    const late = await move(0.1);
+    scrollTo({top:scrollY + content.getBoundingClientRect().top +
+      content.getBoundingClientRect().height / 2 - innerHeight / 2, behavior:'instant'});
+    ScrollTrigger.update();
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    const centered = sample();
     const scrolled = await move(0.02);
     await new Promise(resolve => setTimeout(resolve, 100));
     const afterScroll = sample();
@@ -645,12 +660,13 @@ async function checkHedraAmbient(session, variant) {
     await new Promise(resolve => setTimeout(resolve, 150));
     const stoppedAfterExit = drawTimes.length === drawsAtExit;
     WebGL2RenderingContext.prototype.drawArraysInstanced = drawInstanced;
-    return {before, entered, idle, scrolled, afterScroll, later, drawTimes, stoppedAfterExit,
+    return {before, entered, idle, midway, late, centered, scrolled, afterScroll,
+      later, drawTimes, stoppedAfterExit,
       renderer:'webgl2',
       reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches,
       decorative:canvas.getAttribute('aria-hidden'), pointerEvents:style.pointerEvents,
       opacity:Number(style.opacity), transitionDuration:style.transitionDuration,
-      clipOverflow:clipStyle.overflow, maskImage:clipStyle.maskImage,
+      clipOverflow:clipStyle.overflow,
       canvasLayer:Number(clipStyle.zIndex),
       contentLayer:Number(getComputedStyle(section.querySelector('.job-content')).zIndex),
       transitionLayer:Number(getComputedStyle(document.getElementById('hedra-halftone')).zIndex)};
@@ -661,7 +677,23 @@ async function checkHedraAmbient(session, variant) {
   assert.equal(result.transitionDuration, '0s', `${label}: no opacity fade`);
   assert.ok(result.opacity <= 0.15, `${label}: white dots never exceed 15% opacity`);
   assert.equal(result.clipOverflow, 'hidden', `${label}: parallax dots remain clipped to Hedra`);
-  assert.ok(result.maskImage.includes('linear-gradient'), `${label}: dots feather at the top edge`);
+  assert.ok([result.entered, result.midway, result.late].every(sample =>
+    sample.maskImage.includes('linear-gradient')),
+    `${label}: ambient dots fade in behind Hedra's entering transition`);
+  assert.ok([result.entered, result.midway, result.late, result.centered].every(sample =>
+    sample.fadeStart >= 0 && sample.fadeEnd >= sample.fadeStart &&
+    sample.fadeEnd <= sample.viewportHeight + 1),
+    `${label}: the full visible fade stays inside Hedra's clip box`);
+  assert.ok(result.entered.fadeEnd > result.midway.fadeEnd &&
+    result.midway.fadeEnd > result.late.fadeEnd &&
+    result.late.fadeEnd > result.late.fadeStart,
+    `${label}: the fade follows the transition upward and clears the top`);
+  assert.ok(Math.abs(result.centered.contentCenter - result.centered.viewportHeight / 2) < 2 &&
+    result.centered.maskImage.includes('linear-gradient') &&
+    result.centered.fadeStart === 0 && result.centered.fadeEnd === 0,
+    `${label}: the centered description clears the top fade and keeps the bottom fade ` +
+      JSON.stringify({center:result.centered.contentCenter,
+        viewport:result.centered.viewportHeight, mask:result.centered.maskImage}));
   assert.equal(result.renderer, 'webgl2', `${label}: ambient dots use WebGL2`);
   if (variant.endsWith(', native')) {
     const sectionTravel = result.scrolled.sectionTop - result.entered.sectionTop;

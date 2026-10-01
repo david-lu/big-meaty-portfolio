@@ -324,6 +324,9 @@ const experienceSettings = {
   ambient: {
     maxDpr: 1.5,       // The soft background does not need a full high-density bitmap.
     maxFps: 15,        // Redraw the ambient canvas at most this many times a second.
+    fadeHeight: 0.50,  // Height of the moving top fade, in viewport heights.
+    fadeLead: 0.12,    // Start this far above the transition's solid edge.
+    fadeExit: 0.40,    // Move the fade to the section top before text center.
     scrollPhase: 1.3,  // Scrolling advances the wave field by this many seconds.
     timePhase: 0.001,  // Convert animation timestamps from milliseconds to seconds.
     scrollEaseMs: 90   // Smooth wheel steps without delaying the section transition.
@@ -709,6 +712,8 @@ const createHalftone = ({ canvasSelector, sectionSelector }) => {
   const canvas = $(canvasSelector);
   const section = $(sectionSelector);
   const decorationLayer = section.querySelector('.nick-decorations');
+  const ambientClip = section.querySelector('#hedra-ambient-clip');
+  const jobContent = ambientClip && section.querySelector('.job-content');
   const ambient = createHedraAmbient(section);
   const { startTop, endTop, growthDistance, columnOffset } = experienceSettings.halftone;
   let size;
@@ -767,23 +772,47 @@ const createHalftone = ({ canvasSelector, sectionSelector }) => {
     decorationLayer.style.setProperty('--nick-wipe-top', `${viewportTop - sectionTop}px`);
   };
 
+  const setAmbientFade = (bounds, solidEdgeViewport, complete) => {
+    if (!ambientClip) return;
+    // Follow the transition, but keep the visible fade inside Hedra's clip.
+    // A mask that starts above the clip creates a hard line at its top edge.
+    const contentBounds = jobContent.getBoundingClientRect();
+    const untilCentered = Math.max(0,
+      contentBounds.top + contentBounds.height / 2 - innerHeight / 2);
+    const fadeHeight = experienceSettings.ambient.fadeHeight * innerHeight;
+    const fadeExit = experienceSettings.ambient.fadeExit * innerHeight;
+    const exitProgress = complete ? 1 : gsap.utils.clamp(0, 1,
+      1 - untilCentered / fadeExit);
+    const followingStart = solidEdgeViewport - bounds.top -
+      experienceSettings.ambient.fadeLead * innerHeight;
+    const offscreenStart = -fadeHeight - 2;
+    const movingStart = gsap.utils.interpolate(followingStart, offscreenStart, exitProgress);
+    const start = gsap.utils.clamp(0, bounds.height, movingStart);
+    const end = gsap.utils.clamp(start, bounds.height, movingStart + fadeHeight);
+    // Collapse only the top fade; the small bottom fade stays in place.
+    const topCleared = complete || untilCentered <= 1 || end === 0;
+    ambientClip.style.setProperty('--hedra-fade-start', `${topCleared ? 0 : start}px`);
+    ambientClip.style.setProperty('--hedra-fade-end', `${topCleared ? 0 : end}px`);
+  };
+
   const update = () => {
     const height = window.innerHeight;
     const bounds = section.getBoundingClientRect();
     const travel = (startTop - endTop) * height;
     const distance = startTop * height - bounds.top;
     const progress = gsap.utils.clamp(0, 1, distance / travel);
-    // Paint as soon as Hedra enters view. CSS keeps the canvas visible and
-    // feathers its top edge; this only pauses work while the section is away.
+    // Paint as soon as Hedra enters view; this only pauses work while away.
     ambient?.setState(bounds.top < height && bounds.bottom > 0,
       gsap.utils.clamp(0, 1, (height - bounds.top) / (height + bounds.height)));
     if (!renderer) {
       // With no canvas, the solid orange section itself is the reveal edge.
+      setAmbientFade(bounds, 0, true);
       setDecorationWipe(gsap.utils.clamp(0, height, bounds.top), bounds.top);
       return;
     }
     // Stop at this section's bottom; the next background or header takes over.
     if (distance <= 0 || bounds.bottom <= 0) {
+      setAmbientFade(bounds, 2 * height, bounds.bottom <= 0);
       if (decorationLayer) {
         // The layer can bleed above Nick, so hide it completely before entry.
         if (distance <= 0) decorationLayer.style.setProperty('--nick-wipe-top', `${2 * height}px`);
@@ -801,9 +830,11 @@ const createHalftone = ({ canvasSelector, sectionSelector }) => {
     // nearest the bottom; completed dots overlap into a solid color.
     const growthPixels = growthDistance * height;
     const rowDelay = (travel - growthPixels) / (cells - 1 + columnOffset);
+    // The slowest column determines where the transition is solid black.
+    const fullRow = (distance - growthPixels) / rowDelay - columnOffset;
+    setAmbientFade(bounds, height - (fullRow - 1) * size.rowPitch, progress >= 1);
     if (decorationLayer) {
       // Follow the slowest column's fully grown row, with an upward lead.
-      const fullRow = (distance - growthPixels) / rowDelay - columnOffset;
       const wipeLeadPixels = 200; // Increase to reveal characters earlier/higher.
       const wipeViewportTop = gsap.utils.clamp(0, height,
         height - (fullRow - 1) * size.rowPitch - wipeLeadPixels);

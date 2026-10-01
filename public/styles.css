@@ -857,8 +857,9 @@ body>div {
     z-index: 11;
     overflow: hidden;
     pointer-events: none;
-    -webkit-mask-image: linear-gradient(to bottom, transparent, #000 22svh);
-    mask-image: linear-gradient(to bottom, transparent, #000 22svh);
+    /* The moving top fade clears at text center; the short bottom fade softens the exit. */
+    -webkit-mask-image: linear-gradient(to bottom, transparent var(--hedra-fade-start, 100svh), #000 var(--hedra-fade-end, 100svh), #000 calc(100% - 12svh), transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent var(--hedra-fade-start, 100svh), #000 var(--hedra-fade-end, 100svh), #000 calc(100% - 12svh), transparent 100%);
 }
 
 #hedra-ambient {
