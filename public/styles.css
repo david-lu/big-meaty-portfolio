@@ -302,8 +302,8 @@ body>div {
 }
 
 @keyframes nick-decoration-parallax {
-    from { transform: translate3d(0, calc(-1 * var(--nick-parallax-half-travel, 0px)), 0) rotate(var(--nick-angle)); }
-    to { transform: translate3d(0, var(--nick-parallax-half-travel, 0px), 0) rotate(var(--nick-angle)); }
+    from { transform: translate3d(0, calc(-1 * var(--nick-parallax-half-travel, 0px)), 0) rotate(calc(var(--nick-angle) - 2.5deg)) scaleX(var(--nick-mirror, 1)); }
+    to { transform: translate3d(0, var(--nick-parallax-half-travel, 0px), 0) rotate(calc(var(--nick-angle) + 2.5deg)) scaleX(var(--nick-mirror, 1)); }
 }
 
 /* Over Hedra's cover range, 65% of page travel is cancelled by the canvas.
@@ -843,11 +843,12 @@ body>div {
     width: auto;
     height: var(--size);
     opacity: 0.45;
-    transform: translate3d(0, var(--nick-decoration-scroll, 0px), 0) rotate(var(--nick-angle));
+    transform: translate3d(0, var(--nick-decoration-scroll, 0px), 0) rotate(calc(var(--nick-angle) + var(--nick-rotation-offset, -2.5deg))) scaleX(var(--nick-mirror, 1));
 }
 
 /* --size ranges from 10svh to 18svh; larger outlines get higher --nick-speed. */
-/* --nick-speed controls 30-40% scroll travel; --nick-angle adds a fixed per-figure tilt. */
+/* --nick-speed controls 30-40% scroll travel; --nick-angle adds a fixed tilt.
+   Each outline also turns five degrees and may be mirrored as it crosses Nick. */
 
 /* Clip the oversized parallax canvas to Hedra so no dots cross section edges. */
 #hedra-ambient-clip {

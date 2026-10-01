@@ -298,8 +298,16 @@ async function checkNickDecorationParallax(session, label) {
         return x > innerWidth * 0.35 && x < innerWidth * 0.65;
       }).map(({index}) => index);
       const layer = section.querySelector('.nick-decorations');
+      const transforms = decorations.map(el => {
+        const matrix = new DOMMatrix(getComputedStyle(el).transform);
+        const mirror = Number(el.style.getPropertyValue('--nick-mirror'));
+        return {
+          angle:Math.atan2(matrix.b * mirror, matrix.a * mirror) * 180 / Math.PI,
+          mirrored:matrix.a * matrix.d - matrix.b * matrix.c < 0
+        };
+      });
       return {scroll:scrollY, tops:decorations.map(el => el.getBoundingClientRect().top),
-        visibleCount:visible.length, collisions, centered,
+        visibleCount:visible.length, collisions, centered, transforms,
         layerOpacity:Number(getComputedStyle(layer).opacity),
         layerClip:getComputedStyle(layer).clipPath,
         wipeViewportY:parseFloat(layer.style.getPropertyValue('--nick-wipe-top')) +
@@ -321,19 +329,31 @@ async function checkNickDecorationParallax(session, label) {
       viewportHeight:innerHeight,
       outlineImages:decorations.map(el => ({src:el.currentSrc || el.src,
         loaded:el.complete && el.naturalWidth > 0, tag:el.tagName})),
-      outlineCorners:[...new Set(decorations.map(el => el.currentSrc || el.src))].map(src => {
+      outlineMetrics:[...new Set(decorations.map(el => el.currentSrc || el.src))].map(src => {
         const image = decorations.find(el => (el.currentSrc || el.src) === src);
         const canvas = document.createElement('canvas');
-        canvas.width = canvas.height = 1;
+        canvas.width = image.naturalWidth;
+        canvas.height = image.naturalHeight;
         const context = canvas.getContext('2d');
         context.drawImage(image, 0, 0);
-        return context.getImageData(0, 0, 1, 1).data[3];
+        const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+        let left = canvas.width, top = canvas.height, right = -1, bottom = -1;
+        for (let y = 0; y < canvas.height; y++) for (let x = 0; x < canvas.width; x++) {
+          if (pixels[(y * canvas.width + x) * 4 + 3] <= 8) continue;
+          left = Math.min(left, x);
+          right = Math.max(right, x);
+          top = Math.min(top, y);
+          bottom = Math.max(bottom, y);
+        }
+        return {name:src.split('/').at(-1), cornerAlpha:pixels[3],
+          area:(right - left + 1) * (bottom - top + 1) / (canvas.height * canvas.height)};
       }),
       layoutCenters:decorations.map(el => ({side:el.dataset.side,
         y:parseFloat(el.style.top) + el.offsetHeight / 2})),
       heights:decorations.map(el => parseFloat(getComputedStyle(el).height)),
       widths:decorations.map(el => parseFloat(getComputedStyle(el).width)),
       angles:decorations.map(el => parseFloat(getComputedStyle(el).getPropertyValue('--nick-angle'))),
+      mirrors:decorations.map(el => Number(el.style.getPropertyValue('--nick-mirror'))),
       opacities:decorations.map(el => Number(getComputedStyle(el).opacity)),
       speeds:decorations.map(el => Number(getComputedStyle(el).getPropertyValue('--nick-speed')))};
   })()`);
@@ -343,8 +363,17 @@ async function checkNickDecorationParallax(session, label) {
   assert.ok(result.outlineImages.every(image => image.tag === 'IMG' && image.loaded &&
     image.src.includes('assets/nick-outlines/') && image.src.includes('.png')),
     `${label}: all outline PNGs load successfully`);
-  assert.ok(result.outlineCorners.every(alpha => alpha === 0),
+  assert.ok(result.outlineMetrics.every(metric => metric.cornerAlpha === 0),
     `${label}: outline PNGs have transparent padding`);
+  const standardAreas = result.outlineMetrics.filter(metric =>
+    !['gary.png', 'plankton.png'].includes(metric.name)).map(metric => metric.area);
+  const commonArea = standardAreas.reduce((sum, area) => sum + area, 0) / standardAreas.length;
+  assert.ok(standardAreas.every(area => Math.abs(area / commonArea - 1) < 0.02),
+    `${label}: five regular outlines have matching visible areas at equal rendered height`);
+  assert.ok(result.outlineMetrics.filter(metric =>
+    ['gary.png', 'plankton.png'].includes(metric.name)).every(metric =>
+    Math.abs(metric.area / commonArea - 0.7) < 0.02),
+    `${label}: Gary and Plankton have 70% of the regular outline area`);
   for (const side of ['left', 'right']) {
     const centers = result.layoutCenters.filter(item => item.side === side)
       .map(item => item.y).sort((a, b) => a - b);
@@ -362,6 +391,15 @@ async function checkNickDecorationParallax(session, label) {
   assert.ok(new Set(result.angles).size >= 16, `${label}: outline tilts differ`);
   assert.ok(Math.min(...result.angles) <= -20 && Math.max(...result.angles) >= 20,
     `${label}: outline rotation varies in both directions`);
+  assert.ok(result.mirrors.every(mirror => mirror === -1 || mirror === 1) &&
+    result.mirrors.includes(-1) && result.mirrors.includes(1),
+  `${label}: outlines have a stable mix of mirrored and original orientations`);
+  assert.ok(result.samples.every(sample => sample.transforms.every((transform, index) =>
+    transform.mirrored === (result.mirrors[index] === -1))),
+  `${label}: outline mirroring persists throughout the scroll`);
+  assert.ok(result.samples[2].transforms.every((transform, index) =>
+    Math.abs(result.samples.at(-1).transforms[index].angle - transform.angle - 5) < 0.05),
+  `${label}: outlines rotate five degrees across Nick's cover range`);
   assert.ok(result.widths.every(width => width > 0), `${label}: outlines have width`);
   const byHeight = result.heights.map((height, i) => ({height, speed:result.speeds[i]}))
     .sort((a, b) => a.height - b.height);

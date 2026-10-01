@@ -411,8 +411,13 @@ experienceSettings.sections.forEach(({ sectionSelector, job }) => {
 // Nickelodeon decorations follow Nick's cover range. Their CSS speeds describe
 // screen travel relative to page travel: 0.30 moves 30px per 100px scrolled.
 const nickSection = $('#nick');
+// Give each outline a stable mirror choice; reloading, resizing, and switching
+// between CSS and JS parallax keep the same arrangement.
+let nickMirrorSeed = 47019;
 const nickDecorations = [...nickSection.querySelectorAll('.nick-decoration')].map(element => {
   const style = getComputedStyle(element);
+  nickMirrorSeed = (1664525 * nickMirrorSeed + 1013904223) >>> 0;
+  element.style.setProperty('--nick-mirror', nickMirrorSeed < 0x80000000 ? -1 : 1);
   return {
     element,
     speed: Number(style.getPropertyValue('--nick-speed')),
@@ -445,9 +450,16 @@ const layoutNickDecorations = () => {
     const { element, angle, side } = decoration;
     const width = element.offsetWidth;
     const height = element.offsetHeight;
+    // The figure turns five degrees across Nick's cover range. Reserve the
+    // largest rotated box, including zero degrees if the turn crosses it.
+    const halfTurn = 2.5 * Math.PI / 180;
+    const angles = [angle - halfTurn, angle + halfTurn];
+    if (Math.abs(angle) <= halfTurn) angles.push(0);
     return { decoration, width, height,
-      boxWidth: Math.abs(width * Math.cos(angle)) + Math.abs(height * Math.sin(angle)),
-      boxHeight: Math.abs(height * Math.cos(angle)) + Math.abs(width * Math.sin(angle)),
+      boxWidth: Math.max(...angles.map(value =>
+        Math.abs(width * Math.cos(value)) + Math.abs(height * Math.sin(value)))),
+      boxHeight: Math.max(...angles.map(value =>
+        Math.abs(height * Math.cos(value)) + Math.abs(width * Math.sin(value)))),
       side };
   }).sort((a, b) => b.boxHeight - a.boxHeight);
 
@@ -540,6 +552,8 @@ if (supportsCssParallax) {
     nickDecorations.forEach(decoration => {
       decoration.element.style.setProperty('--nick-decoration-scroll',
         `${(2 * progress - 1) * decoration.halfTravel}px`);
+      decoration.element.style.setProperty('--nick-rotation-offset',
+        `${(progress - 0.5) * 5}deg`);
     });
   };
   ScrollTrigger.create({
