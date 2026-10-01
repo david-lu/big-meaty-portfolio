@@ -879,11 +879,14 @@ try {
         const before = await evaluate(session, `({
           loading:document.documentElement.classList.contains('intro-loading'),
           opacity:getComputedStyle(document.getElementById('intro'), '::after').opacity,
+          menuOpacity:getComputedStyle(document.getElementById('nav-hamburger')).opacity,
+          menuVisibility:getComputedStyle(document.getElementById('nav-hamburger')).visibility,
           titleHidden:document.getElementById('title').classList.contains('hidden'),
           buttonDisabled:document.getElementById('intro-scroll-button').disabled,
           assets:document.querySelectorAll('link[data-intro-asset]').length
         })`);
-        assert.deepEqual(before, { loading:true, opacity:'1', titleHidden:true,
+        assert.deepEqual(before, { loading:true, opacity:'1', menuOpacity:'0',
+          menuVisibility:'hidden', titleHidden:true,
           buttonDisabled:true, assets:12 }, `${variant}: intro stays covered while an image loads`);
         for (let attempts = 0; attempts < 200; attempts++) {
           if (await evaluate(session, `!document.documentElement.classList.contains('intro-loading')`)) break;
@@ -897,10 +900,19 @@ try {
         })`);
         assert.deepEqual(after, { loading:false, titleHidden:false,
           buttonDisabled:false, imageReady:true }, `${variant}: intro reveals after its images load`);
-        await delay(800);
-        assert.equal(await evaluate(session,
-          `getComputedStyle(document.getElementById('intro'), '::after').opacity`), '0',
-        `${variant}: loading gradient finishes fading away`);
+        await delay(450);
+        const during = Number(await evaluate(session,
+          `getComputedStyle(document.getElementById('nav-hamburger')).opacity`));
+        assert.ok(during > 0 && during < 1,
+          `${variant}: menu button opacity animates during reveal (${during})`);
+        await delay(900);
+        const faded = await evaluate(session, `({
+          overlay:getComputedStyle(document.getElementById('intro'), '::after').opacity,
+          menu:getComputedStyle(document.getElementById('nav-hamburger')).opacity,
+          menuVisibility:getComputedStyle(document.getElementById('nav-hamburger')).visibility
+        })`);
+        assert.deepEqual(faded, { overlay:'0', menu:'1', menuVisibility:'visible' },
+          `${variant}: intro and menu button finish fading in`);
       }
       console.log(`${width}x${height}: intro images reveal together after loading.`);
       continue;

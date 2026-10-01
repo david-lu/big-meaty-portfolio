@@ -108,6 +108,12 @@ body>div {
 
 #nav-hamburger {
     transform: scale(1.35);
+    transition: transform 300ms var(--backEaseOut), opacity 1000ms ease-out 250ms;
+}
+
+html.intro-loading #nav-hamburger {
+    opacity: 0;
+    visibility: hidden;
 }
 
 #nav-github {
@@ -376,6 +382,7 @@ html.intro-loading #intro::after {
 
 @media (prefers-reduced-motion: reduce) {
     #intro::after { transition: none; }
+    #nav-hamburger { transition: none; }
 }
 
 #title {

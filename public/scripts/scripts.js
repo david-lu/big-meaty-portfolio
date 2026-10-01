@@ -43,6 +43,7 @@ const revealIntro = () => {
 
 // Preloaded SVGs can still finish decoding on different frames. Keep the
 // gradient over the intro until all its art is ready, then reveal it at once.
+const introLoadStarted = performance.now();
 const introImages = [...document.querySelectorAll('link[data-intro-asset]')].map(link => {
   const image = new Image();
   image.src = link.href;
@@ -60,7 +61,10 @@ Promise.race([
   new Promise(resolve => { introTimeout = setTimeout(resolve, 10000); })
 ]).then(() => {
   clearTimeout(introTimeout);
-  requestAnimationFrame(() => requestAnimationFrame(revealIntro));
+  // Cache hits can finish before the first visible frame. Leave a short
+  // painted loading state so the intro and menu fades can actually be seen.
+  const remaining = Math.max(0, 350 - (performance.now() - introLoadStarted));
+  setTimeout(() => requestAnimationFrame(() => requestAnimationFrame(revealIntro)), remaining);
 });
 
 const navHamburger = $('#nav-hamburger');
