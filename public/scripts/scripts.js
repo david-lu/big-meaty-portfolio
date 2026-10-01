@@ -34,11 +34,34 @@ document.addEventListener('mousemove', (e) => {
 });
 
 // INTRO ANIMATION
-window.onload = () => {
+const revealIntro = () => {
+  document.documentElement.classList.remove('intro-loading');
   $('#title').classList.remove('hidden');
   $('#subtitle').classList.remove('hidden');
   $('#intro-scroll-button').disabled = false;
 };
+
+// Preloaded SVGs can still finish decoding on different frames. Keep the
+// gradient over the intro until all its art is ready, then reveal it at once.
+const introImages = [...document.querySelectorAll('link[data-intro-asset]')].map(link => {
+  const image = new Image();
+  image.src = link.href;
+  return image;
+});
+const whenImageReady = image => image.decode?.() ?? new Promise(resolve => {
+  if (image.complete) return resolve();
+  image.addEventListener('load', resolve, { once: true });
+  image.addEventListener('error', resolve, { once: true });
+});
+let introTimeout;
+Promise.race([
+  Promise.allSettled([...introImages, ...$('#intro').querySelectorAll('img')]
+    .map(whenImageReady)),
+  new Promise(resolve => { introTimeout = setTimeout(resolve, 10000); })
+]).then(() => {
+  clearTimeout(introTimeout);
+  requestAnimationFrame(() => requestAnimationFrame(revealIntro));
+});
 
 const navHamburger = $('#nav-hamburger');
 const navOptions = ['#nav-resume', '#nav-github', '#nav-linkedin', '#nav-instagram'].map(selector => $(selector));

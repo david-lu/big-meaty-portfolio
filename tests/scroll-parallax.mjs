@@ -27,6 +27,7 @@ const profileSkills = process.argv.includes('--profile-skills');
 const profileOutro = process.argv.includes('--profile-outro');
 const profileHedra = process.argv.includes('--profile-hedra');
 const hedraFadeOnly = process.argv.includes('--hedra-fade-only');
+const introLoadingOnly = process.argv.includes('--intro-loading-only');
 const forceNoWebgl = process.argv.includes('--force-no-webgl');
 const profileSection = profileHedra ? 'hedra' : profileOutro ? 'outro' : profileSkills ? 'skills' : undefined;
 const viewportOption = process.argv.find(arg => arg.startsWith('--viewport='));
@@ -46,6 +47,9 @@ const server = http.createServer(async (req, res) => {
     assert.ok(resolved.startsWith(path.join(root, 'public') + path.sep));
     let body = variant === 'baseline' && baseline[file] !== undefined
       ? baseline[file] : await readFile(resolved);
+    if (introLoadingOnly && file === 'assets/intro-layer-tree.svg') {
+      await new Promise(resolve => setTimeout(resolve, 2500));
+    }
     if (file === 'scripts/logging.js') body = ''; // Keep analytics out of local tests.
     if (file === 'index.html') {
       body = body.toString().replace(/<script async src="https:[^>]+><\/script>/, '');
@@ -860,6 +864,47 @@ try {
     await send('Runtime.enable', {}, sessionId);
   }
   for (const [width, height] of viewports) {
+    if (introLoadingOnly) {
+      for (const variant of ['native', 'fallback']) {
+        const session = sessions[variant];
+        await send('Emulation.setDeviceMetricsOverride',
+          { width, height, deviceScaleFactor: 1, mobile: false }, session);
+        await send('Page.navigate', { url: `${origin}/${variant}/` }, session);
+        await send('Page.bringToFront', {}, session);
+        for (let attempts = 0; attempts < 100; attempts++) {
+          if (await evaluate(session, `document.getElementById('intro') &&
+            getComputedStyle(document.getElementById('intro'), '::after').content !== 'none'`)) break;
+          await delay(20);
+        }
+        const before = await evaluate(session, `({
+          loading:document.documentElement.classList.contains('intro-loading'),
+          opacity:getComputedStyle(document.getElementById('intro'), '::after').opacity,
+          titleHidden:document.getElementById('title').classList.contains('hidden'),
+          buttonDisabled:document.getElementById('intro-scroll-button').disabled,
+          assets:document.querySelectorAll('link[data-intro-asset]').length
+        })`);
+        assert.deepEqual(before, { loading:true, opacity:'1', titleHidden:true,
+          buttonDisabled:true, assets:12 }, `${variant}: intro stays covered while an image loads`);
+        for (let attempts = 0; attempts < 200; attempts++) {
+          if (await evaluate(session, `!document.documentElement.classList.contains('intro-loading')`)) break;
+          await delay(25);
+        }
+        const after = await evaluate(session, `({
+          loading:document.documentElement.classList.contains('intro-loading'),
+          titleHidden:document.getElementById('title').classList.contains('hidden'),
+          buttonDisabled:document.getElementById('intro-scroll-button').disabled,
+          imageReady:[...document.querySelectorAll('#intro img')].every(image => image.complete && image.naturalWidth > 0)
+        })`);
+        assert.deepEqual(after, { loading:false, titleHidden:false,
+          buttonDisabled:false, imageReady:true }, `${variant}: intro reveals after its images load`);
+        await delay(800);
+        assert.equal(await evaluate(session,
+          `getComputedStyle(document.getElementById('intro'), '::after').opacity`), '0',
+        `${variant}: loading gradient finishes fading away`);
+      }
+      console.log(`${width}x${height}: intro images reveal together after loading.`);
+      continue;
+    }
     for (const variant of variants) {
       const session = sessions[variant];
       await send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false }, session);
@@ -946,7 +991,7 @@ try {
       await checkOutroLayerIsolation(sessions.native, `${width}x${height}`);
       console.log(`${width}x${height}: section-anchored halftones, job motion, and doodle overlap passed.`);
     }
-    if (!profileSection && !hedraFadeOnly) {
+    if (!profileSection && !hedraFadeOnly && !introLoadingOnly) {
     // Rotate an already loaded page. CSS units and GSAP's captured lengths can differ.
     await Promise.all(variants.map(v => send('Emulation.setDeviceMetricsOverride', {
       width: 1024, height: 768, deviceScaleFactor: 1, mobile: false,

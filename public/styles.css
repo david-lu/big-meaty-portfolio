@@ -357,6 +357,27 @@ body>div {
     /* background-size: 100% 100%; */
 }
 
+/* Show the same gradient until every intro image has decoded. One overlay
+   fades away, so the individual scenery layers cannot pop in separately. */
+#intro::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    background: inherit;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 700ms ease-in-out;
+}
+
+html.intro-loading #intro::after {
+    opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #intro::after { transition: none; }
+}
+
 #title {
     width: 100%;
     aspect-ratio: 3.1;
