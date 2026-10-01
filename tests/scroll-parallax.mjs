@@ -26,6 +26,7 @@ const control = process.argv.includes('--control');
 const profileSkills = process.argv.includes('--profile-skills');
 const profileOutro = process.argv.includes('--profile-outro');
 const profileHedra = process.argv.includes('--profile-hedra');
+const hedraFadeOnly = process.argv.includes('--hedra-fade-only');
 const forceNoWebgl = process.argv.includes('--force-no-webgl');
 const profileSection = profileHedra ? 'hedra' : profileOutro ? 'outro' : profileSkills ? 'skills' : undefined;
 const viewportOption = process.argv.find(arg => arg.startsWith('--viewport='));
@@ -145,7 +146,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 const sessions = {};
 const variants = ['native', ...(!profileSection ? ['fallback'] : []), ...(compareHead ? ['baseline'] : [])];
 const selector = '#fg, #intro .parallax-bg, #map-path, #map-info, #map-path svg, ' +
-  '.pin, #google-pin-expand, .google-section, .skill-section, .nick-decoration, ' +
+  '.pin, #google-pin-expand, .google-section, .skill-section, ' +
   '#outro .parallax-bg, #outro-info, #outro-sun, #outro-socials, .scroll-button';
 const snapshot = `JSON.stringify({
   scroll: scrollY, height: document.documentElement.scrollHeight,
@@ -245,16 +246,20 @@ async function checkJobSections(session, variant) {
       }),
       nickJob:sections[1].classList.contains('job-section'),
       hedraJob:sections[2].classList.contains('job-section'),
+      nickDecorationCount:sections[1].querySelectorAll('.nick-decoration, .nick-decorations').length,
       nickColor:getComputedStyle(sections[1]).backgroundColor,
       hedraColor:getComputedStyle(sections[2]).backgroundColor,
       nickCanvasOutside:!sections[1].contains(document.getElementById('nick-halftone')),
       hedraCanvasOutside:!sections[2].contains(document.getElementById('hedra-halftone')),
+      horizontalOverflow:document.documentElement.scrollWidth - innerWidth,
       viewport:innerHeight
     };
   })()`);
   const label = `${variant}: restored job sections`;
   assert.deepEqual(result.ids, ['google', 'nick', 'hedra', 'skills-header'], `${label}: sections exist`);
   assert.ok(result.nickJob && result.hedraJob, `${label}: both job sections are restored`);
+  assert.equal(result.nickDecorationCount, 0, `${label}: Nick has a plain orange background`);
+  assert.ok(result.horizontalOverflow <= 1, `${label}: page has no horizontal overflow`);
   for (let i = 0; i < result.edges.length - 1; i++) {
     assert.ok(Math.abs(result.edges[i].bottom - result.edges[i + 1].top) < 1,
       `${label}: ${result.ids[i]} joins ${result.ids[i + 1]} without a gap`);
@@ -269,180 +274,6 @@ async function checkJobSections(session, variant) {
     `${label}: black field has its expected background`);
   assert.ok(result.nickCanvasOutside && result.hedraCanvasOutside,
     `${label}: viewport overlays are outside the clipped sections`);
-}
-
-async function checkNickDecorationParallax(session, label) {
-  await send('Page.bringToFront', {}, session);
-  const result = await evaluate(session, `(async () => {
-    const section = document.getElementById('nick');
-    const decorations = [...section.querySelectorAll('.nick-decoration')];
-    const sectionTop = section.getBoundingClientRect().top + scrollY;
-    const sample = async fraction => {
-      scrollTo({top:Math.round(sectionTop - fraction * innerHeight), behavior:'instant'});
-      ScrollTrigger.update();
-      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-      const visible = decorations.flatMap((el, index) => {
-        if (getComputedStyle(el).visibility !== 'visible') return [];
-        return [{index, rect:el.getBoundingClientRect()}];
-      });
-      const collisions = [];
-      for (let i = 0; i < visible.length; i++) for (let j = i + 1; j < visible.length; j++) {
-        const a = visible[i].rect, b = visible[j].rect;
-        if (Math.min(a.right, b.right) - Math.max(a.left, b.left) > 0.5 &&
-            Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 0.5) {
-          collisions.push([visible[i].index, visible[j].index]);
-        }
-      }
-      const centered = visible.filter(({rect}) => {
-        const x = rect.left + rect.width / 2;
-        return x > innerWidth * 0.35 && x < innerWidth * 0.65;
-      }).map(({index}) => index);
-      const layer = section.querySelector('.nick-decorations');
-      const transforms = decorations.map(el => {
-        const matrix = new DOMMatrix(getComputedStyle(el).transform);
-        const mirror = Number(el.style.getPropertyValue('--nick-mirror'));
-        return {
-          angle:Math.atan2(matrix.b * mirror, matrix.a * mirror) * 180 / Math.PI,
-          mirrored:matrix.a * matrix.d - matrix.b * matrix.c < 0
-        };
-      });
-      return {scroll:scrollY, tops:decorations.map(el => el.getBoundingClientRect().top),
-        visibleCount:visible.length, collisions, centered, transforms,
-        layerOpacity:Number(getComputedStyle(layer).opacity),
-        layerClip:getComputedStyle(layer).clipPath,
-        wipeViewportY:parseFloat(layer.style.getPropertyValue('--nick-wipe-top')) +
-          layer.getBoundingClientRect().top,
-        documentWidth:document.documentElement.scrollWidth,
-        clientWidth:document.documentElement.clientWidth};
-    };
-    const before = await sample(0.5);
-    const after = await sample(0);
-    const samples = [before, after];
-    for (const fraction of [1, 0.75, 0.25, -0.25, -0.5, -0.75, -1]) {
-      samples.push(await sample(fraction));
-    }
-    return {before, after,
-      samples,
-      layerOverflow:getComputedStyle(section.querySelector('.nick-decorations')).overflow,
-      layerClipMargin:getComputedStyle(section.querySelector('.nick-decorations')).overflowClipMargin,
-      viewportWidth:innerWidth,
-      viewportHeight:innerHeight,
-      outlineImages:decorations.map(el => ({src:el.currentSrc || el.src,
-        loaded:el.complete && el.naturalWidth > 0, tag:el.tagName})),
-      outlineMetrics:[...new Set(decorations.map(el => el.currentSrc || el.src))].map(src => {
-        const image = decorations.find(el => (el.currentSrc || el.src) === src);
-        const canvas = document.createElement('canvas');
-        canvas.width = image.naturalWidth;
-        canvas.height = image.naturalHeight;
-        const context = canvas.getContext('2d');
-        context.drawImage(image, 0, 0);
-        const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
-        let left = canvas.width, top = canvas.height, right = -1, bottom = -1;
-        for (let y = 0; y < canvas.height; y++) for (let x = 0; x < canvas.width; x++) {
-          if (pixels[(y * canvas.width + x) * 4 + 3] <= 8) continue;
-          left = Math.min(left, x);
-          right = Math.max(right, x);
-          top = Math.min(top, y);
-          bottom = Math.max(bottom, y);
-        }
-        return {name:src.split('/').at(-1), cornerAlpha:pixels[3],
-          area:(right - left + 1) * (bottom - top + 1) / (canvas.height * canvas.height)};
-      }),
-      layoutCenters:decorations.map(el => ({side:el.dataset.side,
-        y:parseFloat(el.style.top) + el.offsetHeight / 2})),
-      heights:decorations.map(el => parseFloat(getComputedStyle(el).height)),
-      widths:decorations.map(el => parseFloat(getComputedStyle(el).width)),
-      angles:decorations.map(el => parseFloat(getComputedStyle(el).getPropertyValue('--nick-angle'))),
-      mirrors:decorations.map(el => Number(el.style.getPropertyValue('--nick-mirror'))),
-      opacities:decorations.map(el => Number(getComputedStyle(el).opacity)),
-      speeds:decorations.map(el => Number(getComputedStyle(el).getPropertyValue('--nick-speed')))};
-  })()`);
-  assert.equal(result.speeds.length, 20, `${label}: all 20 Nick outlines are present`);
-  assert.equal(new Set(result.outlineImages.map(image => image.src)).size, 7,
-    `${label}: all seven character outlines are used`);
-  assert.ok(result.outlineImages.every(image => image.tag === 'IMG' && image.loaded &&
-    image.src.includes('assets/nick-outlines/') && image.src.includes('.png')),
-    `${label}: all outline PNGs load successfully`);
-  assert.ok(result.outlineMetrics.every(metric => metric.cornerAlpha === 0),
-    `${label}: outline PNGs have transparent padding`);
-  const standardAreas = result.outlineMetrics.filter(metric =>
-    !['gary.png', 'plankton.png'].includes(metric.name)).map(metric => metric.area);
-  const commonArea = standardAreas.reduce((sum, area) => sum + area, 0) / standardAreas.length;
-  assert.ok(standardAreas.every(area => Math.abs(area / commonArea - 1) < 0.02),
-    `${label}: five regular outlines have matching visible areas at equal rendered height`);
-  assert.ok(result.outlineMetrics.filter(metric =>
-    ['gary.png', 'plankton.png'].includes(metric.name)).every(metric =>
-    Math.abs(metric.area / commonArea - 0.7) < 0.02),
-    `${label}: Gary and Plankton have 70% of the regular outline area`);
-  for (const side of ['left', 'right']) {
-    const centers = result.layoutCenters.filter(item => item.side === side)
-      .map(item => item.y).sort((a, b) => a - b);
-    assert.equal(centers.length, 10, `${label}: ${side} side has ten figures`);
-    const gaps = centers.slice(1).map((center, index) => center - centers[index]);
-    assert.ok(Math.max(...gaps) < result.viewportHeight * 0.55,
-      `${label}: ${side} figures have no large vertical gap (${JSON.stringify(gaps)})`);
-  }
-  assert.equal(result.layerOverflow, 'clip', `${label}: outline layer clips only beyond its bleed margin`);
-  assert.ok(parseFloat(result.layerClipMargin) >= result.viewportHeight - 1,
-    `${label}: outline bleed margin covers the viewport around Nick`);
-  assert.ok(result.opacities.every(opacity => opacity === 0.45),
-    `${label}: Nick outlines have visible but subdued opacity`);
-  assert.equal(new Set(result.speeds).size, 20, `${label}: decoration speeds differ`);
-  assert.ok(new Set(result.angles).size >= 16, `${label}: outline tilts differ`);
-  assert.ok(Math.min(...result.angles) <= -20 && Math.max(...result.angles) >= 20,
-    `${label}: outline rotation varies in both directions`);
-  assert.ok(result.mirrors.every(mirror => mirror === -1 || mirror === 1) &&
-    result.mirrors.includes(-1) && result.mirrors.includes(1),
-  `${label}: outlines have a stable mix of mirrored and original orientations`);
-  assert.ok(result.samples.every(sample => sample.transforms.every((transform, index) =>
-    transform.mirrored === (result.mirrors[index] === -1))),
-  `${label}: outline mirroring persists throughout the scroll`);
-  assert.ok(result.samples[2].transforms.every((transform, index) =>
-    Math.abs(result.samples.at(-1).transforms[index].angle - transform.angle - 5) < 0.05),
-  `${label}: outlines rotate five degrees across Nick's cover range`);
-  assert.ok(result.widths.every(width => width > 0), `${label}: outlines have width`);
-  const byHeight = result.heights.map((height, i) => ({height, speed:result.speeds[i]}))
-    .sort((a, b) => a.height - b.height);
-  assert.ok(Math.abs(byHeight[0].height - result.viewportHeight * 0.10) < 1,
-    `${label}: smallest outline is the base size`);
-  assert.ok(Math.abs(byHeight.at(-1).height - result.viewportHeight * 0.18) < 1,
-    `${label}: largest outline is 80% above the base size`);
-  assert.ok(byHeight.every((item, i) => !i || item.speed > byHeight[i - 1].speed),
-    `${label}: larger outlines move faster`);
-  assert.ok(result.samples.every(sample => sample.visibleCount === 20),
-    `${label}: all outlines stay enabled at every width`);
-  assert.ok(result.samples.every(sample => sample.documentWidth <= sample.clientWidth + 1),
-    `${label}: outlines create no horizontal scrollbar (${JSON.stringify(result.samples.map(sample => [sample.documentWidth, sample.clientWidth]))})`);
-  assert.ok(result.samples.every(sample => sample.layerOpacity === 1 &&
-    sample.layerClip.startsWith('inset(') && Number.isFinite(sample.wipeViewportY)),
-    `${label}: a spatial clip reveals the outlines without fading them`);
-  assert.ok(Math.abs(result.after.wipeViewportY) < 2 &&
-    result.samples.slice(5).every(sample => Math.abs(sample.wipeViewportY) < 2),
-    `${label}: the outline wipe clears when Nick fills the viewport`);
-  if (forceNoWebgl) {
-    assert.ok([[result.before, 0.5], [result.samples[2], 1],
-      [result.samples[3], 0.75], [result.samples[4], 0.25]].every(([sample, fraction]) =>
-      Math.abs(sample.wipeViewportY - result.viewportHeight * fraction) < 2),
-    `${label}: the wipe follows Nick's orange section edge without WebGL`);
-  } else {
-    assert.ok(result.samples[2].wipeViewportY > result.samples[3].wipeViewportY &&
-      result.samples[3].wipeViewportY > result.before.wipeViewportY &&
-      result.before.wipeViewportY > result.samples[4].wipeViewportY &&
-      result.samples[4].wipeViewportY >= result.after.wipeViewportY - 2,
-    `${label}: the wipe moves continuously through Nick and reverses with the scroll (${JSON.stringify(result.samples.map(sample => sample.wipeViewportY))})`);
-  }
-  assert.ok(result.samples.every(sample => sample.centered.length === 0),
-    `${label}: no visible outline is horizontally centered (${JSON.stringify(result.samples.map(sample => sample.centered))})`);
-  assert.ok(result.samples.every(sample => sample.collisions.length === 0),
-    `${label}: visible outlines do not overlap during the scroll (${JSON.stringify(result.samples.map(sample => sample.collisions))})`);
-  const pageTravel = result.after.scroll - result.before.scroll;
-  result.speeds.forEach((speed, i) => {
-    const screenSpeed = (result.before.tops[i] - result.after.tops[i]) / pageTravel;
-    assert.ok(speed >= 0.30 && speed <= 0.40,
-      `${label}: decoration ${i} speed stays in the requested range`);
-    assert.ok(Math.abs(screenSpeed - speed) < 0.015,
-      `${label}: decoration ${i} travels at ${speed}x page speed (${screenSpeed})`);
-  });
 }
 
 async function checkAnchoredExperience(session, variant) {
@@ -652,6 +483,7 @@ async function checkHedraAmbient(session, variant) {
     const afterScroll = sample();
     await new Promise(resolve => setTimeout(resolve, 300));
     const later = sample();
+    const full = await move(0);
     const style = getComputedStyle(canvas);
     const clipStyle = getComputedStyle(document.getElementById('hedra-ambient-clip'));
     scrollTo({top:Math.ceil(section.getBoundingClientRect().bottom + scrollY + 3), behavior:'instant'});
@@ -660,7 +492,7 @@ async function checkHedraAmbient(session, variant) {
     await new Promise(resolve => setTimeout(resolve, 150));
     const stoppedAfterExit = drawTimes.length === drawsAtExit;
     WebGL2RenderingContext.prototype.drawArraysInstanced = drawInstanced;
-    return {before, entered, idle, midway, late, centered, scrolled, afterScroll,
+    return {before, entered, idle, midway, late, centered, scrolled, afterScroll, full,
       later, drawTimes, stoppedAfterExit,
       renderer:'webgl2',
       reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches,
@@ -690,10 +522,13 @@ async function checkHedraAmbient(session, variant) {
     `${label}: the fade follows the transition upward and clears the top`);
   assert.ok(Math.abs(result.centered.contentCenter - result.centered.viewportHeight / 2) < 2 &&
     result.centered.maskImage.includes('linear-gradient') &&
-    result.centered.fadeStart === 0 && result.centered.fadeEnd === 0,
-    `${label}: the centered description clears the top fade and keeps the bottom fade ` +
+    result.centered.fadeStart === 0 && result.centered.fadeEnd <= result.centered.viewportHeight * 0.08 + 1,
+    `${label}: the centered description keeps a short top fade and the bottom fade ` +
       JSON.stringify({center:result.centered.contentCenter,
         viewport:result.centered.viewportHeight, mask:result.centered.maskImage}));
+  assert.ok(Math.abs(result.full.sectionTop) <= 1 && result.full.fadeStart === 0 &&
+    result.full.fadeEnd >= result.full.viewportHeight * 0.05,
+    `${label}: Hedra keeps at least a 5vh top fade when fully in view`);
   assert.equal(result.renderer, 'webgl2', `${label}: ambient dots use WebGL2`);
   if (variant.endsWith(', native')) {
     const sectionTravel = result.scrolled.sectionTop - result.entered.sectionTop;
@@ -724,6 +559,54 @@ async function checkHedraAmbient(session, variant) {
   assert.ok(result.transitionLayer < result.canvasLayer && result.canvasLayer < result.contentLayer,
     `${label}: dots sit over black and below the job description`);
   assert.equal(result.stoppedAfterExit, true, `${label}: motion stops after Hedra leaves`);
+}
+
+async function checkOutroLayerIsolation(session, label) {
+  await send('Page.bringToFront', {}, session);
+  const layers = await evaluate(session, `(async () => {
+    scrollTo({top:document.documentElement.scrollHeight - innerHeight, behavior:'instant'});
+    ScrollTrigger.update();
+    ScrollTrigger.getAll().forEach(trigger => trigger.getTween()?.progress?.(1));
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const canvas = document.getElementById('hedra-halftone');
+    return {canvas:Number(getComputedStyle(canvas).zIndex),
+      header:Number(getComputedStyle(document.getElementById('outro-header')).zIndex),
+      outro:Number(getComputedStyle(document.getElementById('outro')).zIndex),
+      visibility:getComputedStyle(canvas).visibility};
+  })()`);
+  assert.equal(layers.visibility, 'hidden', `${label}: Hedra canvas hides after its section`);
+  assert.ok(layers.header > layers.canvas && layers.outro > layers.canvas,
+    `${label}: the end section stays above Hedra's fixed canvas`);
+
+  const normal = await send('Page.captureScreenshot', {format:'png', fromSurface:true}, session);
+  let forced;
+  try {
+    await evaluate(session, `document.getElementById('hedra-halftone').style.visibility = 'visible'`);
+    await evaluate(session, 'new Promise(resolve => requestAnimationFrame(resolve))');
+    forced = await send('Page.captureScreenshot', {format:'png', fromSurface:true}, session);
+  } finally {
+    await evaluate(session, `document.getElementById('hedra-halftone').style.visibility = 'hidden'`);
+  }
+  const difference = await evaluate(session, `(async () => {
+    const sources = ${JSON.stringify([normal, forced].map(shot => `data:image/png;base64,${shot.data}`))};
+    const images = await Promise.all(sources.map(async source => {
+      const image = new Image(); image.src = source; await image.decode();
+      const canvas = document.createElement('canvas');
+      canvas.width = image.width; canvas.height = image.height;
+      const context = canvas.getContext('2d'); context.drawImage(image, 0, 0);
+      return context.getImageData(0, 0, image.width, image.height).data;
+    }));
+    let changed = 0, samples = 0;
+    for (let pixel = 0; pixel < images[0].length / 4; pixel += 64) {
+      const index = pixel * 4;
+      if (Math.max(...[0, 1, 2].map(channel =>
+        Math.abs(images[0][index + channel] - images[1][index + channel]))) > 12) changed++;
+      samples++;
+    }
+    return changed / samples;
+  })()`);
+  assert.ok(difference < 0.001,
+    `${label}: a stale black Hedra canvas cannot obscure the end screen (${difference})`);
 }
 
 async function checkGoogleDoodleLayering(session, variant) {
@@ -1000,13 +883,20 @@ try {
       }
     }
     await delay(1600);
+    if (hedraFadeOnly) {
+      for (const variant of ['native', 'fallback']) {
+        await checkHedraAmbient(sessions[variant], `${width}x${height}, ${variant}`);
+      }
+      console.log(`${width}x${height}: Hedra ambient fade passed.`);
+      continue;
+    }
     if (profileSection) {
       for (const variant of variants) await runScrollProfile(sessions[variant], variant, width, height);
       continue;
     }
       const counts = await Promise.all(variants.map(v => evaluate(sessions[v], 'ScrollTrigger.getAll().length')));
       const skillsActivated = await evaluate(sessions.native, `document.querySelector('#skills .parallax-container').classList.contains('parallax-active')`);
-      assert.equal(counts[1] - counts[0], control ? 0 : 15 + Number(skillsActivated), 'CSS should replace imagery, job, and Nick decoration triggers and remove the skills activation trigger after entry.');
+      assert.equal(counts[1] - counts[0], control ? 0 : 14 + Number(skillsActivated), 'CSS should replace imagery and job triggers and remove the skills activation trigger after entry.');
       const positions = await evaluate(sessions.fallback, `(() => {
         const top = id => document.getElementById(id).getBoundingClientRect().top + scrollY;
         const height = id => document.getElementById(id).offsetHeight;
@@ -1049,14 +939,14 @@ try {
       for (const variant of ['native', 'fallback']) {
         const label = `${width}x${height}, ${variant}`;
         await checkJobSections(sessions[variant], label);
-        await checkNickDecorationParallax(sessions[variant], label);
         await checkAnchoredExperience(sessions[variant], label);
         await checkHedraAmbient(sessions[variant], label);
         await checkGoogleDoodleLayering(sessions[variant], label);
       }
-      console.log(`${width}x${height}: section-anchored halftones, job and decoration motion, and doodle overlap passed.`);
+      await checkOutroLayerIsolation(sessions.native, `${width}x${height}`);
+      console.log(`${width}x${height}: section-anchored halftones, job motion, and doodle overlap passed.`);
     }
-    if (!profileSection) {
+    if (!profileSection && !hedraFadeOnly) {
     // Rotate an already loaded page. CSS units and GSAP's captured lengths can differ.
     await Promise.all(variants.map(v => send('Emulation.setDeviceMetricsOverride', {
       width: 1024, height: 768, deviceScaleFactor: 1, mobile: false,

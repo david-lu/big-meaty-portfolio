@@ -225,12 +225,6 @@ body>div {
     #nick .job-content { animation-timeline: --nick-job; }
     #hedra .job-content { animation-timeline: --hedra-job; }
 
-    #nick .nick-decoration {
-        animation: nick-decoration-parallax auto linear both;
-        animation-timeline: --nick-job;
-        animation-range: cover 0% cover 100%;
-    }
-
     #hedra-ambient {
         animation: hedra-ambient-parallax auto linear both;
         animation-timeline: --hedra-job;
@@ -299,11 +293,6 @@ body>div {
 @keyframes job-parallax {
     from { transform: translate3d(-50%, 0, 0); }
     to { transform: translate3d(-50%, var(--job-parallax-distance, 0px), 0); }
-}
-
-@keyframes nick-decoration-parallax {
-    from { transform: translate3d(0, calc(-1 * var(--nick-parallax-half-travel, 0px)), 0) rotate(calc(var(--nick-angle) - 2.5deg)) scaleX(var(--nick-mirror, 1)); }
-    to { transform: translate3d(0, var(--nick-parallax-half-travel, 0px), 0) rotate(calc(var(--nick-angle) + 2.5deg)) scaleX(var(--nick-mirror, 1)); }
 }
 
 /* Over Hedra's cover range, 65% of page travel is cancelled by the canvas.
@@ -823,33 +812,6 @@ body>div {
     background-color: white;
 }
 
-/* The bleed margin keeps figures visible beyond Nick's edges without creating a scrollbar. */
-.nick-decorations {
-    position: absolute;
-    inset: 0;
-    z-index: 8;
-    overflow: clip;
-    overflow-clip-margin: 100svh;
-    /* JS moves this clip with Nick's halftone, applying its wipe lead. */
-    clip-path: inset(var(--nick-wipe-top, 200svh) -100svh -100svh -100svh);
-    pointer-events: none;
-}
-
-.nick-decoration {
-    position: absolute;
-    left: 0;
-    top: 0;
-    /* Override the HTML intrinsic-width hint; --size sets the rendered height. */
-    width: auto;
-    height: var(--size);
-    opacity: 0.45;
-    transform: translate3d(0, var(--nick-decoration-scroll, 0px), 0) rotate(calc(var(--nick-angle) + var(--nick-rotation-offset, -2.5deg))) scaleX(var(--nick-mirror, 1));
-}
-
-/* --size ranges from 10svh to 18svh; larger outlines get higher --nick-speed. */
-/* --nick-speed controls 30-40% scroll travel; --nick-angle adds a fixed tilt.
-   Each outline also turns five degrees and may be mirrored as it crosses Nick. */
-
 /* Clip the oversized parallax canvas to Hedra so no dots cross section edges. */
 #hedra-ambient-clip {
     position: absolute;
@@ -857,7 +819,7 @@ body>div {
     z-index: 11;
     overflow: hidden;
     pointer-events: none;
-    /* The moving top fade clears at text center; the short bottom fade softens the exit. */
+    /* The top fade follows the transition, then stays 8vh tall at full view. */
     -webkit-mask-image: linear-gradient(to bottom, transparent var(--hedra-fade-start, 100svh), #000 var(--hedra-fade-end, 100svh), #000 calc(100% - 12svh), transparent 100%);
     mask-image: linear-gradient(to bottom, transparent var(--hedra-fade-start, 100svh), #000 var(--hedra-fade-end, 100svh), #000 calc(100% - 12svh), transparent 100%);
 }
@@ -1101,12 +1063,15 @@ body>div {
 }
 
 #outro-header {
+    /* The fixed Hedra transition must stay behind the entire end screen. */
+    z-index: 13;
     color: rgb(221, 3, 36);
     background-color: white;
 }
 
 
 #outro {
+    z-index: 13;
     height: 100svh;
     justify-content: flex-end;
     background: linear-gradient(180deg, #F39C26 0%, #E81C35 40%, #dd0937 80%);
