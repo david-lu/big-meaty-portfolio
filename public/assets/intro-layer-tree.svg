@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg id="Layer_17" data-name="Layer 17" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 500">
+<svg id="Layer_17" data-name="Layer 17" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 580">
   <path d="m95.024,503.665l-26.342-87.81c-.944-3.147-5.401-3.147-6.345,0l-26.342,87.81h59.029Z" fill="#1c242d"/>
   <path d="m182.551,518.403l-26.342-87.81c-.944-3.147-5.401-3.147-6.345,0l-26.342,87.81h59.029Z" fill="#1c242d"/>
   <path d="m211.836,524.104l-18.542-61.81c-.665-2.216-3.802-2.216-4.467,0l-18.542,61.81h41.551Z" fill="#1c242d"/>
@@ -14,4 +14,22 @@
   <path d="m794.649,547.683l-23.364-77.884c-.837-2.792-4.791-2.792-5.628,0l-23.364,77.884h52.357Z" fill="#1c242d"/>
   <path d="m893.464,518.403l-26.342-87.81c-.944-3.147-5.401-3.147-6.345,0l-26.342,87.81h59.029Z" fill="#1c242d"/>
   <path d="m858.662,545.514l-37.95-126.506c-1.36-4.534-7.781-4.534-9.142,0l-37.95,126.506h85.042Z" fill="#1c242d"/>
+  <!-- Continue each silhouette through the reveal overshoot. The old 500-ish
+       path bottoms otherwise become horizontal cutoffs inside the new bleed. -->
+  <g fill="#1c242d">
+    <rect x="35.995" y="503.665" width="59.029" height="80"/>
+    <rect x="123.522" y="518.403" width="59.029" height="80"/>
+    <rect x="170.285" y="524.104" width="41.551" height="80"/>
+    <rect x="61.016" y="526.451" width="59.029" height="80"/>
+    <rect x="95.024" y="553.108" width="52.357" height="80"/>
+    <rect x="13.856" y="518.403" width="59.029" height="80"/>
+    <rect x="-28.665" y="514.029" width="85.042" height="80"/>
+    <rect x="869.263" y="503.665" width="75.925" height="80"/>
+    <rect x="944.101" y="518.403" width="73.499" height="80"/>
+    <rect x="904.290" y="516.118" width="59.029" height="80"/>
+    <rect x="720.348" y="535.155" width="52.357" height="80"/>
+    <rect x="742.292" y="547.683" width="52.357" height="80"/>
+    <rect x="834.435" y="518.403" width="59.029" height="80"/>
+    <rect x="773.620" y="545.514" width="85.042" height="80"/>
+  </g>
 </svg>

@@ -193,6 +193,13 @@ html.intro-loading #nav-hamburger {
     will-change: transform;
 }
 
+/* The intro SVGs have an 80-unit lower bleed. Shift by 80/580 of each image's
+   own height so the original 500-unit edge stays at the section bottom. */
+#intro .parallax-bg {
+    height: 116%;
+    --intro-rest-y: 13.79310345%;
+}
+
 /* Match the feature check in scripts.js so only one implementation owns transforms.
    Use the section's timeline: its overflow can make view() on a child track the
    section's own scroll container instead of the document viewport. */
@@ -258,10 +265,11 @@ html.intro-loading #nav-hamburger {
     }
 
     /* Images appear from back to front in the intro, front to back in the outro. */
-    #intro .parallax-bg:nth-of-type(1) { --parallax-to: 28%; }
-    #intro .parallax-bg:nth-of-type(2) { --parallax-to: 21%; }
-    #intro .parallax-bg:nth-of-type(3) { --parallax-to: 14%; }
-    #intro .parallax-bg:nth-of-type(4) { --parallax-to: 7%; }
+    /* Account for the 16% bleed so the original scroll distances stay put. */
+    #intro .parallax-bg:nth-of-type(1) { --parallax-to: 24.14%; }
+    #intro .parallax-bg:nth-of-type(2) { --parallax-to: 18.10%; }
+    #intro .parallax-bg:nth-of-type(3) { --parallax-to: 12.07%; }
+    #intro .parallax-bg:nth-of-type(4) { --parallax-to: 6.03%; }
 
     #outro .parallax-bg,
     #outro-info,
@@ -368,15 +376,18 @@ html.intro-loading #nav-hamburger {
 #fg-container,
 #intro .parallax-bg {
     opacity: 1;
-    translate: 0 0;
-    transition: translate 700ms linear(0, 0.544 5.5%, 0.947 11.5%, 1.213 18.1%, 1.298 21.7%, 1.352 25.5%, 1.372 28.2%, 1.379 31.1%, 1.374 34.2%, 1.357 37.6%, 1.307 43.7%, 1.121 61.8%, 1.074 67.8%, 1.04 73.7%, 1.007 84.7%, 1), opacity 300ms;
+    /* GSAP's scroll fallback writes inline `translate: none` while setting its
+       transform. Keep the SVG bleed anchor independent of that transform. */
+    translate: 0 var(--intro-rest-y, 0px) !important;
+    transition: translate 700ms cubic-bezier(0.287, 1.711, 0.488, 0.991), opacity 300ms;
     transition-delay: var(--intro-layer-delay, 0ms);
 }
 
 html.intro-loading #fg-container,
 html.intro-loading #intro .parallax-bg {
-    opacity: 0;
-    translate: 0 15vh;
+    /* A nearly transparent pixel keeps SVG tiles ready before the stagger. */
+    opacity: 0.001;
+    translate: 0 calc(var(--intro-rest-y, 0px) + 15vh) !important;
     transition: none;
 }
 
@@ -435,9 +446,19 @@ html.intro-loading #intro .parallax-bg {
     width: 100%;
     bottom: 0;
     aspect-ratio: 1.2;
-    background-size: contain;
-    background-image: url('assets/intro-layer-fg.svg');
     will-change: transform;
+}
+
+/* The SVG continues below its original 320-unit edge. Let that extra terrain
+   paint outside #fg so the reveal's upward overshoot never exposes a strip. */
+#fg::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    aspect-ratio: 384 / 400;
+    background: url('assets/intro-layer-fg.svg') center top / 100% 100% no-repeat;
 }
 
 #david-lower {
@@ -552,12 +573,24 @@ html.intro-loading #intro .parallax-bg {
 #intro-scroll-button {
     position: absolute;
     bottom: 3%;
-    animation: pulse-animation 2s infinite;
     transition-delay: 1800ms;
 }
 
 #intro-scroll-button:disabled {
     transition-delay: 0ms;
+}
+
+/* Pulse a separate ring with compositor-friendly opacity and transform. The
+   old animated box-shadow repainted every frame, even while disabled. */
+#intro-scroll-button:not(:disabled)::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border: 2px solid #ffffff66;
+    border-radius: inherit;
+    pointer-events: none;
+    will-change: transform, opacity;
+    animation: pulse-animation 2s 1800ms infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -567,15 +600,19 @@ html.intro-loading #intro .parallax-bg {
     #subtitle,
     #intro-scroll-button,
     #nav-hamburger { transition: none; }
+
+    #intro-scroll-button::after { animation: none; }
 }
 
 @keyframes pulse-animation {
     0% {
-        box-shadow: 0 0 0 0px #ffffff66;
+        transform: scale(1);
+        opacity: 1;
     }
 
     100% {
-        box-shadow: 0 0 0 20px #ffffff00;
+        transform: scale(1.8);
+        opacity: 0;
     }
 }
 
@@ -1262,6 +1299,10 @@ html.intro-loading #intro .parallax-bg {
     .parallax-bg {
         min-height: initial;
         width: 220%;
+    }
+
+    #intro .parallax-bg {
+        height: auto;
     }
 
     #intro {

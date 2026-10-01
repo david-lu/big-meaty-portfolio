@@ -188,7 +188,8 @@ if (!supportsCssParallax) {
     (elem, i) => {
       gsap.to(elem,
         {
-          yPercent: (i + 1) * 7,
+          // SVGs are 16% taller for the lower bleed; preserve scroll distance.
+          yPercent: ((i + 1) * 7) / 1.16,
           scrollTrigger: {
             trigger: "#intro",
             start: "top top",
@@ -579,13 +580,17 @@ const createHalftone = ({ canvasSelector, sectionSelector }) => {
   const section = $(sectionSelector);
   const ambientClip = section.querySelector('#hedra-ambient-clip');
   const jobContent = ambientClip && section.querySelector('.job-content');
-  const ambient = createHedraAmbient(section);
+  let ambient;
   const { startTop, endTop, growthDistance, columnOffset } = experienceSettings.halftone;
   let size;
   let lastProgress;
   let renderer;
+  let initialized = false;
+  let prewarm;
 
   const initialize = () => {
+    initialized = true;
+    if (ambient === undefined) ambient = createHedraAmbient(section);
     try {
       renderer = createHalftoneGpuRenderer(canvas);
     } catch (error) {
@@ -597,7 +602,6 @@ const createHalftone = ({ canvasSelector, sectionSelector }) => {
     size = undefined;
     lastProgress = undefined;
   };
-  initialize();
 
   const resize = () => {
     const width = window.innerWidth;
@@ -661,6 +665,12 @@ const createHalftone = ({ canvasSelector, sectionSelector }) => {
   const update = () => {
     const height = window.innerHeight;
     const bounds = section.getBoundingClientRect();
+    // A direct jump can reach the section before its prewarm observer fires.
+    if (!initialized) {
+      if (bounds.top >= height || bounds.bottom <= 0) return;
+      prewarm?.disconnect();
+      initialize();
+    }
     const travel = (startTop - endTop) * height;
     const distance = startTop * height - bounds.top;
     const progress = gsap.utils.clamp(0, 1, distance / travel);
@@ -697,19 +707,17 @@ const createHalftone = ({ canvasSelector, sectionSelector }) => {
       columnOffset, complete: progress >= 1 });
   };
 
-  if (renderer) {
-    canvas.addEventListener('webglcontextlost', (event) => {
-      event.preventDefault();
-      renderer = null;
-      canvas.style.display = 'none';
-      section.style.backgroundColor = getComputedStyle(canvas).color;
-      update();
-    });
-    canvas.addEventListener('webglcontextrestored', () => {
-      initialize();
-      update();
-    });
-  }
+  canvas.addEventListener('webglcontextlost', (event) => {
+    event.preventDefault();
+    renderer = null;
+    canvas.style.display = 'none';
+    section.style.backgroundColor = getComputedStyle(canvas).color;
+    update();
+  });
+  canvas.addEventListener('webglcontextrestored', () => {
+    initialize();
+    update();
+  });
 
   ScrollTrigger.create({
     trigger: section,
@@ -722,6 +730,21 @@ const createHalftone = ({ canvasSelector, sectionSelector }) => {
     onLeave: update,
     onLeaveBack: update
   });
+
+  // Compiling offscreen shaders during the intro blocks its first frames.
+  // Prepare each transition before it enters the viewport instead.
+  if ('IntersectionObserver' in window) {
+    prewarm = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      prewarm.disconnect();
+      initialize();
+      update();
+    }, { rootMargin: `${Math.ceil(innerHeight * 1.5)}px 0px` });
+    prewarm.observe(section);
+  } else {
+    initialize();
+    update();
+  }
 
 };
 
