@@ -41,8 +41,7 @@ const revealIntro = () => {
   $('#intro-scroll-button').disabled = false;
 };
 
-// Preloaded SVGs can still finish decoding on different frames. Keep the
-// gradient over the intro until all its art is ready, then reveal it at once.
+// Wait until all intro art has decoded before starting the staggered reveal.
 const introLoadStarted = performance.now();
 const introImages = [...document.querySelectorAll('link[data-intro-asset]')].map(link => {
   const image = new Image();
