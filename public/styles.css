@@ -231,12 +231,6 @@ html.intro-loading #nav-hamburger {
     #nick .job-content { animation-timeline: --nick-job; }
     #hedra .job-content { animation-timeline: --hedra-job; }
 
-    #hedra-ambient {
-        animation: hedra-ambient-parallax auto linear both;
-        animation-timeline: --hedra-job;
-        animation-range: cover 0% cover 100%;
-    }
-
     #fg,
     #intro .parallax-bg,
     #outro .parallax-bg,
@@ -299,13 +293,6 @@ html.intro-loading #nav-hamburger {
 @keyframes job-parallax {
     from { transform: translate3d(-50%, 0, 0); }
     to { transform: translate3d(-50%, var(--job-parallax-distance, 0px), 0); }
-}
-
-/* Over Hedra's cover range, 65% of page travel is cancelled by the canvas.
-   Its dots therefore move through the viewport at 35% of scroll speed. */
-@keyframes hedra-ambient-parallax {
-    from { transform: translate3d(0, calc(-32.5svh - 32.5dvh), 0); }
-    to { transform: translate3d(0, calc(32.5svh + 32.5dvh), 0); }
 }
 
 .scroll-button {
@@ -838,30 +825,6 @@ html.intro-loading #intro::after {
 #nick,
 #hedra {
     background-color: white;
-}
-
-/* Clip the oversized parallax canvas to Hedra so no dots cross section edges. */
-#hedra-ambient-clip {
-    position: absolute;
-    inset: 0;
-    z-index: 11;
-    overflow: hidden;
-    pointer-events: none;
-    /* The top fade follows the transition, then stays 8vh tall at full view. */
-    -webkit-mask-image: linear-gradient(to bottom, transparent var(--hedra-fade-start, 100svh), #000 var(--hedra-fade-end, 100svh), #000 calc(100% - 12svh), transparent 100%);
-    mask-image: linear-gradient(to bottom, transparent var(--hedra-fade-start, 100svh), #000 var(--hedra-fade-end, 100svh), #000 calc(100% - 12svh), transparent 100%);
-}
-
-#hedra-ambient {
-    position: absolute;
-    left: 0;
-    /* Extra rows cover the full 35%-speed movement without exposing an edge. */
-    top: calc(-32.5svh - 32.5dvh);
-    display: block;
-    width: 100%;
-    height: calc(165svh + 65dvh);
-    pointer-events: none;
-    opacity: 0.15;
 }
 
 .job-content {

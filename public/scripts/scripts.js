@@ -1,4 +1,3 @@
-import { createHedraGpuRenderer } from './hedra-ambient-gl.js';
 import { createHalftoneGpuRenderer } from './halftone-transition-gl.js';
 
 gsap.registerPlugin(ScrollToPlugin, ScrollTrigger);
@@ -348,18 +347,6 @@ const experienceSettings = {
     dotRows: 30,       // Grid density: this many rows fit in 48% of the viewport height.
     columnOffset: 4    // Rightmost dots start this many row delays after leftmost dots.
   },
-  ambient: {
-    maxDpr: 1.5,       // The soft background does not need a full high-density bitmap.
-    maxFps: 15,        // Redraw the ambient canvas at most this many times a second.
-    fadeHeight: 0.50,  // Height of the moving top fade, in viewport heights.
-    fadeLead: 0.12,    // Start this far above the transition's solid edge.
-    fadeExit: 0.40,    // Move the fade to the section top before text center.
-    settledFadeHeight: 0.08, // Keep an 8vh top fade when Hedra fills the viewport.
-    settledFadeApproach: 0.12, // Grow that fade over the last 12vh of entry.
-    scrollPhase: 1.3,  // Scrolling advances the wave field by this many seconds.
-    timePhase: 0.001,  // Convert animation timestamps from milliseconds to seconds.
-    scrollEaseMs: 90   // Smooth wheel steps without delaying the section transition.
-  },
   sections: [
     {
       sectionSelector: '#nick',
@@ -443,144 +430,12 @@ experienceSettings.sections.forEach(({ sectionSelector, job }) => {
 // HALFTONE TRANSITIONS
 // Each canvas is fixed so its dots can cover the previous section. Orange stays
 // under black; the DOM sections are white, so no hard color edge can show.
-// The ambient dots use this same spacing so their lattice matches the transition.
 const halftoneRowPitch = (viewportHeight) =>
   viewportHeight * 0.48 / experienceSettings.halftone.dotRows;
-
-const createHedraAmbient = (section) => {
-  const canvas = section.querySelector('#hedra-ambient');
-  if (!canvas) return null;
-  let gpu;
-  try {
-    gpu = createHedraGpuRenderer(canvas);
-  } catch (error) {
-    console.warn('Hedra WebGL renderer unavailable.', error);
-  }
-  if (!gpu) {
-    canvas.style.display = 'none';
-    return null;
-  }
-
-  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
-  const { maxDpr, maxFps, scrollPhase, timePhase, scrollEaseMs } = experienceSettings.ambient;
-  const frameInterval = 1000 / maxFps;
-  let width = 0, height = 0, dpr = 0, timer = 0, lastFrame = 0, lastDraw = -Infinity;
-  let active = false, sectionProgress = 0, targetProgress = 0;
-  let rowPitch = 0, maxRadius = 0;
-
-  const resize = () => {
-    const nextWidth = canvas.clientWidth;
-    const nextHeight = canvas.clientHeight;
-    const nextDpr = Math.min(devicePixelRatio || 1, maxDpr,
-      gpu.maxSize / Math.max(nextWidth, nextHeight));
-    const nextRowPitch = halftoneRowPitch(innerHeight);
-    if (width === nextWidth && height === nextHeight && dpr === nextDpr && rowPitch === nextRowPitch) return;
-    width = nextWidth;
-    height = nextHeight;
-    dpr = nextDpr;
-    canvas.width = Math.ceil(width * dpr);
-    canvas.height = Math.ceil(height * dpr);
-    rowPitch = nextRowPitch;
-    // The nearest neighbors in the rotated grid are rowPitch * sqrt(2) apart.
-    maxRadius = rowPitch * Math.SQRT2 * 0.45;
-    gpu.resize(width, height, rowPitch);
-  };
-
-  const render = (time) => {
-    resize();
-    if (!width || !height) return;
-    const waveTime = reducedMotion.matches ? 1.5 : time * timePhase + sectionProgress * scrollPhase;
-    gpu.render(waveTime, width, height, dpr, maxRadius);
-  };
-
-  // One timer owns all draws, including resize and reduced-motion updates.
-  // The interval is measured from the previous draw, capping the shader at 15 fps.
-  const schedule = () => {
-    if (timer || !gpu || !active || document.hidden) return;
-    const delay = Math.max(0, frameInterval - (performance.now() - lastDraw));
-    timer = setTimeout(tick, delay);
-  };
-
-  const tick = () => {
-    timer = 0;
-    if (!gpu || !active || document.hidden) return;
-    const time = performance.now();
-    if (time - lastDraw < frameInterval) {
-      schedule();
-      return;
-    }
-    const elapsed = Math.min(250, Math.max(0, time - lastFrame));
-    lastFrame = time;
-    if (!reducedMotion.matches) {
-      const scrollBlend = 1 - Math.exp(-elapsed / scrollEaseMs);
-      sectionProgress += (targetProgress - sectionProgress) * scrollBlend;
-    }
-    render(time);
-    lastDraw = performance.now();
-    if (!reducedMotion.matches) schedule();
-  };
-
-  const setState = (visible, progress) => {
-    targetProgress = progress;
-    if (visible === active) return;
-    active = visible;
-    if (active) {
-      sectionProgress = progress;
-      lastFrame = performance.now();
-      tick();
-    } else {
-      if (timer) clearTimeout(timer);
-      timer = 0;
-    }
-  };
-
-  canvas.addEventListener('webglcontextlost', (event) => {
-    event.preventDefault();
-    gpu = null;
-    canvas.style.display = 'none';
-    if (timer) clearTimeout(timer);
-    timer = 0;
-  });
-  canvas.addEventListener('webglcontextrestored', () => {
-    try {
-      gpu = createHedraGpuRenderer(canvas);
-    } catch (error) {
-      console.warn('Hedra WebGL renderer unavailable after context restoration.', error);
-    }
-    if (!gpu) return;
-    width = height = dpr = rowPitch = 0;
-    canvas.style.display = '';
-    if (active) schedule();
-  });
-
-  reducedMotion.addEventListener('change', () => {
-    if (timer) clearTimeout(timer);
-    timer = 0;
-    if (!active) return;
-    sectionProgress = targetProgress;
-    schedule();
-  });
-
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden && timer) {
-      clearTimeout(timer);
-      timer = 0;
-    } else if (!document.hidden && active) {
-      schedule();
-    }
-  });
-  window.addEventListener('resize', () => {
-    if (active) schedule();
-  });
-  return { setState };
-};
 
 const createHalftone = ({ canvasSelector, sectionSelector }) => {
   const canvas = $(canvasSelector);
   const section = $(sectionSelector);
-  const ambientClip = section.querySelector('#hedra-ambient-clip');
-  const jobContent = ambientClip && section.querySelector('.job-content');
-  const ambient = createHedraAmbient(section);
   const { startTop, endTop, growthDistance, columnOffset } = experienceSettings.halftone;
   let size;
   let lastProgress;
@@ -632,50 +487,18 @@ const createHalftone = ({ canvasSelector, sectionSelector }) => {
     lastProgress = undefined;
   };
 
-  const setAmbientFade = (bounds, solidEdgeViewport, complete) => {
-    if (!ambientClip) return;
-    // Follow the transition, but keep the visible fade inside Hedra's clip.
-    // A mask that starts above the clip creates a hard line at its top edge.
-    const contentBounds = jobContent.getBoundingClientRect();
-    const untilCentered = Math.max(0,
-      contentBounds.top + contentBounds.height / 2 - innerHeight / 2);
-    const fadeHeight = experienceSettings.ambient.fadeHeight * innerHeight;
-    const fadeExit = experienceSettings.ambient.fadeExit * innerHeight;
-    const exitProgress = complete ? 1 : gsap.utils.clamp(0, 1,
-      1 - untilCentered / fadeExit);
-    const followingStart = solidEdgeViewport - bounds.top -
-      experienceSettings.ambient.fadeLead * innerHeight;
-    const offscreenStart = -fadeHeight - 2;
-    const movingStart = gsap.utils.interpolate(followingStart, offscreenStart, exitProgress);
-    const start = gsap.utils.clamp(0, bounds.height, movingStart);
-    const end = gsap.utils.clamp(start, bounds.height, movingStart + fadeHeight);
-    // Settle into a short top fade instead of collapsing it to a hard edge.
-    const settledFade = Math.min(bounds.height,
-      experienceSettings.ambient.settledFadeHeight * innerHeight *
-      gsap.utils.clamp(0, 1, 1 - bounds.top /
-        (experienceSettings.ambient.settledFadeApproach * innerHeight)));
-    const topCleared = complete || untilCentered <= 1 || end === 0;
-    ambientClip.style.setProperty('--hedra-fade-start', `${topCleared ? 0 : start}px`);
-    ambientClip.style.setProperty('--hedra-fade-end', `${Math.max(topCleared ? 0 : end, settledFade)}px`);
-  };
-
   const update = () => {
     const height = window.innerHeight;
     const bounds = section.getBoundingClientRect();
     const travel = (startTop - endTop) * height;
     const distance = startTop * height - bounds.top;
     const progress = gsap.utils.clamp(0, 1, distance / travel);
-    // Paint as soon as Hedra enters view; this only pauses work while away.
-    ambient?.setState(bounds.top < height && bounds.bottom > 0,
-      gsap.utils.clamp(0, 1, (height - bounds.top) / (height + bounds.height)));
     if (!renderer) {
-      // With no canvas, the solid orange section itself is the reveal edge.
-      setAmbientFade(bounds, 0, true);
+      // With no canvas, the solid section color itself is the reveal edge.
       return;
     }
     // Stop at this section's bottom; the next background or header takes over.
     if (distance <= 0 || bounds.bottom <= 0) {
-      setAmbientFade(bounds, 2 * height, bounds.bottom <= 0);
       if (canvas.style.visibility !== 'hidden') canvas.style.visibility = 'hidden';
       lastProgress = undefined;
       return;
@@ -688,10 +511,6 @@ const createHalftone = ({ canvasSelector, sectionSelector }) => {
     // nearest the bottom; completed dots overlap into a solid color.
     const growthPixels = growthDistance * height;
     const rowDelay = (travel - growthPixels) / (cells - 1 + columnOffset);
-    // The slowest column determines where the transition is solid black.
-    const fullRow = (distance - growthPixels) / rowDelay - columnOffset;
-    setAmbientFade(bounds, height - (fullRow - 1) * size.rowPitch, progress >= 1);
-    // The clip still tracks the section after its canvas reaches full color.
     if (progress === lastProgress) return;
     lastProgress = progress;
     renderer.render({ ...size, distance, growthPixels, rowDelay,
