@@ -716,15 +716,15 @@ html.intro-loading #intro::after {
 
 #google {
     flex-direction: row;
-    /* Short enough for the last doodles to meet Nick's entering halftone. */
-    height: 125vh;
+    height: 165vh;
     align-items: flex-start;
     padding-top: 15vh;
     background-color: white;
 }
 
-/* Each fixed canvas belongs to the section named in its ID. */
-#nick-halftone,
+/* The fixed layers cover the previous section as each job enters. */
+#nick-wipe,
+#nick-bubbles,
 #hedra-halftone {
     position: fixed;
     inset: 0;
@@ -735,8 +735,20 @@ html.intro-loading #intro::after {
     visibility: hidden;
 }
 
-#nick-halftone {
-    color: var(--job-orange);
+#nick-wipe {
+    background-color: var(--job-orange);
+    opacity: 0;
+}
+
+#nick-bubbles {
+    z-index: 9;
+    display: block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #nick-bubbles {
+        display: none;
+    }
 }
 
 #hedra-halftone {
@@ -827,6 +839,10 @@ html.intro-loading #intro::after {
     background-color: white;
 }
 
+#nick {
+    height: 100vh;
+}
+
 .job-content {
     position: absolute;
     z-index: 12;
@@ -843,7 +859,9 @@ html.intro-loading #intro::after {
 }
 
 #nick .job-content {
-    z-index: 9;
+    z-index: 8;
+    opacity: 0;
+    visibility: hidden;
 }
 
 #hedra .job-content h2,
@@ -1248,7 +1266,7 @@ html.intro-loading #intro::after {
 @media (max-aspect-ratio: 0.6) {
     /* Stacked doodle rows need less trailing space on narrow screens. */
     #google {
-        height: 105vh;
+        height: 145vh;
     }
 
     #intro-scroll-button {

@@ -26,6 +26,7 @@ const control = process.argv.includes('--control');
 const profileSkills = process.argv.includes('--profile-skills');
 const profileOutro = process.argv.includes('--profile-outro');
 const profileHedra = process.argv.includes('--profile-hedra');
+const nickWipeOnly = process.argv.includes('--nick-wipe-only');
 const hedraBackgroundOnly = process.argv.includes('--hedra-background-only');
 const introLoadingOnly = process.argv.includes('--intro-loading-only');
 const forceNoWebgl = process.argv.includes('--force-no-webgl');
@@ -57,7 +58,8 @@ const server = http.createServer(async (req, res) => {
         body = body.replace('<script defer type=\'module\' src="scripts/scripts.js"></script>',
           `<script>const originalGetContext = HTMLCanvasElement.prototype.getContext;
           HTMLCanvasElement.prototype.getContext = function(type, ...args) {
-            if (['nick-halftone', 'hedra-halftone'].includes(this.id)) {
+            if (this.id === 'nick-bubbles' && type === 'webgl2') return null;
+            if (this.id === 'hedra-halftone') {
               if (type === 'webgl2') return null;
               if (type === '2d') window.halftone2dRequests =
                 (window.halftone2dRequests || 0) + 1;
@@ -253,10 +255,11 @@ async function checkJobSections(session, variant) {
       nickDecorationCount:sections[1].querySelectorAll('.nick-decoration, .nick-decorations').length,
       nickColor:getComputedStyle(sections[1]).backgroundColor,
       hedraColor:getComputedStyle(sections[2]).backgroundColor,
-      nickCanvasOutside:!sections[1].contains(document.getElementById('nick-halftone')),
+      nickWipeOutside:!sections[1].contains(document.getElementById('nick-wipe')),
       hedraCanvasOutside:!sections[2].contains(document.getElementById('hedra-halftone')),
       horizontalOverflow:document.documentElement.scrollWidth - innerWidth,
-      viewport:innerHeight
+      viewport:innerHeight,
+      narrowDoodles:matchMedia('(max-aspect-ratio: 0.6)').matches
     };
   })()`);
   const label = `${variant}: restored job sections`;
@@ -268,15 +271,18 @@ async function checkJobSections(session, variant) {
     assert.ok(Math.abs(result.edges[i].bottom - result.edges[i + 1].top) < 1,
       `${label}: ${result.ids[i]} joins ${result.ids[i + 1]} without a gap`);
   }
+  assert.ok(Math.abs(result.edges[0].height -
+    result.viewport * (result.narrowDoodles ? 1.45 : 1.65)) <= 1,
+    `${label}: Google doodles section has the extended height`);
   assert.ok(Math.abs(result.edges[1].height - result.viewport) <= 1,
-    `${label}: orange section is one viewport tall`);
+    `${label}: Nick section is 100vh tall`);
   assert.ok(Math.abs(result.edges[2].height - result.viewport) <= 1,
     `${label}: black section is one viewport tall`);
-  assert.equal(result.nickColor, forceNoWebgl ? 'rgb(255, 121, 0)' : 'rgb(255, 255, 255)',
-    `${label}: orange field has its expected background`);
+  assert.equal(result.nickColor, 'rgb(255, 255, 255)',
+    `${label}: Nick's section stays behind the orange wipe`);
   assert.equal(result.hedraColor, forceNoWebgl ? 'rgb(0, 0, 0)' : 'rgb(255, 255, 255)',
     `${label}: black field has its expected background`);
-  assert.ok(result.nickCanvasOutside && result.hedraCanvasOutside,
+  assert.ok(result.nickWipeOutside && result.hedraCanvasOutside,
     `${label}: viewport overlays are outside the clipped sections`);
 }
 
@@ -284,14 +290,14 @@ async function checkAnchoredExperience(session, variant) {
   await send('Page.bringToFront', {}, session);
   if (forceNoWebgl) {
     const state = await evaluate(session, `(() => ({
-      displays:['nick-halftone', 'hedra-halftone']
+      displays:['hedra-halftone']
         .map(id => getComputedStyle(document.getElementById(id)).display),
       fallbackRequests:window.halftone2dRequests || 0
     }))()`);
-    assert.deepEqual(state.displays, ['none', 'none'],
-      `${variant}: transition canvases hide without WebGL2`);
+    assert.deepEqual(state.displays, ['none'],
+      `${variant}: Hedra transition canvas hides without WebGL2`);
     assert.equal(state.fallbackRequests, 0,
-      `${variant}: transition canvases never request Canvas 2D`);
+      `${variant}: Hedra transition never requests Canvas 2D`);
     return;
   }
   const result = await evaluate(session, `(async () => {
@@ -349,22 +355,19 @@ async function checkAnchoredExperience(session, variant) {
         opacity:getComputedStyle(content).opacity,
         logoColor:getComputedStyle(section.querySelector('.job-logo')).backgroundColor};
     };
-    const nick = await sample('nick', 'nick-halftone');
     const hedra = await sample('hedra', 'hedra-halftone');
-    // At Hedra's midpoint, orange must still be solid behind black dots.
+    // At Hedra's midpoint, Nick's orange wipe stays behind black dots.
     const hedraTop = document.getElementById('hedra').getBoundingClientRect().top + scrollY;
     scrollTo({top:Math.round(hedraTop - 0.5 * height), behavior:'instant'});
     ScrollTrigger.update();
-    const orange = document.getElementById('nick-halftone');
-    const orangeGl = orange.getContext('webgl2');
-    const orangePixel = new Uint8Array(4);
-    orangeGl.readPixels(0, 0, 1, 1, orangeGl.RGBA, orangeGl.UNSIGNED_BYTE, orangePixel);
-    const orangeAtBlackEntry = [...orangePixel];
-    return {nick, hedra, orangeAtBlackEntry};
+    const orange = document.getElementById('nick-wipe');
+    return {hedra, orangeAtBlackEntry:{
+      visible:getComputedStyle(orange).visibility,
+      opacity:Number(getComputedStyle(orange).opacity),
+      color:getComputedStyle(orange).backgroundColor
+    }};
   })()`);
-  for (const [id, expected] of [
-    ['nick', [255, 121, 0, 255]], ['hedra', [0, 0, 0, 255]]
-  ]) {
+  for (const [id, expected] of [['hedra', [0, 0, 0, 255]]]) {
     const state = result[id];
     const label = `${variant}: ${id} section anchor`;
     assert.equal(state.canvasPosition, 'fixed', `${label}: canvas covers the viewport`);
@@ -391,8 +394,8 @@ async function checkAnchoredExperience(session, variant) {
       `${label}: job moves at configured page speed`);
     assert.equal(state.opacity, '1', `${label}: job does not fade`);
   }
-  assert.equal(result.nick.logoColor, 'rgb(141, 198, 63)', 'Nickelodeon badge stays green');
-  assert.deepEqual(result.orangeAtBlackEntry, [255, 121, 0, 255],
+  assert.deepEqual(result.orangeAtBlackEntry,
+    {visible:'visible', opacity:1, color:'rgb(255, 121, 0)'},
     `${variant}: orange remains solid behind Hedra's black dots`);
 }
 
@@ -461,104 +464,241 @@ async function checkOutroLayerIsolation(session, label) {
     `${label}: a stale black Hedra canvas cannot obscure the end screen (${difference})`);
 }
 
-async function checkGoogleDoodleLayering(session, variant) {
-  if (forceNoWebgl) return;
+
+async function checkNickWipe(session, variant) {
   await send('Page.bringToFront', {}, session);
-  const candidates = await evaluate(session, `(async () => {
-    const google = document.getElementById('google');
-    const canvas = document.getElementById('nick-halftone');
-    const gl = canvas.getContext('webgl2');
-    if (!gl) throw new Error('Nick halftone did not initialize WebGL2.');
-    const doodleEnd = Math.max(...[...google.querySelectorAll('.doodle-img')]
-      .map(image => image.getBoundingClientRect().bottom + scrollY));
-    const dpr = devicePixelRatio;
-    let stats;
-    const collect = () => {
-      stats = {inside:0, opaque:0, hitImage:0, overlap:0};
-      const rgba = new Uint8Array(canvas.width * canvas.height * 4);
-      gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, rgba);
-      const points = [];
-      for (const image of document.querySelectorAll('#google .doodle-img')) {
-        const rect = image.getBoundingClientRect();
-        const left = Math.max(2, Math.ceil(rect.left + 3));
-        const right = Math.min(innerWidth - 2, Math.floor(rect.right - 3));
-        const top = Math.max(2, Math.ceil(rect.top + 3));
-        const bottom = Math.min(innerHeight - 2, Math.floor(rect.bottom - 3),
-          Math.floor(google.getBoundingClientRect().bottom - 2));
-        for (let y = top; y < bottom; y += 6) {
-          for (let x = left; x < right; x += 6) {
-            const index = ((canvas.height - 1 - Math.round(y * dpr)) * canvas.width
-              + Math.round(x * dpr)) * 4 + 3;
-            const opaque = rgba[index] >= 253;
-            const hitImage = document.elementFromPoint(x, y) === image;
-            stats.inside++;
-            if (opaque) stats.opaque++;
-            if (hitImage) stats.hitImage++;
-            if (opaque && hitImage) stats.overlap++;
-            if (!opaque || !hitImage) continue;
-            points.push([x, y]);
-            if (points.length >= 1200) return points;
+  const result = await evaluate(session, `(async () => {
+    const section = document.getElementById('nick');
+    const wipe = document.getElementById('nick-wipe');
+    const bubbles = document.getElementById('nick-bubbles');
+    const content = section.querySelector('.job-content');
+    const top = section.getBoundingClientRect().top + scrollY;
+    const height = innerHeight;
+    const bubbleGl = bubbles.getContext('webgl2');
+    const bubbleContext = bubbleGl ? null : bubbles.getContext('2d');
+    let bubbleDraws = 0;
+    let particleUploads = 0;
+    if (bubbleGl) {
+      const originalDraw = bubbleGl.drawArraysInstanced;
+      bubbleGl.drawArraysInstanced = function(...args) {
+        bubbleDraws++;
+        return originalDraw.apply(this, args);
+      };
+      const originalBufferData = bubbleGl.bufferData;
+      bubbleGl.bufferData = function(...args) {
+        if (args[0] === this.ARRAY_BUFFER) particleUploads++;
+        return originalBufferData.apply(this, args);
+      };
+      const originalBufferSubData = bubbleGl.bufferSubData;
+      bubbleGl.bufferSubData = function(...args) {
+        if (args[0] === this.ARRAY_BUFFER) particleUploads++;
+        return originalBufferSubData.apply(this, args);
+      };
+    } else {
+      const originalDraw = bubbleContext.drawImage;
+      bubbleContext.drawImage = function(...args) {
+        bubbleDraws++;
+        return originalDraw.apply(this, args);
+      };
+    }
+    const imageStats = (includeAlphas = false) => {
+      const {width, height} = bubbles;
+      const pixels = bubbleGl ? new Uint8Array(width * height * 4) :
+        bubbleContext.getImageData(0, 0, width, height).data;
+      if (bubbleGl) {
+        bubbleGl.readPixels(0, 0, width, height, bubbleGl.RGBA,
+          bubbleGl.UNSIGNED_BYTE, pixels);
+      }
+      const ratioX = width / innerWidth;
+      const ratioY = height / innerHeight;
+      let covered = 0, sampled = 0, translucent = 0, alphaSum = 0;
+      let hash = 2166136261;
+      const alphas = [];
+      const zones = Array.from({length:9}, () => ({covered:0, sampled:0}));
+      for (let y = 6; y < innerHeight; y += 12) {
+        for (let x = 6; x < innerWidth; x += 12) {
+          const pixelX = Math.min(width - 1, Math.floor(x * ratioX));
+          const pixelY = Math.min(height - 1, Math.floor(y * ratioY));
+          const row = bubbleGl ? height - 1 - pixelY : pixelY;
+          const alpha = pixels[(row * width + pixelX) * 4 + 3];
+          const zone = zones[Math.min(2, Math.floor(y / innerHeight * 3)) * 3 +
+            Math.min(2, Math.floor(x / innerWidth * 3))];
+          sampled++;
+          zone.sampled++;
+          if (alpha) {
+            covered++;
+            alphaSum += alpha;
+            zone.covered++;
+            if (alpha < 255) translucent++;
           }
+          hash = Math.imul(hash ^ alpha, 16777619) >>> 0;
+          if (includeAlphas) alphas.push(alpha);
         }
       }
-      return points;
+      return {
+        coverage:covered / sampled,
+        zoneCoverage:zones.map(zone => zone.covered / zone.sampled),
+        translucent:translucent / Math.max(covered, 1),
+        meanBubbleAlpha:alphaSum / Math.max(covered, 1),
+        hash, alphas
+      };
     };
-    let best = {scroll:0, count:0};
-    const history = [];
-    for (const fraction of [0.75, 0.7, 0.65, 0.6, 0.55, 0.5, 0.45, 0.4, 0.35, 0.3]) {
-      const targetScroll = Math.round(doodleEnd - fraction * innerHeight);
-      scrollTo({top:targetScroll, behavior:'instant'});
+    const move = async fraction => {
+      scrollTo({top:Math.round(top - fraction * height), behavior:'instant'});
       ScrollTrigger.update();
-      const count = collect().length;
-      history.push({fraction, ...stats});
-      if (count > best.count) best = {scroll:targetScroll, doodleBottom:fraction * innerHeight, count};
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      const wipeStyle = getComputedStyle(wipe);
+      return {
+        sectionTop:section.getBoundingClientRect().top,
+        contentTop:content.getBoundingClientRect().top,
+        contentHeight:content.getBoundingClientRect().height,
+        contentOpacity:Number(getComputedStyle(content).opacity),
+        contentVisibility:getComputedStyle(content).visibility,
+        wipeVisible:wipeStyle.visibility,
+        wipeOpacity:Number(wipeStyle.opacity),
+        clipPath:wipeStyle.clipPath,
+        bubbleVisible:getComputedStyle(bubbles).visibility,
+        bubblesActive:bubbles.classList.contains('is-active'),
+        animation:getComputedStyle(bubbles).animationName
+      };
+    };
+    const beforeBubbles = await move(1.3 + 3 / height);
+    const start = await move(1.3);
+    const preWipe = await move(1.25);
+    const before = await move(1 + 3 / height);
+    const entered = await move(0.96);
+    const enteredImage = imageStats(true);
+    const middle = await move(0.9);
+    const bubbleCoverageByPosition = [];
+    for (const position of [-1.3, -0.75, 0, 0.25, 0.5, 0.75, 1, 1.75, 2.3]) {
+      await move(1 - position * 0.2);
+      bubbleCoverageByPosition.push(imageStats().coverage);
     }
-    scrollTo({top:best.scroll, behavior:'instant'});
-    ScrollTrigger.update();
-    await new Promise(resolve => setTimeout(resolve, 250));
-    return {points:collect(), best, history};
+    const dense = await move(0.9);
+    const denseImage = imageStats();
+    await new Promise(resolve => setTimeout(resolve, 120));
+    const idleImage = imageStats();
+    await move(0.85);
+    const scrolledImage = imageStats();
+    const reverse = await move(0.96);
+    const reverseImage = imageStats(true);
+    const reverseDifference = reverseImage.alphas.reduce((sum, alpha, i) =>
+      sum + Math.abs(alpha - enteredImage.alphas[i]), 0) / reverseImage.alphas.length;
+    delete enteredImage.alphas;
+    delete reverseImage.alphas;
+    const complete = await move(0.8 - 2 / height);
+    const settled = await move(0.7);
+    const finished = await move(0.5 - 2 / height);
+    const jobExit = await move(-0.85);
+    const past = await move(-section.getBoundingClientRect().height / height - 3 / height);
+    const {centerAtSectionTop, speed} = JSON.parse(content.dataset.jobLayout);
+    const jobCenter = await move(centerAtSectionTop);
+    const jobLater = await move(centerAtSectionTop - 0.5);
+    return {
+      beforeBubbles, start, preWipe, before, entered, middle, dense, reverse,
+      complete, settled, finished, jobExit,
+      past, jobCenter, jobLater, enteredImage, denseImage, idleImage,
+      scrolledImage, reverseImage, reverseDifference, bubbleCoverageByPosition,
+      centerAtSectionTop, speed, viewportHeight:height, viewportWidth:innerWidth,
+      wipePosition:getComputedStyle(wipe).position,
+      wipePointerEvents:getComputedStyle(wipe).pointerEvents,
+      wipeColor:getComputedStyle(wipe).backgroundColor,
+      wipeLayer:Number(getComputedStyle(wipe).zIndex),
+      contentLayer:Number(getComputedStyle(content).zIndex),
+      bubbleLayer:Number(getComputedStyle(bubbles).zIndex),
+      bubbleTag:bubbles.tagName,
+      bubbleBackend:bubbleGl ? 'webgl2' : '2d',
+      bubbleChildren:bubbles.childElementCount,
+      bubbleDraws,
+      particleUploads,
+      canvasWidth:bubbles.width,
+      canvasHeight:bubbles.height,
+      reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches,
+      logoColor:getComputedStyle(section.querySelector('.job-logo')).backgroundColor
+    };
   })()`);
-  const label = `${variant}: halftone above Google doodles`;
-  assert.ok(candidates.points.length > 5,
-    `${label}: opaque dots must naturally overlap visible doodle images: ${JSON.stringify(candidates.best)}, ${JSON.stringify(candidates.history)}`);
-  const shown = await send('Page.captureScreenshot', {format:'png', fromSurface:true}, session);
-  await evaluate(session, `document.getElementById('nick-halftone').style.visibility = 'hidden'`);
-  let hidden;
-  try {
-    hidden = await send('Page.captureScreenshot', {format:'png', fromSurface:true}, session);
-  } finally {
-    await evaluate(session, `document.getElementById('nick-halftone').style.visibility = 'visible'`);
+  const label = `${variant}: Nick bubble wipe`;
+  assert.equal(result.beforeBubbles.bubbleVisible, 'hidden',
+    `${label}: bubbles wait below the viewport before -30vh`);
+  assert.ok(Math.abs(result.start.sectionTop - result.viewportHeight * 1.3) <= 2 &&
+    result.preWipe.bubblesActive && result.preWipe.wipeVisible === 'hidden',
+    `${label}: bubbles begin 30vh before the wipe`);
+  assert.equal(result.before.wipeVisible, 'hidden', `${label}: hidden before Nick enters`);
+  assert.equal(result.entered.wipeVisible, 'visible', `${label}: visible during entry`);
+  assert.ok(Math.abs(result.entered.wipeOpacity - 0.2) < 0.01 &&
+    Math.abs(result.middle.wipeOpacity - 0.5) < 0.01 &&
+    Math.abs(result.reverse.wipeOpacity - 0.2) < 0.01,
+    `${label}: orange fades over the first 20vh of Nick`);
+  assert.ok(result.entered.contentVisibility === 'visible' &&
+    result.middle.contentVisibility === 'visible' &&
+    result.complete.contentVisibility === 'visible' &&
+    result.jobExit.contentVisibility === 'visible' &&
+    result.past.contentVisibility === 'hidden' &&
+    Math.abs(result.entered.contentOpacity - result.entered.wipeOpacity) < 0.01 &&
+    Math.abs(result.middle.contentOpacity - result.middle.wipeOpacity) < 0.01 &&
+    result.jobCenter.contentOpacity === 1 && result.jobExit.contentOpacity === 1,
+    `${label}: Nick's description shares the orange entry fade and stays opaque through Hedra's dots`);
+  assert.ok(Math.abs(result.complete.sectionTop - result.viewportHeight * 0.8) <= 3 &&
+    result.complete.wipeOpacity === 1 && result.settled.wipeOpacity === 1,
+    `${label}: orange reaches full opacity after 20vh of scroll: ${JSON.stringify({complete:result.complete, settled:result.settled})}`);
+  assert.equal(result.middle.clipPath, 'none', `${label}: orange fades without a wipe edge`);
+  assert.equal(result.past.wipeVisible, 'hidden', `${label}: wipe retires after Nick`);
+  assert.equal(result.wipePosition, 'fixed', `${label}: wipe covers the viewport`);
+  assert.equal(result.wipePointerEvents, 'none', `${label}: doodles remain clickable`);
+  assert.equal(result.wipeColor, 'rgb(255, 121, 0)', `${label}: wipe is Nick orange`);
+  assert.ok(result.wipeLayer < result.contentLayer &&
+    result.contentLayer < result.bubbleLayer && result.bubbleLayer < 10,
+    `${label}: Nick's section content sits between the orange fade and bubbles`);
+  assert.equal(result.bubbleTag, 'CANVAS', `${label}: bubbles use one canvas overlay`);
+  assert.equal(result.bubbleBackend, forceNoWebgl ? '2d' : 'webgl2',
+    `${label}: the bubble renderer selects the available backend`);
+  assert.equal(result.bubbleChildren, 0, `${label}: no bubble divs are created`);
+  assert.ok(result.bubbleDraws > 0, `${label}: canvas draws the PNG bubble sprite`);
+  if (result.bubbleBackend === 'webgl2') {
+    assert.ok(result.particleUploads <= 1,
+      `${label}: scrolling changes uniforms without uploading particle positions (${result.particleUploads} uploads)`);
   }
-  const sources = [shown, hidden].map(image => `data:image/png;base64,${image.data}`);
-  const result = await evaluate(session, `(async () => {
-    const sources = ${JSON.stringify(sources)};
-    const points = ${JSON.stringify(candidates.points)};
-    const images = await Promise.all(sources.map(async source => {
-      const image = new Image(); image.src = source; await image.decode();
-      const bitmap = document.createElement('canvas');
-      bitmap.width = image.width; bitmap.height = image.height;
-      const context = bitmap.getContext('2d');
-      context.drawImage(image, 0, 0);
-      return context.getImageData(0, 0, image.width, image.height).data;
-    }));
-    let doodlePixels = 0, covered = 0;
-    const orange = [255, 121, 0], white = [255, 255, 255];
-    const difference = (data, index, color) =>
-      Math.max(...[0, 1, 2].map(channel => Math.abs(data[index + channel] - color[channel])));
-    for (const [x, y] of points) {
-      const index = (y * innerWidth + x) * 4;
-      if (difference(images[1], index, white) < 25 || difference(images[1], index, orange) < 30) continue;
-      doodlePixels++;
-      // Compositor sampling can blend an edge pixel. Verify the shown pixel
-      // moves toward orange compared with the same doodle without the canvas.
-      if (difference(images[0], index, orange) + 10 < difference(images[1], index, orange)) covered++;
-    }
-    return {doodlePixels, covered};
-  })()`);
-  assert.ok(result.doodlePixels > 5,
-    `${label}: identify visible nonwhite doodle pixels under opaque dots: ${JSON.stringify(result)}`);
-  assert.ok(result.covered >= 0.8 * result.doodlePixels,
-    `${label}: orange pixels must cover the doodles while hit testing passes through: ${JSON.stringify(result)}`);
+  assert.ok(result.canvasWidth >= result.viewportWidth &&
+    result.canvasHeight >= result.viewportHeight,
+    `${label}: the canvas covers the viewport`);
+  assert.ok(result.denseImage.coverage > 0.78 && result.denseImage.coverage < 0.95,
+    `${label}: bubbles nearly fill the viewport at peak without forming a solid wall (${result.denseImage.coverage} covered)`);
+  assert.ok(Math.min(...result.denseImage.zoneCoverage) > 0.55,
+    `${label}: bubble coverage reaches every part of the viewport (${result.denseImage.zoneCoverage})`);
+  assert.ok(result.bubbleCoverageByPosition[0] < result.bubbleCoverageByPosition[4] &&
+    result.bubbleCoverageByPosition[1] < result.bubbleCoverageByPosition[4] &&
+    result.bubbleCoverageByPosition[8] < result.bubbleCoverageByPosition[4],
+    `${label}: bubble coverage rises across the wipe and tapers afterward: ${result.bubbleCoverageByPosition}`);
+  assert.ok(result.denseImage.meanBubbleAlpha > 100,
+    `${label}: bubble image retains its own visible opacity (${result.denseImage.meanBubbleAlpha})`);
+  assert.ok(result.denseImage.translucent > 0.5,
+    `${label}: most bubble pixels are translucent`);
+  assert.equal(result.entered.bubblesActive, true, `${label}: bubbles animate during entry`);
+  assert.equal(result.dense.bubbleVisible, result.reducedMotion ? 'hidden' : 'visible',
+    `${label}: bubble visibility follows motion preference`);
+  assert.equal(result.complete.bubblesActive, true,
+    `${label}: bubbles keep rising after the wipe`);
+  assert.ok(result.settled.bubblesActive &&
+    Math.abs(result.finished.sectionTop - result.viewportHeight * 0.5) <= 3 &&
+    !result.finished.bubblesActive && result.finished.bubbleVisible === 'hidden',
+    `${label}: bubbles finish 50vh after the wipe begins: ${JSON.stringify({settled:result.settled, finished:result.finished})}`);
+  assert.equal(result.middle.animation, 'none', `${label}: bubbles have no timed animation`);
+  assert.equal(result.idleImage.hash, result.denseImage.hash,
+    `${label}: bubbles stay still until the page scrolls`);
+  assert.notEqual(result.scrolledImage.hash, result.denseImage.hash,
+    `${label}: scrolling changes bubble positions`);
+  assert.ok(result.reverseDifference < 2,
+    `${label}: reverse scrolling restores the bubble image (${result.reverseDifference} mean alpha difference)`);
+  assert.equal(result.logoColor, 'rgb(141, 198, 63)', `${label}: Nick badge stays green`);
+  assert.ok(Math.abs(result.jobCenter.contentTop + result.jobCenter.contentHeight / 2 -
+    result.viewportHeight / 2) <= 2,
+    `${label}: Nick's description is centered during the section`);
+  const scrollDistance = result.jobCenter.sectionTop - result.jobLater.sectionTop;
+  const contentDistance = result.jobCenter.contentTop - result.jobLater.contentTop;
+  assert.ok(Math.abs(contentDistance - scrollDistance * result.speed) <= 2 &&
+    result.speed === 0.45,
+    `${label}: Nick's description rises at 45% of page speed (${contentDistance} over ${scrollDistance})`);
 }
 
 async function checkOutroSynchronization(session, variant) {
@@ -788,6 +928,13 @@ try {
       }
     }
     await delay(1600);
+    if (nickWipeOnly) {
+      for (const variant of ['native', 'fallback']) {
+        await checkNickWipe(sessions[variant], `${width}x${height}, ${variant}`);
+      }
+      console.log(`${width}x${height}: Nick bubble wipe passed.`);
+      continue;
+    }
     if (hedraBackgroundOnly) {
       for (const variant of ['native', 'fallback']) {
         await checkHedraBackground(sessions[variant], `${width}x${height}, ${variant}`);
@@ -844,14 +991,14 @@ try {
       for (const variant of ['native', 'fallback']) {
         const label = `${width}x${height}, ${variant}`;
         await checkJobSections(sessions[variant], label);
+        await checkNickWipe(sessions[variant], label);
         await checkAnchoredExperience(sessions[variant], label);
         await checkHedraBackground(sessions[variant], label);
-        await checkGoogleDoodleLayering(sessions[variant], label);
       }
       await checkOutroLayerIsolation(sessions.native, `${width}x${height}`);
-      console.log(`${width}x${height}: section-anchored halftones, job motion, and doodle overlap passed.`);
+      console.log(`${width}x${height}: Nick wipe, Hedra halftone, and job motion passed.`);
     }
-    if (!profileSection && !hedraBackgroundOnly && !introLoadingOnly) {
+    if (!profileSection && !nickWipeOnly && !hedraBackgroundOnly && !introLoadingOnly) {
     // Rotate an already loaded page. CSS units and GSAP's captured lengths can differ.
     await Promise.all(variants.map(v => send('Emulation.setDeviceMetricsOverride', {
       width: 1024, height: 768, deviceScaleFactor: 1, mobile: false,

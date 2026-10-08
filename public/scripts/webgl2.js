@@ -1,4 +1,4 @@
-// Shared WebGL2 setup for the ambient and section-transition canvases.
+// WebGL2 setup for the Hedra halftone transition.
 export const createWebgl2Program = (canvas, vertexSource, fragmentSource,
   { preserveDrawingBuffer = false } = {}) => {
   const gl = canvas.getContext('webgl2', {

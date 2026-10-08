@@ -1,4 +1,5 @@
 import { createHalftoneGpuRenderer } from './halftone-transition-gl.js';
+import { createNickBubbleRenderer } from './nick-bubble-renderer.js';
 
 gsap.registerPlugin(ScrollToPlugin, ScrollTrigger);
 SmoothScroll({});
@@ -96,12 +97,14 @@ document.addEventListener('keydown', (event) => {
 const centeredJobScrollY = (sectionSelector, followingSectionSelector) => {
   const section = $(sectionSelector);
   const content = section.querySelector('.job-content');
-  const { entryViewportFraction, speed } = experienceSettings.sections
+  const { entryViewportFraction, centerAtSectionTop, speed } = experienceSettings.sections
     .find(settings => settings.sectionSelector === sectionSelector).job;
   const height = window.innerHeight;
   const sectionTop = section.getBoundingClientRect().top + scrollY;
-  const centeredY = sectionTop - entryViewportFraction * height +
-    (height + content.getBoundingClientRect().height) / (2 * speed);
+  const centeredY = centerAtSectionTop === undefined ?
+    sectionTop - entryViewportFraction * height +
+      (height + content.getBoundingClientRect().height) / (2 * speed) :
+    sectionTop - centerAtSectionTop * height;
   if (!followingSectionSelector) return centeredY;
   const followingTop = $(followingSectionSelector).getBoundingClientRect().top + scrollY;
   // Leave a small buffer so scroll rounding cannot reveal the next section.
@@ -338,7 +341,6 @@ googleSections.forEach((element, i) => {
 
 // EXPERIENCE SECTIONS
 // All positions below use the section named by sectionSelector as their anchor.
-// The canvas named by canvasSelector paints that section's background during entry.
 const experienceSettings = {
   halftone: {
     startTop: 1,       // Start when the new section's top reaches the viewport bottom.
@@ -350,8 +352,7 @@ const experienceSettings = {
   sections: [
     {
       sectionSelector: '#nick',
-      canvasSelector: '#nick-halftone',
-      job: { entryViewportFraction: 0.7, startCover: -0.15, endCover: 1, speed: 1 }
+      job: { centerAtSectionTop: 0.25, startCover: -0.15, endCover: 1, speed: 0.45 }
     },
     {
       sectionSelector: '#hedra',
@@ -363,12 +364,14 @@ const experienceSettings = {
 // Job controls, in each section's job object:
 // entryViewportFraction: where the section top is when the text first reaches
 // the viewport bottom (1 = viewport bottom; 0.7 = 70% down the viewport).
+// centerAtSectionTop: section-top viewport fraction where the text is centered.
 // startCover/endCover: parallax range measured over the section crossing the
 // viewport (0 = top at bottom; 1 = bottom at top). -0.15 begins before entry.
-// speed: text scroll speed divided by page scroll speed (1 = normal; 0.8 = 80%).
+// speed: text scroll speed divided by page scroll speed (1 = normal; 0.45 = 45%).
 
 // JOB DESCRIPTIONS
-const createJobScroll = ({ sectionSelector, entryViewportFraction, startCover, endCover, speed }) => {
+const createJobScroll = ({ sectionSelector, entryViewportFraction, centerAtSectionTop,
+  startCover, endCover, speed }) => {
   const section = $(sectionSelector);
   const content = section.querySelector('.job-content');
   let range;
@@ -385,13 +388,19 @@ const createJobScroll = ({ sectionSelector, entryViewportFraction, startCover, e
     const endSectionTop = height - endCover * coverDistance;
     const startScroll = sectionScroll - startSectionTop;
     const endScroll = sectionScroll - endSectionTop;
-    const entrySectionTop = entryViewportFraction * height;
-    // Offset the starting position when speed changes so entry stays at the
-    // same viewport edge while the text moves more slowly or quickly afterward.
-    const entryCompensation = (1 - speed) * (startSectionTop - entrySectionTop);
-    content.style.top = `${height - entrySectionTop - entryCompensation}px`;
+    if (centerAtSectionTop === undefined) {
+      const entrySectionTop = entryViewportFraction * height;
+      // Offset the starting position when speed changes so entry stays at the
+      // same viewport edge while the text moves more slowly afterward.
+      const entryCompensation = (1 - speed) * (startSectionTop - entrySectionTop);
+      content.style.top = `${height - entrySectionTop - entryCompensation}px`;
+    } else {
+      const centeredSectionTop = centerAtSectionTop * height;
+      content.style.top = `${(height - content.getBoundingClientRect().height) / 2 -
+        (1 - speed) * startSectionTop - speed * centeredSectionTop}px`;
+    }
     content.dataset.jobLayout = JSON.stringify({ height, sectionHeight, entryViewportFraction,
-      startCover, endCover, speed });
+      centerAtSectionTop, startCover, endCover, speed });
     content.style.setProperty('--job-parallax-distance', `${(1 - speed) * (endScroll - startScroll)}px`);
     range = { startScroll, endScroll };
   };
@@ -427,9 +436,222 @@ experienceSettings.sections.forEach(({ sectionSelector, job }) => {
   createJobScroll({ sectionSelector, ...job });
 });
 
-// HALFTONE TRANSITIONS
-// Each canvas is fixed so its dots can cover the previous section. Orange stays
-// under black; the DOM sections are white, so no hard color edge can show.
+// NICKELODEON TRANSITION
+// The orange fade and every bubble position follow Nick's scroll progress.
+const createNickWipe = () => {
+  const section = $('#nick');
+  const content = section.querySelector('.job-content');
+  const wipe = $('#nick-wipe');
+  const bubbles = $('#nick-bubbles');
+  const bubbleRenderer = createNickBubbleRenderer(bubbles);
+  const wipeScrollRange = 0.2;
+  const bubbleLead = 1.5;
+  const bubbleTail = 1.5;
+  // A crossing takes 20vh of scroll, nearly the same distance as before.
+  const bubbleFlight = 1;
+  const latestLaunch = 1 + bubbleTail - bubbleFlight;
+  const launchCenter = 0.5 - bubbleFlight / 2;
+  let particles = [];
+  let particleWidth = 0;
+  let particleHeight = 0;
+  let drawnWidth = 0;
+  let drawnHeight = 0;
+  let bubblePosition = -bubbleLead;
+  let lastDrawnPosition;
+  let pendingFrame = 0;
+  let bubbleSprite;
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+
+  const buildParticles = (width, height) => {
+    const peakSize = Math.min(240, Math.max(135, width * 0.22)) * 0.7;
+    const sizeVariation = 0.4;
+    const horizontalOverscan = peakSize * (1 + sizeVariation);
+    const launchRange = latestLaunch + bubbleLead;
+    const spread = 0.55;
+    let seed = 27183;
+    const random = () => {
+      seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+      return seed / 4294967296;
+    };
+    const bell = (distance) => Math.exp(-0.5 * (distance / spread) ** 2);
+    const sizeAt = (launch) => Math.round(peakSize *
+      (0.2 + 0.8 * bell(launch + bubbleFlight / 2 - 0.5)));
+    // Estimate how much of each bubble's circular face is on screen at the
+    // wipe midpoint. The launch bell and edge clipping are included, so the
+    // count responds to both viewport area and actual bubble pixel size.
+    const calculateBubbleCount = (viewportWidth, viewportHeight, bubblePixelSize) => {
+      const samples = 256;
+      let weightedArea = 0;
+      let totalWeight = 0;
+      const circleIntegral = (radius, y) => 0.5 * (y *
+        Math.sqrt(Math.max(0, radius * radius - y * y)) +
+        radius * radius * Math.asin(y / radius));
+      for (let i = 0; i < samples; i++) {
+        const launch = -bubbleLead + (i + 0.5) / samples * launchRange;
+        const weight = bell(launch - launchCenter);
+        const phase = (0.5 - launch) / bubbleFlight;
+        totalWeight += weight;
+        if (phase <= 0 || phase >= 1) continue;
+        const size = Math.round(bubblePixelSize *
+          (0.2 + 0.8 * bell(launch + bubbleFlight / 2 - 0.5)));
+        const radius = size / 2;
+        const top = viewportHeight + size - phase * (viewportHeight + 2 * size);
+        const center = top + radius;
+        const lower = Math.max(-radius, -center);
+        const upper = Math.min(radius, viewportHeight - center);
+        if (upper > lower) {
+          weightedArea += weight * 2 *
+            (circleIntegral(radius, upper) - circleIntegral(radius, lower));
+        }
+      }
+      const horizontalFraction = viewportWidth /
+        (viewportWidth + 2 * bubblePixelSize * (1 + sizeVariation));
+      // Uniform variation of ±40% increases the average bubble face area.
+      const sizeAreaFactor = 1 + sizeVariation * sizeVariation / 3;
+      // Stratified launch times and horizontal lanes cover gaps more
+      // efficiently than unrestricted random overlap; account for that here.
+      const spacingEfficiency = 1.2;
+      const visibleAreaPerBubble = weightedArea / totalWeight *
+        horizontalFraction * sizeAreaFactor * spacingEfficiency;
+      const targetCoverage = 0.85;
+      return Math.max(24, Math.ceil(-Math.log1p(-targetCoverage) *
+        viewportWidth * viewportHeight / visibleAreaPerBubble));
+    };
+    const bubbleCount = calculateBubbleCount(width, height, peakSize);
+    // One bubble per bell-curve interval keeps the rise and fall smooth;
+    // seeded jitter prevents the launches from looking evenly spaced.
+    const steps = 256;
+    const cumulative = new Float64Array(steps + 1);
+    for (let step = 1; step <= steps; step++) {
+      const launch = -bubbleLead + (step - 0.5) / steps * launchRange;
+      cumulative[step] = cumulative[step - 1] + bell(launch - launchCenter);
+    }
+    const launchAt = (fraction) => {
+      const target = fraction * cumulative[steps];
+      let low = 0;
+      let high = steps;
+      while (low + 1 < high) {
+        const middle = (low + high) >> 1;
+        if (cumulative[middle] < target) low = middle;
+        else high = middle;
+      }
+      const withinStep = (target - cumulative[low]) /
+        (cumulative[high] - cumulative[low]);
+      return -bubbleLead + (low + withinStep) / steps * launchRange;
+    };
+    const nextParticles = [];
+    for (let i = 0; i < bubbleCount; i++) {
+      const launch = i === 0 ? -bubbleLead : i === bubbleCount - 1 ? latestLaunch :
+        launchAt((i - 1 + random()) / (bubbleCount - 2));
+      // Size peaks when this bubble crosses the screen at the wipe midpoint.
+      const size = Math.round(sizeAt(launch) *
+        (1 + sizeVariation * (random() * 2 - 1)));
+      nextParticles.push({
+        size,
+        sway: 16 + random() * 42,
+        launch,
+        waveOffset: random() * Math.PI * 2,
+        angle: (random() * 2 - 1) * Math.PI / 6
+      });
+    }
+    // Shuffle screen-wide lanes for each small launch group, then jitter
+    // within each lane. The seed keeps the pattern stable while scrolling.
+    const laneCount = Math.max(6, Math.round(
+      (width + 2 * horizontalOverscan) / peakSize));
+    for (let start = 0; start < bubbleCount; start += laneCount) {
+      const lanes = Array.from({ length: laneCount }, (_, lane) => lane);
+      for (let lane = laneCount - 1; lane > 0; lane--) {
+        const swap = Math.floor(random() * (lane + 1));
+        [lanes[lane], lanes[swap]] = [lanes[swap], lanes[lane]];
+      }
+      for (let i = 0; i < Math.min(laneCount, bubbleCount - start); i++) {
+        nextParticles[start + i].x = (lanes[i] + random()) / laneCount;
+      }
+    }
+    particles = nextParticles;
+    bubbleRenderer.setParticles(particles, horizontalOverscan);
+    particleWidth = width;
+    particleHeight = height;
+  };
+
+  const drawBubbles = () => {
+    pendingFrame = 0;
+    if (!bubbleSprite || !bubbles.classList.contains('is-active')) return;
+    const width = innerWidth;
+    const height = innerHeight;
+    const ratio = Math.min(devicePixelRatio || 1, 1.5);
+    if (width !== particleWidth || height !== particleHeight) buildParticles(width, height);
+    bubbleRenderer.draw(particles, bubblePosition, bubbleFlight, width, height, ratio);
+    drawnWidth = width;
+    drawnHeight = height;
+    lastDrawnPosition = bubblePosition;
+  };
+
+  const update = () => {
+    const bounds = section.getBoundingClientRect();
+    const visible = bounds.top < innerHeight && bounds.bottom > 0;
+    const wipePosition = (1 - bounds.top / innerHeight) / wipeScrollRange;
+    const progress = gsap.utils.clamp(0, 1, wipePosition);
+    // Bubbles span -30vh to +50vh around the start of the 20vh opacity fade.
+    bubblePosition = gsap.utils.clamp(-bubbleLead, 1 + bubbleTail, wipePosition);
+    const bubbleWindow = bubbleRenderer.kind !== 'none' && Boolean(bubbleSprite) &&
+      !reducedMotion.matches &&
+      wipePosition > -bubbleLead && wipePosition < 1 + bubbleTail;
+    wipe.style.visibility = visible ? 'visible' : 'hidden';
+    bubbles.style.visibility = bubbleWindow ? 'visible' : 'hidden';
+    bubbles.classList.toggle('is-active', bubbleWindow);
+    wipe.style.opacity = progress;
+    // The description shares the orange entry fade; it stays opaque while
+    // Hedra's dots cover it on the way out.
+    content.style.visibility = visible ? 'visible' : 'hidden';
+    content.style.opacity = progress;
+    if (bubbleWindow) {
+      if (!pendingFrame && (bubblePosition !== lastDrawnPosition ||
+          innerWidth !== drawnWidth || innerHeight !== drawnHeight)) {
+        pendingFrame = requestAnimationFrame(drawBubbles);
+      }
+    } else if (pendingFrame) {
+      cancelAnimationFrame(pendingFrame);
+      pendingFrame = 0;
+    }
+  };
+
+  const bubbleImage = new Image();
+  bubbleImage.onload = () => {
+    // Cache a compact sprite so each scroll frame samples a small bitmap.
+    const sprite = document.createElement('canvas');
+    sprite.width = 384;
+    sprite.height = 384;
+    const spriteContext = sprite.getContext('2d');
+    if (!spriteContext) return;
+    spriteContext.drawImage(bubbleImage, 140, 137, 974, 974, 0, 0, 384, 384);
+    bubbleSprite = sprite;
+    bubbleRenderer.setSprite(sprite);
+    lastDrawnPosition = undefined;
+    update();
+  };
+  bubbleImage.src = 'assets/nick-bubble.png';
+  reducedMotion.addEventListener('change', update);
+
+  ScrollTrigger.create({
+    trigger: section,
+    start: () => section.getBoundingClientRect().top + scrollY -
+      (1 + bubbleLead * wipeScrollRange) * innerHeight,
+    end: () => section.getBoundingClientRect().bottom + scrollY,
+    onUpdate: update,
+    onRefresh: update,
+    onEnter: update,
+    onEnterBack: update,
+    onLeave: update,
+    onLeaveBack: update
+  });
+  update();
+};
+
+createNickWipe();
+
+// HEDRA HALFTONE TRANSITION
+// Hedra's fixed canvas covers the orange wipe with black dots.
 const halftoneRowPitch = (viewportHeight) =>
   viewportHeight * 0.48 / experienceSettings.halftone.dotRows;
 
@@ -545,7 +767,7 @@ const createHalftone = ({ canvasSelector, sectionSelector }) => {
 
 };
 
-experienceSettings.sections.forEach(createHalftone);
+experienceSettings.sections.filter(({ canvasSelector }) => canvasSelector).forEach(createHalftone);
 
 // SKILLS
 // All rows travel the same distance. Animate their shared container
