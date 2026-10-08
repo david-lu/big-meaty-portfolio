@@ -879,12 +879,12 @@ html.intro-loading #intro::after {
 #nick-scene-fg {
     left: 0;
     width: 100%;
-    padding-bottom: 24vh;
-    background-image: url('assets/sponge/fg.png');
+    /* Let the art extend below the viewport while Hedra's dots grow. */
+    padding-bottom: 14vh;
+    background-image: url('assets/sponge/fg_blur.png');
     background-size: 100% auto;
     background-position: center bottom;
     background-origin: content-box;
-    filter: blur(4px);
     --parallax-from: 18vh;
     --parallax-to: -18vh;
 }

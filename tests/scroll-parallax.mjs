@@ -564,6 +564,7 @@ async function checkNickWipe(session, variant) {
       await new Promise(resolve => requestAnimationFrame(resolve));
       const wipeStyle = getComputedStyle(wipe);
       const sceneBounds = scene.getBoundingClientRect();
+      const fgBounds = sceneFg.getBoundingClientRect();
       return {
         sectionTop:section.getBoundingClientRect().top,
         sceneTop:sceneBounds.top,
@@ -572,8 +573,9 @@ async function checkNickWipe(session, variant) {
         sceneVisibility:getComputedStyle(scene).visibility,
         bgRelativeTop:sceneBg.getBoundingClientRect().top - sceneBounds.top,
         bgHeight:sceneBg.getBoundingClientRect().height,
-        fgRelativeTop:sceneFg.getBoundingClientRect().top - sceneBounds.top,
-        fgHeight:sceneFg.getBoundingClientRect().height,
+        fgRelativeTop:fgBounds.top - sceneBounds.top,
+        fgHeight:fgBounds.height,
+        fgArtworkBottom:fgBounds.bottom - parseFloat(getComputedStyle(sceneFg).paddingBottom),
         contentTop:content.getBoundingClientRect().top,
         contentHeight:content.getBoundingClientRect().height,
         copyTop:copy.getBoundingClientRect().top,
@@ -633,6 +635,7 @@ async function checkNickWipe(session, variant) {
     const complete = await move(0.95 - 2 / height);
     const settled = await move(0.25);
     const finished = await move(0.15 - 2 / height);
+    const hedraMidpoint = await move(-0.5);
     const jobExit = await move(-0.85);
     const nearExit = await move(-0.98);
     const past = await move(-section.getBoundingClientRect().height / height - 3 / height);
@@ -640,7 +643,7 @@ async function checkNickWipe(session, variant) {
     const jobLater = await move(-0.25);
     return {
       beforeBubbles, start, preWipe, before, entered, middle, dense, reverse,
-      complete, settled, finished, jobExit, nearExit,
+      complete, settled, finished, hedraMidpoint, jobExit, nearExit,
       past, jobCenter, jobLater, enteredImage, denseImage, idleImage,
       scrolledImage, settledScrolledImage, reverseImage, reverseDifference,
       bubbleCoverageByPosition, framesAtRest, idleFrames,
@@ -668,6 +671,8 @@ async function checkNickWipe(session, variant) {
       particleUploads,
       canvasWidth:bubbles.width,
       canvasHeight:bubbles.height,
+      canvasCssWidth:bubbles.getBoundingClientRect().width,
+      canvasCssHeight:bubbles.getBoundingClientRect().height,
       reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches,
       logoColor:getComputedStyle(section.querySelector('.job-logo')).backgroundColor
     };
@@ -702,9 +707,11 @@ async function checkNickWipe(session, variant) {
       state.fgRelativeTop + state.fgHeight >= result.viewportHeight,
       `${label}: oversized parallax layers cover the viewport (${JSON.stringify(state)})`);
   }
-  assert.ok(result.sceneBgLoaded && result.sceneFgImage.includes('sponge/fg.png'),
+  assert.ok(result.sceneBgLoaded && result.sceneFgImage.includes('sponge/fg_blur.png'),
     `${label}: both SpongeBob image layers load`);
-  assert.equal(result.sceneFgFilter, 'blur(4px)', `${label}: the foreground is softly blurred`);
+  assert.equal(result.sceneFgFilter, 'none', `${label}: foreground blur is baked into the image`);
+  assert.ok(result.hedraMidpoint.fgArtworkBottom >= result.viewportHeight - 2,
+    `${label}: foreground art still reaches the bottom while Hedra's dots grow`);
   const bgTravel = result.jobLater.bgRelativeTop - result.jobCenter.bgRelativeTop;
   const fgTravel = result.jobLater.fgRelativeTop - result.jobCenter.fgRelativeTop;
   assert.ok(bgTravel < -result.viewportHeight * 0.04 &&
@@ -742,9 +749,12 @@ async function checkNickWipe(session, variant) {
     assert.ok(result.particleUploads <= 1,
       `${label}: scrolling changes uniforms without uploading particle positions (${result.particleUploads} uploads)`);
   }
-  assert.ok(result.canvasWidth >= result.viewportWidth &&
-    result.canvasHeight >= result.viewportHeight,
-    `${label}: the canvas covers the viewport`);
+  assert.ok(Math.max(result.canvasWidth, result.canvasHeight) <= 1600 &&
+    Math.abs(result.canvasWidth / result.canvasHeight -
+      result.viewportWidth / result.viewportHeight) < 0.002 &&
+    Math.abs(result.canvasCssWidth - result.viewportWidth) <= 1 &&
+    Math.abs(result.canvasCssHeight - result.viewportHeight) <= 1,
+    `${label}: the canvas is capped at 1600 pixels and scales over the viewport`);
   assert.ok(result.denseImage.coverage > 0.85 && result.denseImage.coverage < 0.99,
     `${label}: denser bubbles fill the viewport at peak (${result.denseImage.coverage} covered)`);
   assert.ok(Math.min(...result.denseImage.zoneCoverage) > 0.55,

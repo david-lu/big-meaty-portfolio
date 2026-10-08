@@ -458,6 +458,7 @@ const createNickWipe = () => {
   const wipeScrollRange = 0.1;
   const bubbleLead = 4;
   const bubbleTail = 8;
+  const bubbleCanvasMaxSide = 1600;
   // A bubble still takes 20vh of scroll to cross the viewport.
   const bubbleFlight = 2;
   const latestLaunch = 1 + bubbleTail - bubbleFlight;
@@ -602,7 +603,8 @@ const createNickWipe = () => {
       bubblePosition + difference * (1 - Math.exp(-elapsed / 70));
     const width = innerWidth;
     const height = innerHeight;
-    const ratio = Math.min(devicePixelRatio || 1, 1.5);
+    const ratio = Math.min(devicePixelRatio || 1, 1.5,
+      bubbleCanvasMaxSide / Math.max(width, height));
     if (width !== particleWidth || height !== particleHeight) buildParticles(width, height);
     bubbleRenderer.draw(particles, bubblePosition, bubbleFlight, width, height, ratio);
     drawnWidth = width;

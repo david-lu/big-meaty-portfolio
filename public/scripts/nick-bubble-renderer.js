@@ -115,8 +115,10 @@ export const createNickBubbleRenderer = (canvas) => {
   const draw = (particles, position, flight, width, height, ratio) => {
     if (!sprite) return;
     if (width !== canvasWidth || height !== canvasHeight || ratio !== canvasRatio) {
-      canvas.width = Math.ceil(width * ratio);
-      canvas.height = Math.ceil(height * ratio);
+      canvas.width = Math.max(1, Math.round(width * ratio));
+      canvas.height = Math.max(1, Math.round(height * ratio));
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
       canvasWidth = width;
       canvasHeight = height;
       canvasRatio = ratio;
@@ -137,7 +139,9 @@ export const createNickBubbleRenderer = (canvas) => {
       gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, particleCount);
       gl.bindVertexArray(null);
     } else if (context) {
-      context.setTransform(ratio, 0, 0, ratio, 0, 0);
+      const scaleX = canvas.width / width;
+      const scaleY = canvas.height / height;
+      context.setTransform(scaleX, 0, 0, scaleY, 0, 0);
       context.clearRect(0, 0, width, height);
       context.globalAlpha = 1;
       for (const { x, size, sway, launch, waveOffset, angle } of particles) {
@@ -153,8 +157,8 @@ export const createNickBubbleRenderer = (canvas) => {
         const extent = size / 2 * (Math.abs(sine) + Math.abs(cosine));
         if (centerX + extent < 0 || centerX - extent > width ||
             centerY + extent < 0 || centerY - extent > height) continue;
-        context.setTransform(ratio * cosine, ratio * sine,
-          -ratio * sine, ratio * cosine, ratio * centerX, ratio * centerY);
+        context.setTransform(scaleX * cosine, scaleY * sine,
+          -scaleX * sine, scaleY * cosine, scaleX * centerX, scaleY * centerY);
         context.drawImage(sprite, -size / 2, -size / 2, size, size);
       }
     }
