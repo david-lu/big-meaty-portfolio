@@ -880,7 +880,7 @@ html.intro-loading #intro::after {
     left: 0;
     width: 100%;
     /* Let the art extend below the viewport while Hedra's dots grow. */
-    padding-bottom: 14vh;
+    padding-bottom: 15vh;
     background-image: url('assets/sponge/fg_blur.png');
     background-size: 100% auto;
     background-position: center bottom;
@@ -959,6 +959,7 @@ html.intro-loading #intro::after {
 
 #nick .job-logo {
     background-color: #8dc63f;
+    box-shadow: 0 0.5rem 1.25rem rgb(0 0 0 / 30%);
 }
 
 .job-content h2,

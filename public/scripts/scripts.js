@@ -600,7 +600,7 @@ const createNickWipe = () => {
     lastFrameTime = now;
     const difference = targetBubblePosition - bubblePosition;
     bubblePosition = Math.abs(difference) < 0.002 ? targetBubblePosition :
-      bubblePosition + difference * (1 - Math.exp(-elapsed / 70));
+      bubblePosition + difference * (1 - Math.exp(-elapsed / 87.5));
     const width = innerWidth;
     const height = innerHeight;
     const ratio = Math.min(devicePixelRatio || 1, 1.5,
