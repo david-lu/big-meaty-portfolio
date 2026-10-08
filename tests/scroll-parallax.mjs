@@ -477,11 +477,13 @@ async function checkNickWipe(session, variant) {
     const bubbleGl = bubbles.getContext('webgl2');
     const bubbleContext = bubbleGl ? null : bubbles.getContext('2d');
     let bubbleDraws = 0;
+    let bubbleFrames = 0;
     let particleUploads = 0;
     if (bubbleGl) {
       const originalDraw = bubbleGl.drawArraysInstanced;
       bubbleGl.drawArraysInstanced = function(...args) {
         bubbleDraws++;
+        bubbleFrames++;
         return originalDraw.apply(this, args);
       };
       const originalBufferData = bubbleGl.bufferData;
@@ -495,6 +497,11 @@ async function checkNickWipe(session, variant) {
         return originalBufferSubData.apply(this, args);
       };
     } else {
+      const originalClear = bubbleContext.clearRect;
+      bubbleContext.clearRect = function(...args) {
+        bubbleFrames++;
+        return originalClear.apply(this, args);
+      };
       const originalDraw = bubbleContext.drawImage;
       bubbleContext.drawImage = function(...args) {
         bubbleDraws++;
@@ -563,25 +570,43 @@ async function checkNickWipe(session, variant) {
         animation:getComputedStyle(bubbles).animationName
       };
     };
+    const settle = async () => {
+      let unchanged = 0;
+      let previous = bubbleFrames;
+      for (let frame = 0; frame < 45 && unchanged < 2; frame++) {
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        unchanged = bubbleFrames === previous ? unchanged + 1 : 0;
+        previous = bubbleFrames;
+      }
+      if (unchanged < 2) throw new Error('Nick bubbles did not settle after scrolling');
+    };
     const beforeBubbles = await move(1.3 + 3 / height);
     const start = await move(1.3);
     const preWipe = await move(1.25);
     const before = await move(1 + 3 / height);
     const entered = await move(0.96);
+    await settle();
     const enteredImage = imageStats(true);
     const middle = await move(0.9);
     const bubbleCoverageByPosition = [];
     for (const position of [-1.3, -0.75, 0, 0.25, 0.5, 0.75, 1, 1.75, 2.3]) {
       await move(1 - position * 0.2);
+      await settle();
       bubbleCoverageByPosition.push(imageStats().coverage);
     }
     const dense = await move(0.9);
+    await settle();
     const denseImage = imageStats();
+    const framesAtRest = bubbleFrames;
     await new Promise(resolve => setTimeout(resolve, 120));
     const idleImage = imageStats();
+    const idleFrames = bubbleFrames;
     await move(0.85);
     const scrolledImage = imageStats();
+    await settle();
+    const settledScrolledImage = imageStats();
     const reverse = await move(0.96);
+    await settle();
     const reverseImage = imageStats(true);
     const reverseDifference = reverseImage.alphas.reduce((sum, alpha, i) =>
       sum + Math.abs(alpha - enteredImage.alphas[i]), 0) / reverseImage.alphas.length;
@@ -599,7 +624,8 @@ async function checkNickWipe(session, variant) {
       beforeBubbles, start, preWipe, before, entered, middle, dense, reverse,
       complete, settled, finished, jobExit,
       past, jobCenter, jobLater, enteredImage, denseImage, idleImage,
-      scrolledImage, reverseImage, reverseDifference, bubbleCoverageByPosition,
+      scrolledImage, settledScrolledImage, reverseImage, reverseDifference,
+      bubbleCoverageByPosition, framesAtRest, idleFrames,
       centerAtSectionTop, speed, viewportHeight:height, viewportWidth:innerWidth,
       wipePosition:getComputedStyle(wipe).position,
       wipePointerEvents:getComputedStyle(wipe).pointerEvents,
@@ -686,8 +712,12 @@ async function checkNickWipe(session, variant) {
   assert.equal(result.middle.animation, 'none', `${label}: bubbles have no timed animation`);
   assert.equal(result.idleImage.hash, result.denseImage.hash,
     `${label}: bubbles stay still until the page scrolls`);
+  assert.equal(result.idleFrames, result.framesAtRest,
+    `${label}: the bubble renderer stops drawing after its short catch-up`);
   assert.notEqual(result.scrolledImage.hash, result.denseImage.hash,
     `${label}: scrolling changes bubble positions`);
+  assert.notEqual(result.scrolledImage.hash, result.settledScrolledImage.hash,
+    `${label}: bubbles briefly catch up after scrolling stops`);
   assert.ok(result.reverseDifference < 2,
     `${label}: reverse scrolling restores the bubble image (${result.reverseDifference} mean alpha difference)`);
   assert.equal(result.logoColor, 'rgb(141, 198, 63)', `${label}: Nick badge stays green`);

@@ -457,7 +457,9 @@ const createNickWipe = () => {
   let drawnWidth = 0;
   let drawnHeight = 0;
   let bubblePosition = -bubbleLead;
+  let targetBubblePosition = -bubbleLead;
   let lastDrawnPosition;
+  let lastFrameTime = 0;
   let pendingFrame = 0;
   let bubbleSprite;
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
@@ -574,9 +576,19 @@ const createNickWipe = () => {
     particleHeight = height;
   };
 
-  const drawBubbles = () => {
+  const drawBubbles = (now) => {
     pendingFrame = 0;
-    if (!bubbleSprite || !bubbles.classList.contains('is-active')) return;
+    if (!bubbleSprite || !bubbles.classList.contains('is-active')) {
+      lastFrameTime = 0;
+      return;
+    }
+    // A short, bounded lag gives scroll changes some weight without letting
+    // the bubbles drift far from the current scroll position.
+    const elapsed = lastFrameTime ? now - lastFrameTime : 1000 / 60;
+    lastFrameTime = now;
+    const difference = targetBubblePosition - bubblePosition;
+    bubblePosition = Math.abs(difference) < 0.002 ? targetBubblePosition :
+      bubblePosition + difference * (1 - Math.exp(-elapsed / 70));
     const width = innerWidth;
     const height = innerHeight;
     const ratio = Math.min(devicePixelRatio || 1, 1.5);
@@ -585,6 +597,11 @@ const createNickWipe = () => {
     drawnWidth = width;
     drawnHeight = height;
     lastDrawnPosition = bubblePosition;
+    if (bubblePosition !== targetBubblePosition) {
+      pendingFrame = requestAnimationFrame(drawBubbles);
+    } else {
+      lastFrameTime = 0;
+    }
   };
 
   const update = () => {
@@ -593,10 +610,11 @@ const createNickWipe = () => {
     const wipePosition = (1 - bounds.top / innerHeight) / wipeScrollRange;
     const progress = gsap.utils.clamp(0, 1, wipePosition);
     // Bubbles span -30vh to +50vh around the start of the 20vh opacity fade.
-    bubblePosition = gsap.utils.clamp(-bubbleLead, 1 + bubbleTail, wipePosition);
+    targetBubblePosition = gsap.utils.clamp(-bubbleLead, 1 + bubbleTail, wipePosition);
     const bubbleWindow = bubbleRenderer.kind !== 'none' && Boolean(bubbleSprite) &&
       !reducedMotion.matches &&
       wipePosition > -bubbleLead && wipePosition < 1 + bubbleTail;
+    const wasActive = bubbles.classList.contains('is-active');
     wipe.style.visibility = visible ? 'visible' : 'hidden';
     bubbles.style.visibility = bubbleWindow ? 'visible' : 'hidden';
     bubbles.classList.toggle('is-active', bubbleWindow);
@@ -606,13 +624,22 @@ const createNickWipe = () => {
     content.style.visibility = visible ? 'visible' : 'hidden';
     content.style.opacity = progress;
     if (bubbleWindow) {
-      if (!pendingFrame && (bubblePosition !== lastDrawnPosition ||
+      if (!wasActive) {
+        bubblePosition = targetBubblePosition;
+        lastDrawnPosition = undefined;
+        lastFrameTime = 0;
+      } else {
+        bubblePosition = gsap.utils.clamp(targetBubblePosition - 0.16,
+          targetBubblePosition + 0.16, bubblePosition);
+      }
+      if (!pendingFrame && (targetBubblePosition !== lastDrawnPosition ||
           innerWidth !== drawnWidth || innerHeight !== drawnHeight)) {
         pendingFrame = requestAnimationFrame(drawBubbles);
       }
-    } else if (pendingFrame) {
-      cancelAnimationFrame(pendingFrame);
+    } else {
+      if (pendingFrame) cancelAnimationFrame(pendingFrame);
       pendingFrame = 0;
+      lastFrameTime = 0;
     }
   };
 
