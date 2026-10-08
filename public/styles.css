@@ -222,14 +222,18 @@ html.intro-loading #nav-hamburger {
         view-timeline-inset: 0;
     }
 
-    #nick .job-content,
     #hedra .job-content {
         animation: job-parallax auto linear both;
         animation-range: cover var(--job-cover-start) cover var(--job-cover-end);
     }
 
-    #nick .job-content { animation-timeline: --nick-job; }
     #hedra .job-content { animation-timeline: --hedra-job; }
+
+    #nick .nick-scene-layer {
+        animation: parallax-y auto linear both;
+        animation-timeline: --nick-job;
+        animation-range: cover 0% cover 100%;
+    }
 
     #fg,
     #intro .parallax-bg,
@@ -843,6 +847,53 @@ html.intro-loading #intro::after {
     height: 100vh;
 }
 
+#nick-scene {
+    position: fixed;
+    inset: 0;
+    z-index: 7;
+    width: 100%;
+    height: 100%;
+    overflow: clip;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.nick-scene-layer {
+    position: absolute;
+    top: -24vh;
+    left: -8vw;
+    width: calc(100% + 16vw);
+    height: calc(100% + 48vh);
+    pointer-events: none;
+    user-select: none;
+    will-change: transform;
+}
+
+#nick-scene-bg {
+    object-fit: cover;
+    object-position: center;
+    --parallax-from: 9vh;
+    --parallax-to: -9vh;
+}
+
+#nick-scene-fg {
+    background-image: url('assets/sponge/fg.png');
+    background-size: cover;
+    background-position: center;
+    background-origin: border-box;
+    filter: blur(4px);
+    --parallax-from: 18vh;
+    --parallax-to: -18vh;
+}
+
+@media (max-aspect-ratio: 0.6) {
+    #nick-scene-fg {
+        background-image: url('assets/sponge/fg.png'), url('assets/sponge/fg.png');
+        background-size: auto 100%, auto 100%;
+        background-position: left center, right center;
+    }
+}
+
 .job-content {
     position: absolute;
     z-index: 12;
@@ -858,10 +909,35 @@ html.intro-loading #intro::after {
     transform: translate(-50%, var(--job-scroll, 0px));
 }
 
-#nick .job-content {
+#nick .nick-copy-track {
+    position: absolute;
+    top: 0;
+    left: 0;
     z-index: 8;
+    width: 100%;
+    height: 150vh;
+    justify-content: flex-start;
+    pointer-events: none;
+}
+
+#nick .job-content {
+    position: sticky;
+    z-index: 8;
+    top: 50vh;
+    left: auto;
+    height: 0;
+    flex: none;
+    justify-content: flex-start;
+    margin-top: -55vh;
+    transform: none;
     opacity: 0;
     visibility: hidden;
+}
+
+#nick .nick-copy {
+    width: 100%;
+    flex: none;
+    transform: translateY(-50%);
 }
 
 #hedra .job-content h2,

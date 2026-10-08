@@ -352,7 +352,7 @@ const experienceSettings = {
   sections: [
     {
       sectionSelector: '#nick',
-      job: { centerAtSectionTop: 0.25, startCover: -0.15, endCover: 1, speed: 0.45 }
+      job: { centerAtSectionTop: 0.25 }
     },
     {
       sectionSelector: '#hedra',
@@ -432,23 +432,34 @@ const createJobScroll = ({ sectionSelector, entryViewportFraction, centerAtSecti
   update();
 };
 
-experienceSettings.sections.forEach(({ sectionSelector, job }) => {
+experienceSettings.sections.filter(({ sectionSelector }) => sectionSelector !== '#nick').forEach(({ sectionSelector, job }) => {
   createJobScroll({ sectionSelector, ...job });
 });
+
+if (!supportsCssParallax) {
+  for (const [layer, travel] of [['#nick-scene-bg', 9], ['#nick-scene-fg', 18]]) {
+    gsap.fromTo(layer, { y: `${travel}vh` }, {
+      y: `-${travel}vh`, ease: 'none',
+      scrollTrigger: { trigger: '#nick', start: 'top bottom', end: 'bottom top', scrub: 0 }
+    });
+  }
+}
 
 // NICKELODEON TRANSITION
 // The orange fade and every bubble position follow Nick's scroll progress.
 const createNickWipe = () => {
   const section = $('#nick');
   const content = section.querySelector('.job-content');
+  const scene = $('#nick-scene');
   const wipe = $('#nick-wipe');
   const bubbles = $('#nick-bubbles');
   const bubbleRenderer = createNickBubbleRenderer(bubbles);
-  const wipeScrollRange = 0.2;
-  const bubbleLead = 1.5;
-  const bubbleTail = 1.5;
-  // A crossing takes 20vh of scroll, nearly the same distance as before.
-  const bubbleFlight = 1;
+  const fadeStartTop = 1.05;
+  const wipeScrollRange = 0.1;
+  const bubbleLead = 4;
+  const bubbleTail = 8;
+  // A bubble still takes 20vh of scroll to cross the viewport.
+  const bubbleFlight = 2;
   const latestLaunch = 1 + bubbleTail - bubbleFlight;
   const launchCenter = 0.5 - bubbleFlight / 2;
   let particles = [];
@@ -469,7 +480,7 @@ const createNickWipe = () => {
     const sizeVariation = 0.4;
     const horizontalOverscan = peakSize * (1 + sizeVariation);
     const launchRange = latestLaunch + bubbleLead;
-    const spread = 0.55;
+    const spread = 1.1;
     let seed = 27183;
     const random = () => {
       seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
@@ -519,7 +530,7 @@ const createNickWipe = () => {
       return Math.max(24, Math.ceil(-Math.log1p(-targetCoverage) *
         viewportWidth * viewportHeight / visibleAreaPerBubble));
     };
-    const bubbleCount = calculateBubbleCount(width, height, peakSize);
+    const bubbleCount = Math.ceil(calculateBubbleCount(width, height, peakSize) * 1.5);
     // One bubble per bell-curve interval keeps the rise and fall smooth;
     // seeded jitter prevents the launches from looking evenly spaced.
     const steps = 256;
@@ -550,7 +561,7 @@ const createNickWipe = () => {
         (1 + sizeVariation * (random() * 2 - 1)));
       nextParticles.push({
         size,
-        sway: 16 + random() * 42,
+        sway: 8 + random() * 21,
         launch,
         waveOffset: random() * Math.PI * 2,
         angle: (random() * 2 - 1) * Math.PI / 6
@@ -606,19 +617,21 @@ const createNickWipe = () => {
 
   const update = () => {
     const bounds = section.getBoundingClientRect();
-    const visible = bounds.top < innerHeight && bounds.bottom > 0;
-    const wipePosition = (1 - bounds.top / innerHeight) / wipeScrollRange;
+    const visible = bounds.top < fadeStartTop * innerHeight && bounds.bottom > 0;
+    const wipePosition = (fadeStartTop - bounds.top / innerHeight) / wipeScrollRange;
     const progress = gsap.utils.clamp(0, 1, wipePosition);
-    // Bubbles span -30vh to +50vh around the start of the 20vh opacity fade.
+    // Bubbles span -40vh to +90vh around the start of the 10vh opacity fade.
     targetBubblePosition = gsap.utils.clamp(-bubbleLead, 1 + bubbleTail, wipePosition);
     const bubbleWindow = bubbleRenderer.kind !== 'none' && Boolean(bubbleSprite) &&
       !reducedMotion.matches &&
       wipePosition > -bubbleLead && wipePosition < 1 + bubbleTail;
     const wasActive = bubbles.classList.contains('is-active');
     wipe.style.visibility = visible ? 'visible' : 'hidden';
+    scene.style.visibility = visible ? 'visible' : 'hidden';
     bubbles.style.visibility = bubbleWindow ? 'visible' : 'hidden';
     bubbles.classList.toggle('is-active', bubbleWindow);
     wipe.style.opacity = progress;
+    scene.style.opacity = progress;
     // The description shares the orange entry fade; it stays opaque while
     // Hedra's dots cover it on the way out.
     content.style.visibility = visible ? 'visible' : 'hidden';
@@ -629,8 +642,8 @@ const createNickWipe = () => {
         lastDrawnPosition = undefined;
         lastFrameTime = 0;
       } else {
-        bubblePosition = gsap.utils.clamp(targetBubblePosition - 0.16,
-          targetBubblePosition + 0.16, bubblePosition);
+        bubblePosition = gsap.utils.clamp(targetBubblePosition - 0.32,
+          targetBubblePosition + 0.32, bubblePosition);
       }
       if (!pendingFrame && (targetBubblePosition !== lastDrawnPosition ||
           innerWidth !== drawnWidth || innerHeight !== drawnHeight)) {
@@ -663,7 +676,7 @@ const createNickWipe = () => {
   ScrollTrigger.create({
     trigger: section,
     start: () => section.getBoundingClientRect().top + scrollY -
-      (1 + bubbleLead * wipeScrollRange) * innerHeight,
+      (fadeStartTop + bubbleLead * wipeScrollRange) * innerHeight,
     end: () => section.getBoundingClientRect().bottom + scrollY,
     onUpdate: update,
     onRefresh: update,

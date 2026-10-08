@@ -77,7 +77,8 @@ const server = http.createServer(async (req, res) => {
       body = 'const CSS = { supports: () => false };\n' + body;
     }
     const mime = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript',
-      '.svg': 'image/svg+xml', '.png': 'image/png', '.gif': 'image/gif', '.ttf': 'font/ttf' };
+      '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg',
+      '.gif': 'image/gif', '.ttf': 'font/ttf' };
     res.writeHead(200, { 'Content-Type': mime[path.extname(file)] || 'application/octet-stream' });
     res.end(body);
   } catch {
@@ -153,7 +154,8 @@ const sessions = {};
 const variants = ['native', ...(!profileSection ? ['fallback'] : []), ...(compareHead ? ['baseline'] : [])];
 const selector = '#fg, #intro .parallax-bg, #map-path, #map-info, #map-path svg, ' +
   '.pin, #google-pin-expand, .google-section, .skill-section, ' +
-  '#outro .parallax-bg, #outro-info, #outro-sun, #outro-socials, .scroll-button';
+  '#nick-scene-bg, #nick-scene-fg, #outro .parallax-bg, ' +
+  '#outro-info, #outro-sun, #outro-socials, .scroll-button';
 const snapshot = `JSON.stringify({
   scroll: scrollY, height: document.documentElement.scrollHeight,
   background: getComputedStyle(document.documentElement).backgroundColor,
@@ -184,7 +186,8 @@ function compare(actual, expected, label) {
       // CSS timelines and ScrollTrigger can round moving art by a fraction
       // of a pixel at a newly sampled section entry.
       const parallaxImageY = property === 'y' &&
-        (element.id === 'outro-sun' || element.id.startsWith('assets/outro-layer-') ||
+        (element.id === 'outro-sun' || element.id.startsWith('nick-scene-') ||
+          element.id.startsWith('assets/outro-layer-') ||
           element.id.startsWith('assets/nick-outlines/'));
       const tolerance = parallaxImageY ? 0.4 : 0.15;
       assert.ok(Math.abs(element[property] - other[property]) < tolerance,
@@ -471,7 +474,11 @@ async function checkNickWipe(session, variant) {
     const section = document.getElementById('nick');
     const wipe = document.getElementById('nick-wipe');
     const bubbles = document.getElementById('nick-bubbles');
+    const scene = document.getElementById('nick-scene');
+    const sceneBg = document.getElementById('nick-scene-bg');
+    const sceneFg = document.getElementById('nick-scene-fg');
     const content = section.querySelector('.job-content');
+    const copy = content.querySelector('.nick-copy');
     const top = section.getBoundingClientRect().top + scrollY;
     const height = innerHeight;
     const bubbleGl = bubbles.getContext('webgl2');
@@ -556,10 +563,21 @@ async function checkNickWipe(session, variant) {
       await new Promise(resolve => requestAnimationFrame(resolve));
       await new Promise(resolve => requestAnimationFrame(resolve));
       const wipeStyle = getComputedStyle(wipe);
+      const sceneBounds = scene.getBoundingClientRect();
       return {
         sectionTop:section.getBoundingClientRect().top,
+        sceneTop:sceneBounds.top,
+        sceneHeight:sceneBounds.height,
+        sceneOpacity:Number(getComputedStyle(scene).opacity),
+        sceneVisibility:getComputedStyle(scene).visibility,
+        bgRelativeTop:sceneBg.getBoundingClientRect().top - sceneBounds.top,
+        bgHeight:sceneBg.getBoundingClientRect().height,
+        fgRelativeTop:sceneFg.getBoundingClientRect().top - sceneBounds.top,
+        fgHeight:sceneFg.getBoundingClientRect().height,
         contentTop:content.getBoundingClientRect().top,
         contentHeight:content.getBoundingClientRect().height,
+        copyTop:copy.getBoundingClientRect().top,
+        copyHeight:copy.getBoundingClientRect().height,
         contentOpacity:Number(getComputedStyle(content).opacity),
         contentVisibility:getComputedStyle(content).visibility,
         wipeVisible:wipeStyle.visibility,
@@ -580,57 +598,67 @@ async function checkNickWipe(session, variant) {
       }
       if (unchanged < 2) throw new Error('Nick bubbles did not settle after scrolling');
     };
-    const beforeBubbles = await move(1.3 + 3 / height);
-    const start = await move(1.3);
-    const preWipe = await move(1.25);
-    const before = await move(1 + 3 / height);
-    const entered = await move(0.96);
+    const beforeBubbles = await move(1.45 + 3 / height);
+    const start = await move(1.45);
+    const preWipe = await move(1.4);
+    const before = await move(1.05 + 3 / height);
+    const entered = await move(1.03);
     await settle();
     const enteredImage = imageStats(true);
-    const middle = await move(0.9);
+    const middle = await move(1);
     const bubbleCoverageByPosition = [];
-    for (const position of [-1.3, -0.75, 0, 0.25, 0.5, 0.75, 1, 1.75, 2.3]) {
-      await move(1 - position * 0.2);
+    for (const position of [-4, -3, -1, 0, 0.5, 1, 2.5, 6, 8.5]) {
+      await move(1.05 - position * 0.1);
       await settle();
       bubbleCoverageByPosition.push(imageStats().coverage);
     }
-    const dense = await move(0.9);
+    const dense = await move(1);
     await settle();
     const denseImage = imageStats();
     const framesAtRest = bubbleFrames;
     await new Promise(resolve => setTimeout(resolve, 120));
     const idleImage = imageStats();
     const idleFrames = bubbleFrames;
-    await move(0.85);
+    await move(0.99);
     const scrolledImage = imageStats();
     await settle();
     const settledScrolledImage = imageStats();
-    const reverse = await move(0.96);
+    const reverse = await move(1.03);
     await settle();
     const reverseImage = imageStats(true);
     const reverseDifference = reverseImage.alphas.reduce((sum, alpha, i) =>
       sum + Math.abs(alpha - enteredImage.alphas[i]), 0) / reverseImage.alphas.length;
     delete enteredImage.alphas;
     delete reverseImage.alphas;
-    const complete = await move(0.8 - 2 / height);
-    const settled = await move(0.7);
-    const finished = await move(0.5 - 2 / height);
+    const complete = await move(0.95 - 2 / height);
+    const settled = await move(0.25);
+    const finished = await move(0.15 - 2 / height);
     const jobExit = await move(-0.85);
+    const nearExit = await move(-0.98);
     const past = await move(-section.getBoundingClientRect().height / height - 3 / height);
-    const {centerAtSectionTop, speed} = JSON.parse(content.dataset.jobLayout);
-    const jobCenter = await move(centerAtSectionTop);
-    const jobLater = await move(centerAtSectionTop - 0.5);
+    const jobCenter = await move(0.25);
+    const jobLater = await move(-0.25);
     return {
       beforeBubbles, start, preWipe, before, entered, middle, dense, reverse,
-      complete, settled, finished, jobExit,
+      complete, settled, finished, jobExit, nearExit,
       past, jobCenter, jobLater, enteredImage, denseImage, idleImage,
       scrolledImage, settledScrolledImage, reverseImage, reverseDifference,
       bubbleCoverageByPosition, framesAtRest, idleFrames,
-      centerAtSectionTop, speed, viewportHeight:height, viewportWidth:innerWidth,
+      viewportHeight:height, viewportWidth:innerWidth,
       wipePosition:getComputedStyle(wipe).position,
       wipePointerEvents:getComputedStyle(wipe).pointerEvents,
       wipeColor:getComputedStyle(wipe).backgroundColor,
       wipeLayer:Number(getComputedStyle(wipe).zIndex),
+      scenePosition:getComputedStyle(scene).position,
+      sceneOverflow:getComputedStyle(scene).overflow,
+      scenePointerEvents:getComputedStyle(scene).pointerEvents,
+      sceneLayer:Number(getComputedStyle(scene).zIndex),
+      sceneBgLoaded:sceneBg.naturalWidth > 0,
+      sceneFgImage:getComputedStyle(sceneFg).backgroundImage,
+      sceneFgFilter:getComputedStyle(sceneFg).filter,
+      contentPosition:getComputedStyle(content).position,
+      contentAnimation:getComputedStyle(content).animationName,
+      contentScrollOffset:content.style.getPropertyValue('--job-scroll'),
       contentLayer:Number(getComputedStyle(content).zIndex),
       bubbleLayer:Number(getComputedStyle(bubbles).zIndex),
       bubbleTag:bubbles.tagName,
@@ -646,16 +674,43 @@ async function checkNickWipe(session, variant) {
   })()`);
   const label = `${variant}: Nick bubble wipe`;
   assert.equal(result.beforeBubbles.bubbleVisible, 'hidden',
-    `${label}: bubbles wait below the viewport before -30vh`);
-  assert.ok(Math.abs(result.start.sectionTop - result.viewportHeight * 1.3) <= 2 &&
+    `${label}: bubbles wait below the viewport before -40vh`);
+  assert.ok(Math.abs(result.start.sectionTop - result.viewportHeight * 1.45) <= 2 &&
     result.preWipe.bubblesActive && result.preWipe.wipeVisible === 'hidden',
-    `${label}: bubbles begin 30vh before the wipe`);
+    `${label}: bubbles begin 40vh before the wipe`);
   assert.equal(result.before.wipeVisible, 'hidden', `${label}: hidden before Nick enters`);
   assert.equal(result.entered.wipeVisible, 'visible', `${label}: visible during entry`);
-  assert.ok(Math.abs(result.entered.wipeOpacity - 0.2) < 0.01 &&
-    Math.abs(result.middle.wipeOpacity - 0.5) < 0.01 &&
-    Math.abs(result.reverse.wipeOpacity - 0.2) < 0.01,
-    `${label}: orange fades over the first 20vh of Nick`);
+  assert.ok(Math.abs(result.entered.wipeOpacity - 0.2) < 0.02 &&
+    Math.abs(result.middle.wipeOpacity - 0.5) < 0.02 &&
+    Math.abs(result.reverse.wipeOpacity - 0.2) < 0.02,
+    `${label}: orange fades over the last 5vh of Doodles and first 5vh of Nick (${JSON.stringify({entered:result.entered, middle:result.middle, reverse:result.reverse})})`);
+  assert.ok(Math.abs(result.entered.sceneOpacity - result.entered.wipeOpacity) < 0.01 &&
+    Math.abs(result.middle.sceneOpacity - result.middle.wipeOpacity) < 0.01 &&
+    result.jobCenter.sceneOpacity === 1 &&
+    result.entered.sceneVisibility === 'visible' &&
+    result.past.sceneVisibility === 'hidden',
+    `${label}: the SpongeBob scene enters with the orange fade`);
+  assert.ok(result.scenePosition === 'fixed' && result.sceneOverflow === 'clip' &&
+    result.scenePointerEvents === 'none' &&
+    Math.abs(result.jobCenter.sceneTop) <= 1 &&
+    Math.abs(result.jobCenter.sceneHeight - result.viewportHeight) <= 1,
+    `${label}: the scene is clipped to the viewport`);
+  for (const state of [result.entered, result.middle, result.jobCenter, result.jobLater, result.jobExit]) {
+    assert.ok(state.bgRelativeTop <= 0 &&
+      state.bgRelativeTop + state.bgHeight >= result.viewportHeight &&
+      state.fgRelativeTop <= 0 &&
+      state.fgRelativeTop + state.fgHeight >= result.viewportHeight,
+      `${label}: oversized parallax layers cover the viewport (${JSON.stringify(state)})`);
+  }
+  assert.ok(result.sceneBgLoaded && result.sceneFgImage.includes('sponge/fg.png'),
+    `${label}: both SpongeBob image layers load`);
+  assert.equal(result.sceneFgFilter, 'blur(4px)', `${label}: the foreground is softly blurred`);
+  const bgTravel = result.jobLater.bgRelativeTop - result.jobCenter.bgRelativeTop;
+  const fgTravel = result.jobLater.fgRelativeTop - result.jobCenter.fgRelativeTop;
+  assert.ok(bgTravel < -result.viewportHeight * 0.04 &&
+    bgTravel > -result.viewportHeight * 0.05 &&
+    fgTravel < bgTravel * 1.9 && fgTravel > -result.viewportHeight * 0.1,
+    `${label}: scene layers drift at different rates (${bgTravel}, ${fgTravel})`);
   assert.ok(result.entered.contentVisibility === 'visible' &&
     result.middle.contentVisibility === 'visible' &&
     result.complete.contentVisibility === 'visible' &&
@@ -665,17 +720,19 @@ async function checkNickWipe(session, variant) {
     Math.abs(result.middle.contentOpacity - result.middle.wipeOpacity) < 0.01 &&
     result.jobCenter.contentOpacity === 1 && result.jobExit.contentOpacity === 1,
     `${label}: Nick's description shares the orange entry fade and stays opaque through Hedra's dots`);
-  assert.ok(Math.abs(result.complete.sectionTop - result.viewportHeight * 0.8) <= 3 &&
+  assert.ok(Math.abs(result.middle.sectionTop - result.viewportHeight) <= 2 &&
+    Math.abs(result.complete.sectionTop - result.viewportHeight * 0.95) <= 3 &&
     result.complete.wipeOpacity === 1 && result.settled.wipeOpacity === 1,
-    `${label}: orange reaches full opacity after 20vh of scroll: ${JSON.stringify({complete:result.complete, settled:result.settled})}`);
+    `${label}: orange reaches full opacity 5vh into Nick: ${JSON.stringify({complete:result.complete, settled:result.settled})}`);
   assert.equal(result.middle.clipPath, 'none', `${label}: orange fades without a wipe edge`);
   assert.equal(result.past.wipeVisible, 'hidden', `${label}: wipe retires after Nick`);
   assert.equal(result.wipePosition, 'fixed', `${label}: wipe covers the viewport`);
   assert.equal(result.wipePointerEvents, 'none', `${label}: doodles remain clickable`);
   assert.equal(result.wipeColor, 'rgb(255, 121, 0)', `${label}: wipe is Nick orange`);
-  assert.ok(result.wipeLayer < result.contentLayer &&
+  assert.ok(result.wipeLayer === result.sceneLayer &&
+    result.sceneLayer < result.contentLayer &&
     result.contentLayer < result.bubbleLayer && result.bubbleLayer < 10,
-    `${label}: Nick's section content sits between the orange fade and bubbles`);
+    `${label}: the scene and text sit between the orange fade and bubbles`);
   assert.equal(result.bubbleTag, 'CANVAS', `${label}: bubbles use one canvas overlay`);
   assert.equal(result.bubbleBackend, forceNoWebgl ? '2d' : 'webgl2',
     `${label}: the bubble renderer selects the available backend`);
@@ -688,8 +745,8 @@ async function checkNickWipe(session, variant) {
   assert.ok(result.canvasWidth >= result.viewportWidth &&
     result.canvasHeight >= result.viewportHeight,
     `${label}: the canvas covers the viewport`);
-  assert.ok(result.denseImage.coverage > 0.78 && result.denseImage.coverage < 0.95,
-    `${label}: bubbles nearly fill the viewport at peak without forming a solid wall (${result.denseImage.coverage} covered)`);
+  assert.ok(result.denseImage.coverage > 0.85 && result.denseImage.coverage < 0.99,
+    `${label}: denser bubbles fill the viewport at peak (${result.denseImage.coverage} covered)`);
   assert.ok(Math.min(...result.denseImage.zoneCoverage) > 0.55,
     `${label}: bubble coverage reaches every part of the viewport (${result.denseImage.zoneCoverage})`);
   assert.ok(result.bubbleCoverageByPosition[0] < result.bubbleCoverageByPosition[4] &&
@@ -706,9 +763,9 @@ async function checkNickWipe(session, variant) {
   assert.equal(result.complete.bubblesActive, true,
     `${label}: bubbles keep rising after the wipe`);
   assert.ok(result.settled.bubblesActive &&
-    Math.abs(result.finished.sectionTop - result.viewportHeight * 0.5) <= 3 &&
+    Math.abs(result.finished.sectionTop - result.viewportHeight * 0.15) <= 3 &&
     !result.finished.bubblesActive && result.finished.bubbleVisible === 'hidden',
-    `${label}: bubbles finish 50vh after the wipe begins: ${JSON.stringify({settled:result.settled, finished:result.finished})}`);
+    `${label}: bubbles finish 90vh after the wipe begins: ${JSON.stringify({settled:result.settled, finished:result.finished})}`);
   assert.equal(result.middle.animation, 'none', `${label}: bubbles have no timed animation`);
   assert.equal(result.idleImage.hash, result.denseImage.hash,
     `${label}: bubbles stay still until the page scrolls`);
@@ -721,14 +778,14 @@ async function checkNickWipe(session, variant) {
   assert.ok(result.reverseDifference < 2,
     `${label}: reverse scrolling restores the bubble image (${result.reverseDifference} mean alpha difference)`);
   assert.equal(result.logoColor, 'rgb(141, 198, 63)', `${label}: Nick badge stays green`);
-  assert.ok(Math.abs(result.jobCenter.contentTop + result.jobCenter.contentHeight / 2 -
-    result.viewportHeight / 2) <= 2,
-    `${label}: Nick's description is centered during the section`);
-  const scrollDistance = result.jobCenter.sectionTop - result.jobLater.sectionTop;
-  const contentDistance = result.jobCenter.contentTop - result.jobLater.contentTop;
-  assert.ok(Math.abs(contentDistance - scrollDistance * result.speed) <= 2 &&
-    result.speed === 0.45,
-    `${label}: Nick's description rises at 45% of page speed (${contentDistance} over ${scrollDistance})`);
+  assert.ok(result.contentPosition === 'sticky' && result.contentAnimation === 'none' &&
+    result.contentScrollOffset === '',
+    `${label}: Nick's description uses CSS sticky without a scroll transform`);
+  for (const state of [result.entered, result.middle, result.jobCenter, result.jobLater,
+    result.jobExit, result.nearExit]) {
+    assert.ok(Math.abs(state.copyTop + state.copyHeight / 2 - result.viewportHeight / 2) <= 2,
+      `${label}: Nick's description stays centered while sticky (${JSON.stringify(state)})`);
+  }
 }
 
 async function checkOutroSynchronization(session, variant) {
@@ -978,7 +1035,7 @@ try {
     }
       const counts = await Promise.all(variants.map(v => evaluate(sessions[v], 'ScrollTrigger.getAll().length')));
       const skillsActivated = await evaluate(sessions.native, `document.querySelector('#skills .parallax-container').classList.contains('parallax-active')`);
-      assert.equal(counts[1] - counts[0], control ? 0 : 14 + Number(skillsActivated), 'CSS should replace imagery and job triggers and remove the skills activation trigger after entry.');
+      assert.equal(counts[1] - counts[0], control ? 0 : 15 + Number(skillsActivated), 'CSS should replace imagery and job triggers and remove the skills activation trigger after entry.');
       const positions = await evaluate(sessions.fallback, `(() => {
         const top = id => document.getElementById(id).getBoundingClientRect().top + scrollY;
         const height = id => document.getElementById(id).offsetHeight;
