@@ -27,6 +27,7 @@ const profileSkills = process.argv.includes('--profile-skills');
 const profileOutro = process.argv.includes('--profile-outro');
 const profileHedra = process.argv.includes('--profile-hedra');
 const nickWipeOnly = process.argv.includes('--nick-wipe-only');
+const lazyScenesOnly = process.argv.includes('--lazy-scenes-only');
 const hedraBackgroundOnly = process.argv.includes('--hedra-background-only');
 const introLoadingOnly = process.argv.includes('--intro-loading-only');
 const forceNoWebgl = process.argv.includes('--force-no-webgl');
@@ -54,6 +55,27 @@ const server = http.createServer(async (req, res) => {
     if (file === 'scripts/logging.js') body = ''; // Keep analytics out of local tests.
     if (file === 'index.html') {
       body = body.toString().replace(/<script async src="https:[^>]+><\/script>/, '');
+      if (lazyScenesOnly) {
+        body = body.replace('<script defer type=\'module\' src="scripts/scripts.js"></script>',
+          `<script>window.sceneContextRequests = { 'nick-bubbles': 0, 'hedra-halftone': 0 };
+          window.sceneBubbleDraws = 0;
+          const originalSceneGetContext = HTMLCanvasElement.prototype.getContext;
+          const instrumentedSceneContexts = new WeakSet();
+          HTMLCanvasElement.prototype.getContext = function(type, ...args) {
+            if (this.id in window.sceneContextRequests) window.sceneContextRequests[this.id]++;
+            const context = originalSceneGetContext.call(this, type, ...args);
+            if (this.id === 'nick-bubbles' && context && !instrumentedSceneContexts.has(context)) {
+              instrumentedSceneContexts.add(context);
+              const draw = type === 'webgl2' ? 'drawArraysInstanced' : 'clearRect';
+              const originalDraw = context[draw];
+              context[draw] = function(...drawArgs) {
+                window.sceneBubbleDraws++;
+                return originalDraw.apply(this, drawArgs);
+              };
+            }
+            return context;
+          };</script><script defer type='module' src="scripts/scripts.js"></script>`);
+      }
       if (forceNoWebgl) {
         body = body.replace('<script defer type=\'module\' src="scripts/scripts.js"></script>',
           `<script>const originalGetContext = HTMLCanvasElement.prototype.getContext;
@@ -481,7 +503,11 @@ async function checkNickWipe(session, variant) {
     const copy = content.querySelector('.nick-copy');
     const top = section.getBoundingClientRect().top + scrollY;
     const height = innerHeight;
-    const bubbleGl = bubbles.getContext('webgl2');
+    // Match the renderer's options when the test obtains the context first.
+    const bubbleGl = bubbles.getContext('webgl2', {
+      alpha:true, antialias:false, depth:false, stencil:false,
+      premultipliedAlpha:false, preserveDrawingBuffer:true
+    });
     const bubbleContext = bubbleGl ? null : bubbles.getContext('2d');
     let bubbleDraws = 0;
     let bubbleFrames = 0;
@@ -603,6 +629,12 @@ async function checkNickWipe(session, variant) {
     const beforeBubbles = await move(1.45 + 3 / height);
     const start = await move(1.45);
     const preWipe = await move(1.4);
+    // The sprite is requested only as the effect approaches, so allow its
+    // image decode and first render before sampling the transition.
+    for (let attempt = 0; attempt < 100 && !bubbleFrames; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 25));
+    }
+    if (!bubbleFrames) throw new Error('Nick bubbles did not initialize near their entry');
     const before = await move(1.05 + 3 / height);
     const entered = await move(1.03);
     await settle();
@@ -1025,6 +1057,85 @@ try {
       }
     }
     await delay(1600);
+    if (lazyScenesOnly) {
+      for (const variant of ['native', 'fallback']) {
+        const session = sessions[variant];
+        await send('Page.bringToFront', {}, session);
+        const state = () => evaluate(session, `({
+          contexts:{...window.sceneContextRequests},
+          bubbleDraws:window.sceneBubbleDraws,
+          bubbleRequested:performance.getEntriesByType('resource')
+            .some(entry => entry.name.endsWith('/assets/nick-bubble.png')),
+          eyeCalls:window.eyeCalls || 0
+        })`);
+        const move = (id, fraction) => evaluate(session, `(async () => {
+          const section = document.getElementById('${id}');
+          scrollTo({ top:Math.round(section.getBoundingClientRect().top + scrollY -
+            ${fraction} * innerHeight), behavior:'instant' });
+          ScrollTrigger.update();
+          await new Promise(resolve => requestAnimationFrame(resolve));
+        })()`);
+        assert.deepEqual((await state()).contexts,
+          { 'nick-bubbles':0, 'hedra-halftone':0 },
+          `${variant}: offscreen scenes have no canvas contexts`);
+        assert.equal((await state()).bubbleRequested, false,
+          `${variant}: offscreen bubble sprite is not requested`);
+        await evaluate(session, `(() => {
+          window.eyeCalls = 0;
+          const originalSet = gsap.set;
+          gsap.set = function(target, ...args) {
+            if (target === '#david-left-eye' || target === '#david-right-eye') window.eyeCalls++;
+            return originalSet.call(this, target, ...args);
+          };
+          document.dispatchEvent(new MouseEvent('mousemove', { clientX: 100, clientY: 100 }));
+        })()`);
+        assert.ok((await state()).eyeCalls >= 2, `${variant}: intro eyes respond while visible`);
+        await move('nick', 1.7);
+        const before = await state();
+        assert.deepEqual(before.contexts, { 'nick-bubbles':0, 'hedra-halftone':0 },
+          `${variant}: bubble renderer waits until its effect approaches`);
+        assert.equal(before.bubbleDraws, 0, `${variant}: bubble canvas has not drawn early`);
+        await evaluate(session, `document.dispatchEvent(new MouseEvent('mousemove'))`);
+        assert.equal((await state()).eyeCalls, before.eyeCalls,
+          `${variant}: intro eye handler stops offscreen`);
+        await move('nick', 1.5);
+        let nearNick;
+        for (let attempt = 0; attempt < 100; attempt++) {
+          nearNick = await state();
+          if (nearNick.contexts['nick-bubbles']) break;
+          await delay(50);
+        }
+        assert.ok(nearNick.contexts['nick-bubbles'] > 0 && nearNick.bubbleRequested,
+          `${variant}: bubble renderer and sprite load near Nick`);
+        assert.equal(nearNick.contexts['hedra-halftone'], 0,
+          `${variant}: Hedra renderer still waits`);
+        assert.equal(nearNick.bubbleDraws, 0,
+          `${variant}: prepared bubbles do not render before their entry`);
+        await move('nick', 1.4);
+        assert.ok((await state()).bubbleDraws > 0,
+          `${variant}: bubble canvas starts drawing when bubbles are visible`);
+        await move('hedra', 1.1);
+        assert.equal((await state()).contexts['hedra-halftone'], 0,
+          `${variant}: Hedra renderer waits until section entry`);
+        await move('hedra', 0.8);
+        const nearHedra = await state();
+        assert.ok(nearHedra.contexts['hedra-halftone'] > 0,
+          `${variant}: Hedra renderer starts when section enters`);
+        await delay(250);
+        assert.equal((await state()).bubbleDraws, nearHedra.bubbleDraws,
+          `${variant}: bubble canvas stops drawing after leaving its range`);
+        await evaluate(session, `scrollTo({ top:0, behavior:'instant' }); ScrollTrigger.update();
+          document.dispatchEvent(new MouseEvent('mousemove', { clientX: 100, clientY: 100 }));`);
+        assert.ok((await state()).eyeCalls > before.eyeCalls,
+          `${variant}: intro eye handler resumes on reverse scroll`);
+        await move('nick', 1.5);
+        await move('hedra', 0.8);
+        assert.deepEqual((await state()).contexts, nearHedra.contexts,
+          `${variant}: revisiting sections reuses their renderers`);
+      }
+      console.log(`${width}x${height}: section effects initialize on approach and reuse resources.`);
+      continue;
+    }
     if (nickWipeOnly) {
       for (const variant of ['native', 'fallback']) {
         await checkNickWipe(sessions[variant], `${width}x${height}, ${variant}`);

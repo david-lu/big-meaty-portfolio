@@ -19,7 +19,7 @@ const supportsCssParallax = CSS.supports(
   '(animation-range: entry-crossing 0% exit-crossing 100%)'
 );
 
-document.addEventListener('mousemove', (e) => {
+const updateIntroEyes = (e) => {
   const x = e.clientX / window.innerWidth;
   const y = e.clientY / window.innerHeight;
   let cx = 2 * (x - 0.5);
@@ -31,7 +31,7 @@ document.addEventListener('mousemove', (e) => {
   const transformY = cy * 100;
   gsap.set('#david-left-eye', { x: `${transformX}%`, y: `${transformY}%` });
   gsap.set('#david-right-eye', { x: `${transformX}%`, y: `${transformY}%` });
-});
+};
 
 // INTRO ANIMATION
 const revealIntro = () => {
@@ -119,12 +119,21 @@ $('#intro-scroll-button').addEventListener('click', () => {
     scrollTo: { y: '#google', offsetY: vh(95), autoKill: true }
   });
 });
+const setIntroActive = (active) => {
+  for (const selector of ['#intro-scroll-button', '#david-upper', '#david-arm', '#david-hand']) {
+    $(selector).style.animationPlayState = active ? 'running' : 'paused';
+  }
+  if (active) document.addEventListener('mousemove', updateIntroEyes, { passive: true });
+  else document.removeEventListener('mousemove', updateIntroEyes);
+};
 ScrollTrigger.create({
   trigger: '#intro', start: "top bottom", end: "bottom top",
   // The box-shadow pulse otherwise repaints even while the intro is off-screen.
-  onToggle: (self) => $('#intro-scroll-button').style.animationPlayState = self.isActive ? 'running' : 'paused',
+  onToggle: (self) => setIntroActive(self.isActive),
   onEnterBack: (self) => $('#intro-scroll-button').disabled = false
 });
+const introBounds = $('#intro').getBoundingClientRect();
+setIntroActive(introBounds.bottom > 0 && introBounds.top < innerHeight);
 
 $('#map-scroll-button').addEventListener('click', () => {
   $('#map-scroll-button').disabled = true;
@@ -453,11 +462,12 @@ const createNickWipe = () => {
   const scene = $('#nick-scene');
   const wipe = $('#nick-wipe');
   const bubbles = $('#nick-bubbles');
-  const bubbleRenderer = createNickBubbleRenderer(bubbles);
+  let bubbleRenderer;
   const fadeStartTop = 1.05;
   const wipeScrollRange = 0.1;
   const bubbleLead = 4;
   const bubbleTail = 8;
+  const bubblePreload = 2;
   const bubbleCanvasMaxSide = 1600;
   // A bubble still takes 20vh of scroll to cross the viewport.
   const bubbleFlight = 2;
@@ -466,6 +476,7 @@ const createNickWipe = () => {
   let particles = [];
   let particleWidth = 0;
   let particleHeight = 0;
+  let particleOverscan = 0;
   let drawnWidth = 0;
   let drawnHeight = 0;
   let bubblePosition = -bubbleLead;
@@ -474,6 +485,7 @@ const createNickWipe = () => {
   let lastFrameTime = 0;
   let pendingFrame = 0;
   let bubbleSprite;
+  let bubbleLoadStarted = false;
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 
   const buildParticles = (width, height) => {
@@ -583,10 +595,12 @@ const createNickWipe = () => {
       }
     }
     particles = nextParticles;
-    bubbleRenderer.setParticles(particles, horizontalOverscan);
+    particleOverscan = horizontalOverscan;
+    if (bubbleRenderer) bubbleRenderer.setParticles(particles, particleOverscan);
     particleWidth = width;
     particleHeight = height;
   };
+  if (!reducedMotion.matches) buildParticles(innerWidth, innerHeight);
 
   const drawBubbles = (now) => {
     pendingFrame = 0;
@@ -624,7 +638,11 @@ const createNickWipe = () => {
     const progress = gsap.utils.clamp(0, 1, wipePosition);
     // Bubbles span -40vh to +90vh around the start of the 10vh opacity fade.
     targetBubblePosition = gsap.utils.clamp(-bubbleLead, 1 + bubbleTail, wipePosition);
-    const bubbleWindow = bubbleRenderer.kind !== 'none' && Boolean(bubbleSprite) &&
+    // Prepare the sprite shortly before the first bubble reaches the screen.
+    if (wipePosition > -bubbleLead - bubblePreload &&
+        wipePosition < 1 + bubbleTail) loadBubbles();
+    const bubbleWindow = bubbleRenderer && bubbleRenderer.kind !== 'none' &&
+      Boolean(bubbleSprite) &&
       !reducedMotion.matches &&
       wipePosition > -bubbleLead && wipePosition < 1 + bubbleTail;
     const wasActive = bubbles.classList.contains('is-active');
@@ -658,27 +676,34 @@ const createNickWipe = () => {
     }
   };
 
-  const bubbleImage = new Image();
-  bubbleImage.onload = () => {
-    // Cache a compact sprite so each scroll frame samples a small bitmap.
-    const sprite = document.createElement('canvas');
-    sprite.width = 384;
-    sprite.height = 384;
-    const spriteContext = sprite.getContext('2d');
-    if (!spriteContext) return;
-    spriteContext.drawImage(bubbleImage, 140, 137, 974, 974, 0, 0, 384, 384);
-    bubbleSprite = sprite;
-    bubbleRenderer.setSprite(sprite);
-    lastDrawnPosition = undefined;
-    update();
+  const loadBubbles = () => {
+    if (bubbleLoadStarted || reducedMotion.matches) return;
+    bubbleLoadStarted = true;
+    const bubbleImage = new Image();
+    bubbleImage.onload = () => {
+      bubbleImage.onload = null;
+      // Cache a compact sprite so each scroll frame samples a small bitmap.
+      const sprite = document.createElement('canvas');
+      sprite.width = 384;
+      sprite.height = 384;
+      const spriteContext = sprite.getContext('2d');
+      if (!spriteContext) return;
+      spriteContext.drawImage(bubbleImage, 140, 137, 974, 974, 0, 0, 384, 384);
+      bubbleSprite = sprite;
+      bubbleRenderer = createNickBubbleRenderer(bubbles);
+      bubbleRenderer.setSprite(sprite);
+      bubbleRenderer.setParticles(particles, particleOverscan);
+      lastDrawnPosition = undefined;
+      update();
+    };
+    bubbleImage.src = 'assets/nick-bubble.png';
   };
-  bubbleImage.src = 'assets/nick-bubble.png';
   reducedMotion.addEventListener('change', update);
 
   ScrollTrigger.create({
     trigger: section,
     start: () => section.getBoundingClientRect().top + scrollY -
-      (fadeStartTop + bubbleLead * wipeScrollRange) * innerHeight,
+      (fadeStartTop + (bubbleLead + bubblePreload) * wipeScrollRange) * innerHeight,
     end: () => section.getBoundingClientRect().bottom + scrollY,
     onUpdate: update,
     onRefresh: update,
@@ -704,8 +729,10 @@ const createHalftone = ({ canvasSelector, sectionSelector }) => {
   let size;
   let lastProgress;
   let renderer;
+  let initialized = false;
 
   const initialize = () => {
+    initialized = true;
     try {
       renderer = createHalftoneGpuRenderer(canvas);
     } catch (error) {
@@ -717,7 +744,6 @@ const createHalftone = ({ canvasSelector, sectionSelector }) => {
     size = undefined;
     lastProgress = undefined;
   };
-  initialize();
 
   const resize = () => {
     const width = window.innerWidth;
@@ -757,14 +783,15 @@ const createHalftone = ({ canvasSelector, sectionSelector }) => {
     const travel = (startTop - endTop) * height;
     const distance = startTop * height - bounds.top;
     const progress = gsap.utils.clamp(0, 1, distance / travel);
-    if (!renderer) {
-      // With no canvas, the solid section color itself is the reveal edge.
-      return;
-    }
     // Stop at this section's bottom; the next background or header takes over.
     if (distance <= 0 || bounds.bottom <= 0) {
       if (canvas.style.visibility !== 'hidden') canvas.style.visibility = 'hidden';
       lastProgress = undefined;
+      return;
+    }
+    if (!initialized) initialize();
+    if (!renderer) {
+      // With no canvas, the solid section color itself is the reveal edge.
       return;
     }
 
@@ -781,19 +808,17 @@ const createHalftone = ({ canvasSelector, sectionSelector }) => {
       columnOffset, complete: progress >= 1 });
   };
 
-  if (renderer) {
-    canvas.addEventListener('webglcontextlost', (event) => {
-      event.preventDefault();
-      renderer = null;
-      canvas.style.display = 'none';
-      section.style.backgroundColor = getComputedStyle(canvas).color;
-      update();
-    });
-    canvas.addEventListener('webglcontextrestored', () => {
-      initialize();
-      update();
-    });
-  }
+  canvas.addEventListener('webglcontextlost', (event) => {
+    event.preventDefault();
+    renderer = null;
+    canvas.style.display = 'none';
+    section.style.backgroundColor = getComputedStyle(canvas).color;
+    update();
+  });
+  canvas.addEventListener('webglcontextrestored', () => {
+    initialized = false;
+    update();
+  });
 
   ScrollTrigger.create({
     trigger: section,
@@ -806,7 +831,7 @@ const createHalftone = ({ canvasSelector, sectionSelector }) => {
     onLeave: update,
     onLeaveBack: update
   });
-
+  update();
 };
 
 experienceSettings.sections.filter(({ canvasSelector }) => canvasSelector).forEach(createHalftone);
