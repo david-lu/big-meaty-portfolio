@@ -26,12 +26,16 @@ const control = process.argv.includes('--control');
 const profileSkills = process.argv.includes('--profile-skills');
 const profileOutro = process.argv.includes('--profile-outro');
 const profileHedra = process.argv.includes('--profile-hedra');
+const profileNick = process.argv.includes('--profile-nick');
+const profileNickOverlap = process.argv.includes('--profile-nick-overlap');
+const profileGpu = process.argv.includes('--profile-gpu');
 const nickWipeOnly = process.argv.includes('--nick-wipe-only');
 const lazyScenesOnly = process.argv.includes('--lazy-scenes-only');
 const hedraBackgroundOnly = process.argv.includes('--hedra-background-only');
 const introLoadingOnly = process.argv.includes('--intro-loading-only');
 const forceNoWebgl = process.argv.includes('--force-no-webgl');
-const profileSection = profileHedra ? 'hedra' : profileOutro ? 'outro' : profileSkills ? 'skills' : undefined;
+const profileSection = profileNick || profileNickOverlap ? 'nick' : profileHedra ? 'hedra' :
+  profileOutro ? 'outro' : profileSkills ? 'skills' : undefined;
 const viewportOption = process.argv.find(arg => arg.startsWith('--viewport='));
 const viewports = viewportOption ? [viewportOption.slice(11).split('x').map(Number)]
   : profileSection ? [[1440, 900], [390, 844]]
@@ -55,8 +59,11 @@ const server = http.createServer(async (req, res) => {
     if (file === 'scripts/logging.js') body = ''; // Keep analytics out of local tests.
     if (file === 'index.html') {
       body = body.toString().replace(/<script async src="https:[^>]+><\/script>/, '');
+      const mainScriptTag = body.match(
+        /<script defer type='module' src="scripts\/scripts\.js(?:\?[^\"]*)?"><\/script>/)?.[0];
+      if (lazyScenesOnly || forceNoWebgl) assert.ok(mainScriptTag);
       if (lazyScenesOnly) {
-        body = body.replace('<script defer type=\'module\' src="scripts/scripts.js"></script>',
+        body = body.replace(mainScriptTag,
           `<script>window.sceneContextRequests = { 'nick-bubbles': 0, 'hedra-halftone': 0 };
           window.sceneBubbleDraws = 0;
           const originalSceneGetContext = HTMLCanvasElement.prototype.getContext;
@@ -74,10 +81,10 @@ const server = http.createServer(async (req, res) => {
               };
             }
             return context;
-          };</script><script defer type='module' src="scripts/scripts.js"></script>`);
+          };</script>${mainScriptTag}`);
       }
       if (forceNoWebgl) {
-        body = body.replace('<script defer type=\'module\' src="scripts/scripts.js"></script>',
+        body = body.replace(mainScriptTag,
           `<script>const originalGetContext = HTMLCanvasElement.prototype.getContext;
           HTMLCanvasElement.prototype.getContext = function(type, ...args) {
             if (this.id === 'nick-bubbles' && type === 'webgl2') return null;
@@ -87,7 +94,7 @@ const server = http.createServer(async (req, res) => {
                 (window.halftone2dRequests || 0) + 1;
             }
             return originalGetContext.call(this, type, ...args);
-          };</script><script defer type='module' src="scripts/scripts.js"></script>`);
+          };</script>${mainScriptTag}`);
       }
     }
     // Simulate a browser without CSS timelines, exercising the actual GSAP fallback.
@@ -159,7 +166,7 @@ function send(method, params = {}, sessionId) {
     const timer = setTimeout(() => {
       pending.delete(id);
       reject(new Error(`Timed out: ${method} ${params.expression || ''}`));
-    }, 20000);
+    }, 30000);
     pending.set(id, { resolve, reject, timer });
     ws.send(JSON.stringify({ id, method, params, sessionId }));
   });
@@ -512,6 +519,7 @@ async function checkNickWipe(session, variant) {
     let bubbleDraws = 0;
     let bubbleFrames = 0;
     let particleUploads = 0;
+    const inertiaBuckets = [0, 0, 0];
     if (bubbleGl) {
       const originalDraw = bubbleGl.drawArraysInstanced;
       bubbleGl.drawArraysInstanced = function(...args) {
@@ -521,7 +529,15 @@ async function checkNickWipe(session, variant) {
       };
       const originalBufferData = bubbleGl.bufferData;
       bubbleGl.bufferData = function(...args) {
-        if (args[0] === this.ARRAY_BUFFER) particleUploads++;
+        if (args[0] === this.ARRAY_BUFFER) {
+          particleUploads++;
+          if (args[1] instanceof Float32Array && args[1].length % 7 === 0) {
+            inertiaBuckets.fill(0);
+            for (let index = 6; index < args[1].length; index += 7) {
+              inertiaBuckets[args[1][index]]++;
+            }
+          }
+        }
         return originalBufferData.apply(this, args);
       };
       const originalBufferSubData = bubbleGl.bufferSubData;
@@ -619,16 +635,16 @@ async function checkNickWipe(session, variant) {
     const settle = async () => {
       let unchanged = 0;
       let previous = bubbleFrames;
-      for (let frame = 0; frame < 45 && unchanged < 2; frame++) {
+      for (let frame = 0; frame < 200 && unchanged < 2; frame++) {
         await new Promise(resolve => requestAnimationFrame(resolve));
         unchanged = bubbleFrames === previous ? unchanged + 1 : 0;
         previous = bubbleFrames;
       }
       if (unchanged < 2) throw new Error('Nick bubbles did not settle after scrolling');
     };
-    const beforeBubbles = await move(1.45 + 3 / height);
-    const start = await move(1.45);
-    const preWipe = await move(1.4);
+    const beforeBubbles = await move(1.37 + 3 / height);
+    const start = await move(1.37);
+    const preWipe = await move(1.34);
     // The sprite is requested only as the effect approaches, so allow its
     // image decode and first render before sampling the transition.
     for (let attempt = 0; attempt < 100 && !bubbleFrames; attempt++) {
@@ -641,7 +657,7 @@ async function checkNickWipe(session, variant) {
     const enteredImage = imageStats(true);
     const middle = await move(1);
     const bubbleCoverageByPosition = [];
-    for (const position of [-4, -3, -1, 0, 0.5, 1, 2.5, 6, 8.5]) {
+    for (const position of [-3, -2.5, -1, 0, 0.5, 1, 2.5, 5.5, 7.3, 8.2]) {
       await move(1.05 - position * 0.1);
       await settle();
       bubbleCoverageByPosition.push(imageStats().coverage);
@@ -664,9 +680,23 @@ async function checkNickWipe(session, variant) {
       sum + Math.abs(alpha - enteredImage.alphas[i]), 0) / reverseImage.alphas.length;
     delete enteredImage.alphas;
     delete reverseImage.alphas;
+    const beforeTopExit = await move(1.27);
+    await settle();
+    const exitingTop = await move(1.37 + 2 / height);
+    await settle();
+    const topExited = {
+      bubblesActive:bubbles.classList.contains('is-active'),
+      bubbleVisible:getComputedStyle(bubbles).visibility
+    };
     const complete = await move(0.95 - 2 / height);
     const settled = await move(0.25);
     const finished = await move(0.15 - 2 / height);
+    await settle();
+    const finishedAfterInertia = {
+      bubblesActive:bubbles.classList.contains('is-active'),
+      bubbleVisible:getComputedStyle(bubbles).visibility
+    };
+    const dotStart = await move(-2 / height);
     const hedraMidpoint = await move(-0.5);
     const jobExit = await move(-0.85);
     const nearExit = await move(-0.98);
@@ -675,11 +705,15 @@ async function checkNickWipe(session, variant) {
     const jobLater = await move(-0.25);
     return {
       beforeBubbles, start, preWipe, before, entered, middle, dense, reverse,
-      complete, settled, finished, hedraMidpoint, jobExit, nearExit,
+      beforeTopExit, exitingTop, topExited,
+      complete, settled, finished, finishedAfterInertia, dotStart,
+      hedraMidpoint, jobExit, nearExit,
       past, jobCenter, jobLater, enteredImage, denseImage, idleImage,
       scrolledImage, settledScrolledImage, reverseImage, reverseDifference,
       bubbleCoverageByPosition, framesAtRest, idleFrames,
+      inertiaBuckets,
       viewportHeight:height, viewportWidth:innerWidth,
+      documentWidth:document.documentElement.scrollWidth,
       wipePosition:getComputedStyle(wipe).position,
       wipePointerEvents:getComputedStyle(wipe).pointerEvents,
       wipeColor:getComputedStyle(wipe).backgroundColor,
@@ -711,10 +745,14 @@ async function checkNickWipe(session, variant) {
   })()`);
   const label = `${variant}: Nick bubble wipe`;
   assert.equal(result.beforeBubbles.bubbleVisible, 'hidden',
-    `${label}: bubbles wait below the viewport before -40vh`);
-  assert.ok(Math.abs(result.start.sectionTop - result.viewportHeight * 1.45) <= 2 &&
+    `${label}: bubbles wait below the viewport before -32vh`);
+  assert.ok(Math.abs(result.start.sectionTop - result.viewportHeight * 1.37) <= 2 &&
     result.preWipe.bubblesActive && result.preWipe.wipeVisible === 'hidden',
-    `${label}: bubbles begin 40vh before the wipe`);
+    `${label}: bubbles begin 32vh before the wipe`);
+  assert.ok(result.beforeTopExit.bubblesActive &&
+    result.exitingTop.bubblesActive && result.exitingTop.bubbleVisible === 'visible' &&
+    !result.topExited.bubblesActive && result.topExited.bubbleVisible === 'hidden',
+    `${label}: bubbles stay visible while inertia returns them below the viewport`);
   assert.equal(result.before.wipeVisible, 'hidden', `${label}: hidden before Nick enters`);
   assert.equal(result.entered.wipeVisible, 'visible', `${label}: visible during entry`);
   assert.ok(Math.abs(result.entered.wipeOpacity - 0.2) < 0.02 &&
@@ -727,11 +765,13 @@ async function checkNickWipe(session, variant) {
     result.entered.sceneVisibility === 'visible' &&
     result.past.sceneVisibility === 'hidden',
     `${label}: the SpongeBob scene enters with the orange fade`);
-  assert.ok(result.scenePosition === 'fixed' && result.sceneOverflow === 'clip' &&
+  assert.ok(result.scenePosition === 'fixed' && result.sceneOverflow === 'visible' &&
     result.scenePointerEvents === 'none' &&
     Math.abs(result.jobCenter.sceneTop) <= 1 &&
     Math.abs(result.jobCenter.sceneHeight - result.viewportHeight) <= 1,
-    `${label}: the scene is clipped to the viewport`);
+    `${label}: the scene fills the viewport without clipping its layers`);
+  assert.ok(result.documentWidth <= result.viewportWidth + 1,
+    `${label}: the scene does not add horizontal page overflow (${result.documentWidth}px)`);
   for (const state of [result.entered, result.middle, result.jobCenter, result.jobLater, result.jobExit]) {
     assert.ok(state.bgRelativeTop <= 0 &&
       state.bgRelativeTop + state.bgHeight >= result.viewportHeight &&
@@ -739,7 +779,7 @@ async function checkNickWipe(session, variant) {
       state.fgRelativeTop + state.fgHeight >= result.viewportHeight,
       `${label}: oversized parallax layers cover the viewport (${JSON.stringify(state)})`);
   }
-  assert.ok(result.sceneBgLoaded && result.sceneFgImage.includes('sponge/fg_blur.png'),
+  assert.ok(result.sceneBgLoaded && result.sceneFgImage.includes('sponge/fg_blur_half.png'),
     `${label}: both SpongeBob image layers load`);
   assert.equal(result.sceneFgFilter, 'none', `${label}: foreground blur is baked into the image`);
   assert.ok(result.hedraMidpoint.fgArtworkBottom >= result.viewportHeight - 2,
@@ -780,6 +820,8 @@ async function checkNickWipe(session, variant) {
   if (result.bubbleBackend === 'webgl2') {
     assert.ok(result.particleUploads <= 1,
       `${label}: scrolling changes uniforms without uploading particle positions (${result.particleUploads} uploads)`);
+    assert.ok(result.inertiaBuckets.every(count => count > 0),
+      `${label}: all three inertia buckets are populated (${result.inertiaBuckets})`);
   }
   assert.ok(Math.max(result.canvasWidth, result.canvasHeight) <= 1600 &&
     Math.abs(result.canvasWidth / result.canvasHeight -
@@ -793,8 +835,13 @@ async function checkNickWipe(session, variant) {
     `${label}: bubble coverage reaches every part of the viewport (${result.denseImage.zoneCoverage})`);
   assert.ok(result.bubbleCoverageByPosition[0] < result.bubbleCoverageByPosition[4] &&
     result.bubbleCoverageByPosition[1] < result.bubbleCoverageByPosition[4] &&
-    result.bubbleCoverageByPosition[8] < result.bubbleCoverageByPosition[4],
+    result.bubbleCoverageByPosition[8] < result.bubbleCoverageByPosition[4] &&
+    result.bubbleCoverageByPosition[9] < result.bubbleCoverageByPosition[4],
     `${label}: bubble coverage rises across the wipe and tapers afterward: ${result.bubbleCoverageByPosition}`);
+  assert.ok(result.bubbleCoverageByPosition[7] > 0.001 &&
+    result.bubbleCoverageByPosition[8] < result.bubbleCoverageByPosition[7] &&
+    result.bubbleCoverageByPosition[9] <= result.bubbleCoverageByPosition[8],
+    `${label}: bubbles thin out before the effect ends: ${result.bubbleCoverageByPosition}`);
   assert.ok(result.denseImage.meanBubbleAlpha > 100,
     `${label}: bubble image retains its own visible opacity (${result.denseImage.meanBubbleAlpha})`);
   assert.ok(result.denseImage.translucent > 0.5,
@@ -804,10 +851,12 @@ async function checkNickWipe(session, variant) {
     `${label}: bubble visibility follows motion preference`);
   assert.equal(result.complete.bubblesActive, true,
     `${label}: bubbles keep rising after the wipe`);
-  assert.ok(result.settled.bubblesActive &&
+  assert.ok(result.settled.bubblesActive && result.finished.bubblesActive &&
     Math.abs(result.finished.sectionTop - result.viewportHeight * 0.15) <= 3 &&
-    !result.finished.bubblesActive && result.finished.bubbleVisible === 'hidden',
-    `${label}: bubbles finish 90vh after the wipe begins: ${JSON.stringify({settled:result.settled, finished:result.finished})}`);
+    !result.finishedAfterInertia.bubblesActive &&
+    result.finishedAfterInertia.bubbleVisible === 'hidden' &&
+    !result.dotStart.bubblesActive && result.dotStart.bubbleVisible === 'hidden',
+    `${label}: bubble visibility waits for inertia before ending: ${JSON.stringify({settled:result.settled, finished:result.finished, finishedAfterInertia:result.finishedAfterInertia, dotStart:result.dotStart})}`);
   assert.equal(result.middle.animation, 'none', `${label}: bubbles have no timed animation`);
   assert.equal(result.idleImage.hash, result.denseImage.hash,
     `${label}: bubbles stay still until the page scrolls`);
@@ -888,8 +937,17 @@ async function runScrollProfile(session, variant, width, height) {
   await send('Page.bringToFront', {}, session);
   await send('Performance.enable', {}, session);
   await send('LayerTree.enable', {}, session);
-  await send('Emulation.setCPUThrottlingRate', { rate: 4 }, session);
-  await evaluate(session, `window.scrollTo({top: document.getElementById('${profileSection}').getBoundingClientRect().top + scrollY - innerHeight - 100, behavior: 'instant'});`);
+  const cpuRate = profileGpu ? 1 : 4;
+  await send('Emulation.setCPUThrottlingRate', { rate: cpuRate }, session);
+  if (profileGpu) {
+    const { gpu } = await send('SystemInfo.getInfo');
+    console.log(JSON.stringify({gpuDevices:gpu.devices.map(device => ({
+      vendor:device.vendorString, device:device.deviceString,
+      vendorId:device.vendorId, deviceId:device.deviceId
+    })), glRenderer:gpu.auxAttributes?.glRenderer,
+    featureStatus:gpu.featureStatus}));
+  }
+  await evaluate(session, `window.scrollTo({top: document.getElementById('${profileSection}').getBoundingClientRect().top + scrollY - innerHeight * ${profileNickOverlap ? 1.2 : 1} - ${profileNickOverlap ? 0 : 100}, behavior: 'instant'});`);
   await delay(800);
   layerState = { session, maxLayers: 0 };
   const events = [];
@@ -897,15 +955,17 @@ async function runScrollProfile(session, variant, width, height) {
   const completion = new Promise(resolve => { complete = resolve; });
   traceState = { events, complete };
   await send('Tracing.start', {
-    categories: 'devtools.timeline,blink.user_timing,disabled-by-default-devtools.timeline',
+    categories: 'devtools.timeline,blink.user_timing,disabled-by-default-devtools.timeline' +
+      (profileGpu ? ',gpu,cc,viz,disabled-by-default-gpu.service' : ''),
     transferMode: 'ReportEvents',
   });
   const before = (await send('Performance.getMetrics', {}, session)).metrics;
   const frames = await evaluate(session, `new Promise(resolve => {
     const el = document.getElementById('${profileSection}');
     const top = el.getBoundingClientRect().top + scrollY;
-    const start = top - innerHeight - 100;
-    const end = Math.min(document.documentElement.scrollHeight - innerHeight, top + el.offsetHeight + 100);
+    const start = top - innerHeight * ${profileNickOverlap ? 1.2 : 1} - ${profileNickOverlap ? 0 : 100};
+    const end = ${profileNickOverlap ? 'top - innerHeight * 0.8' :
+      'Math.min(document.documentElement.scrollHeight - innerHeight, top + el.offsetHeight + 100)'};
     const intervals = [];
     const lag = { sun: [], info: [], skyline: [] };
     let first, previous;
@@ -965,8 +1025,17 @@ async function runScrollProfile(session, variant, width, height) {
   }
   const file = path.join(os.tmpdir(), `portfolio-${profileSection}-${variant}-${width}x${height}.json`);
   await writeFile(file, JSON.stringify({traceEvents:events}));
-  console.log(JSON.stringify({variant, viewport:`${width}x${height}`, cpuThrottle:4,
-    frames, metrics:delta, trace:totals, layers:{ maxLayers:layerState.maxLayers }, triggerCount:await evaluate(session, 'ScrollTrigger.getAll().length'), traceFile:file}));
+  const gpuTrace = Object.fromEntries([...new Set(events.filter(event => event.ph === 'X' &&
+    /(GPUTask|DrawAndSwap|SwapBuffers|DrawFrame|SubmitCompositorFrame)/i.test(event.name))
+    .map(event => event.name))].map(name => {
+      const durations = events.filter(event => event.ph === 'X' && event.name === name)
+        .map(event => (event.dur || 0) / 1000).sort((a,b) => a-b);
+      return [name, {count:durations.length, p95Ms:+(durations[Math.floor(durations.length * .95)] || 0).toFixed(2),
+        maxMs:+(durations.at(-1) || 0).toFixed(2)}];
+    }));
+  console.log(JSON.stringify({variant, viewport:`${width}x${height}`, cpuThrottle:cpuRate,
+    frames, metrics:delta, trace:totals, gpuTrace,
+    layers:{ maxLayers:layerState.maxLayers }, triggerCount:await evaluate(session, 'ScrollTrigger.getAll().length'), traceFile:file}));
   traceState = undefined;
   layerState = undefined;
   await send('Emulation.setCPUThrottlingRate', { rate: 1 }, session);
@@ -1090,7 +1159,7 @@ try {
           document.dispatchEvent(new MouseEvent('mousemove', { clientX: 100, clientY: 100 }));
         })()`);
         assert.ok((await state()).eyeCalls >= 2, `${variant}: intro eyes respond while visible`);
-        await move('nick', 1.7);
+        await move('nick', 2.6);
         const before = await state();
         assert.deepEqual(before.contexts, { 'nick-bubbles':0, 'hedra-halftone':0 },
           `${variant}: bubble renderer waits until its effect approaches`);
@@ -1098,7 +1167,7 @@ try {
         await evaluate(session, `document.dispatchEvent(new MouseEvent('mousemove'))`);
         assert.equal((await state()).eyeCalls, before.eyeCalls,
           `${variant}: intro eye handler stops offscreen`);
-        await move('nick', 1.5);
+        await move('nick', 2.4);
         let nearNick;
         for (let attempt = 0; attempt < 100; attempt++) {
           nearNick = await state();

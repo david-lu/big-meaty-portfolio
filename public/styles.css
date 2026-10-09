@@ -853,7 +853,6 @@ html.intro-loading #intro::after {
     z-index: 7;
     width: 100%;
     height: 100%;
-    overflow: clip;
     opacity: 0;
     pointer-events: none;
 }
@@ -881,7 +880,7 @@ html.intro-loading #intro::after {
     width: 100%;
     /* Let the art extend below the viewport while Hedra's dots grow. */
     padding-bottom: 15vh;
-    background-image: url('assets/sponge/fg_blur.png');
+    background-image: url('assets/sponge/fg_blur_half.png');
     background-size: 100% auto;
     background-position: center bottom;
     background-origin: content-box;

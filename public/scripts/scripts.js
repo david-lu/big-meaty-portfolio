@@ -1,5 +1,5 @@
 import { createHalftoneGpuRenderer } from './halftone-transition-gl.js';
-import { createNickBubbleRenderer } from './nick-bubble-renderer.js';
+import { createNickBubbleRenderer } from './nick-bubble-renderer.js?v=bubble-inertia-3';
 
 gsap.registerPlugin(ScrollToPlugin, ScrollTrigger);
 SmoothScroll({});
@@ -465,21 +465,26 @@ const createNickWipe = () => {
   let bubbleRenderer;
   const fadeStartTop = 1.05;
   const wipeScrollRange = 0.1;
-  const bubbleLead = 4;
-  const bubbleTail = 8;
+  const bubbleTimingScale = 0.8;
+  const bubbleLead = 4 * bubbleTimingScale;
   const bubblePreload = 2;
   const bubbleCanvasMaxSide = 1600;
   // A bubble still takes 20vh of scroll to cross the viewport.
   const bubbleFlight = 2;
-  const latestLaunch = 1 + bubbleTail - bubbleFlight;
   const launchCenter = 0.5 - bubbleFlight / 2;
+  // Finish the bubbles 20% sooner than Hedra's first entry.
+  const bubbleEndPosition = () =>
+    (fadeStartTop - 1 + section.offsetHeight / innerHeight) /
+    wipeScrollRange * bubbleTimingScale;
+  const bubbleInertiaMs = 131.25;
+  const inertiaMultipliers = [1, 1.5, 2];
   let particles = [];
   let particleWidth = 0;
   let particleHeight = 0;
   let particleOverscan = 0;
   let drawnWidth = 0;
   let drawnHeight = 0;
-  let bubblePosition = -bubbleLead;
+  const bubblePositions = inertiaMultipliers.map(() => -bubbleLead);
   let targetBubblePosition = -bubbleLead;
   let lastDrawnPosition;
   let lastFrameTime = 0;
@@ -492,6 +497,7 @@ const createNickWipe = () => {
     const peakSize = Math.min(240, Math.max(135, width * 0.22)) * 0.7;
     const sizeVariation = 0.4;
     const horizontalOverscan = peakSize * (1 + sizeVariation);
+    const latestLaunch = bubbleEndPosition() - bubbleFlight;
     const launchRange = latestLaunch + bubbleLead;
     const spread = 1.1;
     let seed = 27183;
@@ -500,8 +506,17 @@ const createNickWipe = () => {
       return seed / 4294967296;
     };
     const bell = (distance) => Math.exp(-0.5 * (distance / spread) ** 2);
-    const sizeAt = (launch) => Math.round(peakSize *
-      (0.2 + 0.8 * bell(launch + bubbleFlight / 2 - 0.5)));
+    const distributionAt = (launch) => bell(launch - launchCenter);
+    const sizeScaleAt = (launch) => 0.2 + 0.8 * distributionAt(launch);
+    const densityAt = (launch) => {
+      const distribution = distributionAt(launch);
+      if (launch <= launchCenter) return distribution;
+      const progress = Math.min(1, Math.max(0,
+        (launch + bubbleLead) / launchRange));
+      return (1 - progress) * (0.2 + 0.8 * distribution) +
+        progress * distribution;
+    };
+    const sizeAt = (launch) => Math.round(peakSize * sizeScaleAt(launch));
     // Estimate how much of each bubble's circular face is on screen at the
     // wipe midpoint. The launch bell and edge clipping are included, so the
     // count responds to both viewport area and actual bubble pixel size.
@@ -514,12 +529,11 @@ const createNickWipe = () => {
         radius * radius * Math.asin(y / radius));
       for (let i = 0; i < samples; i++) {
         const launch = -bubbleLead + (i + 0.5) / samples * launchRange;
-        const weight = bell(launch - launchCenter);
+        const weight = densityAt(launch);
         const phase = (0.5 - launch) / bubbleFlight;
         totalWeight += weight;
         if (phase <= 0 || phase >= 1) continue;
-        const size = Math.round(bubblePixelSize *
-          (0.2 + 0.8 * bell(launch + bubbleFlight / 2 - 0.5)));
+        const size = Math.round(bubblePixelSize * sizeScaleAt(launch));
         const radius = size / 2;
         const top = viewportHeight + size - phase * (viewportHeight + 2 * size);
         const center = top + radius;
@@ -531,7 +545,7 @@ const createNickWipe = () => {
         }
       }
       const horizontalFraction = viewportWidth /
-        (viewportWidth + 2 * bubblePixelSize * (1 + sizeVariation));
+        (viewportWidth + 2 * horizontalOverscan);
       // Uniform variation of ±40% increases the average bubble face area.
       const sizeAreaFactor = 1 + sizeVariation * sizeVariation / 3;
       // Stratified launch times and horizontal lanes cover gaps more
@@ -544,13 +558,12 @@ const createNickWipe = () => {
         viewportWidth * viewportHeight / visibleAreaPerBubble));
     };
     const bubbleCount = Math.ceil(calculateBubbleCount(width, height, peakSize) * 1.5);
-    // One bubble per bell-curve interval keeps the rise and fall smooth;
-    // seeded jitter prevents the launches from looking evenly spaced.
+    // Sample the rise and tapering tail with seeded launch jitter.
     const steps = 256;
     const cumulative = new Float64Array(steps + 1);
     for (let step = 1; step <= steps; step++) {
       const launch = -bubbleLead + (step - 0.5) / steps * launchRange;
-      cumulative[step] = cumulative[step - 1] + bell(launch - launchCenter);
+      cumulative[step] = cumulative[step - 1] + densityAt(launch);
     }
     const launchAt = (fraction) => {
       const target = fraction * cumulative[steps];
@@ -577,7 +590,8 @@ const createNickWipe = () => {
         sway: 8 + random() * 21,
         launch,
         waveOffset: random() * Math.PI * 2,
-        angle: (random() * 2 - 1) * Math.PI / 6
+        angle: (random() * 2 - 1) * Math.PI / 6,
+        inertiaBucket: Math.floor(random() * inertiaMultipliers.length)
       });
     }
     // Shuffle screen-wide lanes for each small launch group, then jitter
@@ -612,22 +626,32 @@ const createNickWipe = () => {
     // the bubbles drift far from the current scroll position.
     const elapsed = lastFrameTime ? now - lastFrameTime : 1000 / 60;
     lastFrameTime = now;
-    const difference = targetBubblePosition - bubblePosition;
-    bubblePosition = Math.abs(difference) < 0.002 ? targetBubblePosition :
-      bubblePosition + difference * (1 - Math.exp(-elapsed / 87.5));
+    bubblePositions.forEach((position, bucket) => {
+      const difference = targetBubblePosition - position;
+      bubblePositions[bucket] = Math.abs(difference) < 0.002 ? targetBubblePosition :
+        position + difference * (1 - Math.exp(-elapsed /
+          (bubbleInertiaMs * inertiaMultipliers[bucket])));
+    });
     const width = innerWidth;
     const height = innerHeight;
     const ratio = Math.min(devicePixelRatio || 1, 1.5,
       bubbleCanvasMaxSide / Math.max(width, height));
     if (width !== particleWidth || height !== particleHeight) buildParticles(width, height);
-    bubbleRenderer.draw(particles, bubblePosition, bubbleFlight, width, height, ratio);
+    // A scalar first keeps a cached older renderer able to draw the bubbles.
+    bubbleRenderer.draw(particles, bubblePositions[0], bubbleFlight, width, height,
+      ratio, bubblePositions);
     drawnWidth = width;
     drawnHeight = height;
-    lastDrawnPosition = bubblePosition;
-    if (bubblePosition !== targetBubblePosition) {
+    lastDrawnPosition = bubblePositions[0];
+    if (bubblePositions.some(position => position !== targetBubblePosition)) {
       pendingFrame = requestAnimationFrame(drawBubbles);
     } else {
       lastFrameTime = 0;
+      if (targetBubblePosition <= -bubbleLead ||
+          targetBubblePosition >= bubbleEndPosition()) {
+        bubbles.style.visibility = 'hidden';
+        bubbles.classList.remove('is-active');
+      }
     }
   };
 
@@ -636,16 +660,24 @@ const createNickWipe = () => {
     const visible = bounds.top < fadeStartTop * innerHeight && bounds.bottom > 0;
     const wipePosition = (fadeStartTop - bounds.top / innerHeight) / wipeScrollRange;
     const progress = gsap.utils.clamp(0, 1, wipePosition);
-    // Bubbles span -40vh to +90vh around the start of the 10vh opacity fade.
-    targetBubblePosition = gsap.utils.clamp(-bubbleLead, 1 + bubbleTail, wipePosition);
+    const bubbleEnd = bubbleEndPosition();
+    // Let the last bubbles finish rising before Hedra's dots enter.
+    targetBubblePosition = gsap.utils.clamp(-bubbleLead, bubbleEnd, wipePosition);
     // Prepare the sprite shortly before the first bubble reaches the screen.
     if (wipePosition > -bubbleLead - bubblePreload &&
-        wipePosition < 1 + bubbleTail) loadBubbles();
+        wipePosition < bubbleEnd) loadBubbles();
+    const wasActive = bubbles.classList.contains('is-active');
+    const withinBubbleRange = wipePosition > -bubbleLead &&
+      wipePosition < bubbleEnd;
+    const finishingInertia = wasActive && (
+      (wipePosition <= -bubbleLead &&
+        bubblePositions.some(position => position > -bubbleLead)) ||
+      (wipePosition >= bubbleEnd &&
+        bubblePositions.some(position => position < bubbleEnd)));
     const bubbleWindow = bubbleRenderer && bubbleRenderer.kind !== 'none' &&
       Boolean(bubbleSprite) &&
       !reducedMotion.matches &&
-      wipePosition > -bubbleLead && wipePosition < 1 + bubbleTail;
-    const wasActive = bubbles.classList.contains('is-active');
+      (withinBubbleRange || finishingInertia);
     wipe.style.visibility = visible ? 'visible' : 'hidden';
     scene.style.visibility = visible ? 'visible' : 'hidden';
     bubbles.style.visibility = bubbleWindow ? 'visible' : 'hidden';
@@ -658,12 +690,14 @@ const createNickWipe = () => {
     content.style.opacity = progress;
     if (bubbleWindow) {
       if (!wasActive) {
-        bubblePosition = targetBubblePosition;
+        bubblePositions.fill(targetBubblePosition);
         lastDrawnPosition = undefined;
         lastFrameTime = 0;
       } else {
-        bubblePosition = gsap.utils.clamp(targetBubblePosition - 0.32,
-          targetBubblePosition + 0.32, bubblePosition);
+        bubblePositions.forEach((position, bucket) => {
+          bubblePositions[bucket] = gsap.utils.clamp(targetBubblePosition - 0.32,
+            targetBubblePosition + 0.32, position);
+        });
       }
       if (!pendingFrame && (targetBubblePosition !== lastDrawnPosition ||
           innerWidth !== drawnWidth || innerHeight !== drawnHeight)) {
@@ -680,8 +714,11 @@ const createNickWipe = () => {
     if (bubbleLoadStarted || reducedMotion.matches) return;
     bubbleLoadStarted = true;
     const bubbleImage = new Image();
-    bubbleImage.onload = () => {
+    bubbleImage.onload = async () => {
       bubbleImage.onload = null;
+      // Decode before making the texture so the first visible bubble frame
+      // does not also pay for decoding the source PNG.
+      await bubbleImage.decode?.().catch(() => {});
       // Cache a compact sprite so each scroll frame samples a small bitmap.
       const sprite = document.createElement('canvas');
       sprite.width = 384;
@@ -698,6 +735,27 @@ const createNickWipe = () => {
     };
     bubbleImage.src = 'assets/nick-bubble.png';
   };
+
+  // Prepare the large scene art and bubble texture while Nick is still below
+  // the viewport. The renderer draws only inside the visible bubble window.
+  let foregroundPreload;
+  const prepareNickArt = () => {
+    $('#nick-scene-bg').decode?.().catch(() => {});
+    foregroundPreload = new Image();
+    foregroundPreload.src = 'assets/sponge/fg_blur_half.png';
+    foregroundPreload.decode?.().catch(() => {});
+    loadBubbles();
+  };
+  if ('IntersectionObserver' in window) {
+    const preparationObserver = new IntersectionObserver((entries) => {
+      if (!entries.some(entry => entry.isIntersecting)) return;
+      preparationObserver.disconnect();
+      prepareNickArt();
+    }, { rootMargin: `0px 0px ${Math.ceil(innerHeight * 1.5)}px 0px` });
+    preparationObserver.observe(section);
+  } else {
+    prepareNickArt();
+  }
   reducedMotion.addEventListener('change', update);
 
   ScrollTrigger.create({

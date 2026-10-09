@@ -1,10 +1,11 @@
-// Keep bubble data on the GPU; scrolling only changes the progress uniform.
+// Keep bubble data on the GPU; scrolling only changes three progress uniforms.
 const vertexShader = `#version 300 es
 layout(location = 0) in vec4 a_particle;
 layout(location = 1) in vec2 a_variation;
+layout(location = 2) in float a_inertiaBucket;
 uniform vec2 u_viewport;
 uniform float u_horizontalOverscan;
-uniform float u_progress;
+uniform vec3 u_progresses;
 uniform float u_flight;
 out vec2 v_uv;
 const vec2 corners[6] = vec2[6](
@@ -13,7 +14,9 @@ const vec2 corners[6] = vec2[6](
 );
 void main() {
   v_uv = corners[gl_VertexID];
-  float phase = clamp((u_progress - a_particle.w) / u_flight, 0.0, 1.0);
+  float progress = a_inertiaBucket < 0.5 ? u_progresses.x :
+    a_inertiaBucket < 1.5 ? u_progresses.y : u_progresses.z;
+  float phase = clamp((progress - a_particle.w) / u_flight, 0.0, 1.0);
   if (phase <= 0.0 || phase >= 1.0) {
     gl_Position = vec4(2.0, 2.0, 0.0, 1.0);
     return;
@@ -60,7 +63,8 @@ export const createNickBubbleRenderer = (canvas) => {
   let instanceBuffer;
   let vertexArray;
   const uniforms = {
-    u_viewport: new Float32Array(2), u_horizontalOverscan: 0, u_progress: 0,
+    u_viewport: new Float32Array(2), u_horizontalOverscan: 0,
+    u_progresses: new Float32Array(3),
     u_flight: 1, u_sprite: null
   };
 
@@ -71,11 +75,14 @@ export const createNickBubbleRenderer = (canvas) => {
     vertexArray = gl.createVertexArray();
     gl.bindVertexArray(vertexArray);
     gl.enableVertexAttribArray(0);
-    gl.vertexAttribPointer(0, 4, gl.FLOAT, false, 24, 0);
+    gl.vertexAttribPointer(0, 4, gl.FLOAT, false, 28, 0);
     gl.vertexAttribDivisor(0, 1);
     gl.enableVertexAttribArray(1);
-    gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 24, 16);
+    gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 28, 16);
     gl.vertexAttribDivisor(1, 1);
+    gl.enableVertexAttribArray(2);
+    gl.vertexAttribPointer(2, 1, gl.FLOAT, false, 28, 24);
+    gl.vertexAttribDivisor(2, 1);
     gl.bindVertexArray(null);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
@@ -97,23 +104,25 @@ export const createNickBubbleRenderer = (canvas) => {
   const setParticles = (particles, overscan) => {
     horizontalOverscan = overscan;
     if (!gl) return;
-    const data = new Float32Array(particles.length * 6);
-    particles.forEach(({ x, size, sway, launch, waveOffset, angle }, i) => {
-      const index = i * 6;
+    const data = new Float32Array(particles.length * 7);
+    particles.forEach(({ x, size, sway, launch, waveOffset, angle, inertiaBucket }, i) => {
+      const index = i * 7;
       data[index] = x;
       data[index + 1] = size;
       data[index + 2] = sway;
       data[index + 3] = launch;
       data[index + 4] = waveOffset;
       data[index + 5] = angle;
+      data[index + 6] = inertiaBucket;
     });
     gl.bindBuffer(gl.ARRAY_BUFFER, instanceBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
     particleCount = particles.length;
   };
 
-  const draw = (particles, position, flight, width, height, ratio) => {
+  const draw = (particles, position, flight, width, height, ratio, positions) => {
     if (!sprite) return;
+    const progressPositions = positions || [position, position, position];
     if (width !== canvasWidth || height !== canvasHeight || ratio !== canvasRatio) {
       canvas.width = Math.max(1, Math.round(width * ratio));
       canvas.height = Math.max(1, Math.round(height * ratio));
@@ -133,7 +142,7 @@ export const createNickBubbleRenderer = (canvas) => {
       uniforms.u_viewport[0] = width;
       uniforms.u_viewport[1] = height;
       uniforms.u_horizontalOverscan = horizontalOverscan;
-      uniforms.u_progress = position;
+      uniforms.u_progresses.set(progressPositions);
       uniforms.u_flight = flight;
       twgl.setUniforms(programInfo, uniforms);
       gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, particleCount);
@@ -144,8 +153,9 @@ export const createNickBubbleRenderer = (canvas) => {
       context.setTransform(scaleX, 0, 0, scaleY, 0, 0);
       context.clearRect(0, 0, width, height);
       context.globalAlpha = 1;
-      for (const { x, size, sway, launch, waveOffset, angle } of particles) {
-        const phase = Math.max(0, Math.min(1, (position - launch) / flight));
+      for (const { x, size, sway, launch, waveOffset, angle, inertiaBucket } of particles) {
+        const phase = Math.max(0, Math.min(1,
+          (progressPositions[inertiaBucket] - launch) / flight));
         if (phase === 0 || phase === 1) continue;
         const left = -horizontalOverscan + x * (width + 2 * horizontalOverscan) -
           size / 2 + Math.sin(phase * Math.PI * 4 + waveOffset) * sway;
